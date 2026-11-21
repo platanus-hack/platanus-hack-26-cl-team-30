@@ -1,4 +1,4 @@
-import { closeSession, decideAsCommittee, getSession, getSessionByPhone, setPendingDecision } from "@/integrations/committee-channel";
+import { buildCommitteeBrief, closeSession, decideAsCommittee, getSession, getSessionByPhone, setPendingDecision } from "@/integrations/committee-channel";
 import { extractIncomingMessages, parseButtonId, sendText, verifyWebhook } from "@/integrations/kapso";
 
 // POST /api/integrations/kapso/webhook
@@ -28,11 +28,13 @@ export async function POST(request: Request) {
         const session = parsed ? getSession(parsed.sessionId) : undefined;
         if (!parsed || !session || session.phone !== message.from) continue;
         setPendingDecision(session, parsed.decision);
+        // Con plantilla, el Comité solo vio un resumen corto: aquí va el caso completo.
         await sendText(
           message.from,
-          parsed.decision === "approve"
-            ? "Eligió APROBAR. Escriba en un mensaje la razón de su decisión (es obligatoria)."
-            : "Eligió VETAR. Escriba en un mensaje la razón del veto (es obligatoria).",
+          `${buildCommitteeBrief(session)}\n\n` +
+            (parsed.decision === "approve"
+              ? "Eligió APROBAR. Escriba en un mensaje la razón de su decisión (es obligatoria)."
+              : "Eligió VETAR. Escriba en un mensaje la razón del veto (es obligatoria)."),
         );
         continue;
       }

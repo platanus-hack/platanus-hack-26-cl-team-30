@@ -10,6 +10,11 @@
 //   KAPSO_PHONE_NUMBER_ID    id del número de WhatsApp conectado en Kapso
 //   KAPSO_WEBHOOK_SECRET     secreto con que Kapso firma el webhook (X-Webhook-Signature)
 //   NEXO_COMMITTEE_PHONE     número del Comité en formato E.164 (+569...)
+//   KAPSO_TEMPLATE_NAME      opcional: plantilla aprobada por Meta (p. ej. nexo_comite_caso).
+//                            Con un número de producción, WhatsApp solo deja iniciar la
+//                            conversación con una plantilla; sin ella se envían botones
+//                            interactivos, que sirven en la Sandbox o dentro de las 24 h.
+//   KAPSO_TEMPLATE_LANG      idioma de la plantilla, por defecto "es"
 
 import { WhatsAppClient } from "@kapso/whatsapp-cloud-api";
 import { verifyKapsoWebhookSignature } from "@kapso/whatsapp-cloud-api/server";
@@ -20,6 +25,8 @@ export function kapsoConfig() {
     phoneNumberId: process.env.KAPSO_PHONE_NUMBER_ID ?? "",
     webhookSecret: process.env.KAPSO_WEBHOOK_SECRET ?? "",
     committeePhone: (process.env.NEXO_COMMITTEE_PHONE ?? "").replace(/\D/g, ""),
+    templateName: process.env.KAPSO_TEMPLATE_NAME ?? "",
+    templateLang: process.env.KAPSO_TEMPLATE_LANG || "es",
   };
 }
 
@@ -43,10 +50,48 @@ export function parseButtonId(id: string): { decision: "approve" | "veto"; sessi
   return match ? { decision: match[1] as "approve" | "veto", sessionId: match[2] } : null;
 }
 
-/** Envía el caso con los botones Aprobar y Vetar. */
-export async function sendCommitteeCase(sessionId: string, brief: string): Promise<void> {
+/** Texto apto para una variable de plantilla: Meta no acepta saltos de línea ni tabs. */
+const templateParam = (text: string, max: number) => text.replace(/\s+/g, " ").trim().slice(0, max) || "-";
+
+/**
+ * Componentes de la plantilla nexo_comite_caso: {{1}} = sala, {{2}} = recurso, y
+ * los dos botones de respuesta rápida con el mismo id que los interactivos, así
+ * el webhook los trata igual.
+ */
+export function committeeTemplateComponents(sessionId: string, room: string, resource: string) {
+  return [
+    {
+      type: "body",
+      parameters: [
+        { type: "text", text: templateParam(room, 40) },
+        { type: "text", text: templateParam(resource, 200) },
+      ],
+    },
+    { type: "button", sub_type: "quick_reply", index: "0", parameters: [{ type: "payload", payload: buttonId(sessionId, "approve") }] },
+    { type: "button", sub_type: "quick_reply", index: "1", parameters: [{ type: "payload", payload: buttonId(sessionId, "veto") }] },
+  ];
+}
+
+/** Envía el caso con los botones Aprobar y Vetar (por plantilla si hay una configurada). */
+export async function sendCommitteeCase(
+  sessionId: string,
+  brief: string,
+  context: { room: string; resource: string } = { room: "Nexo", resource: "recurso en disputa" },
+): Promise<void> {
   const config = kapsoConfig();
   if (!config.phoneNumberId || !config.committeePhone) throw new Error("Faltan KAPSO_PHONE_NUMBER_ID o NEXO_COMMITTEE_PHONE");
+  if (config.templateName) {
+    await whatsapp().messages.sendTemplate({
+      phoneNumberId: config.phoneNumberId,
+      to: config.committeePhone,
+      template: {
+        name: config.templateName,
+        language: { code: config.templateLang },
+        components: committeeTemplateComponents(sessionId, context.room, context.resource),
+      },
+    });
+    return;
+  }
   await whatsapp().messages.sendInteractiveButtons({
     phoneNumberId: config.phoneNumberId,
     to: config.committeePhone,

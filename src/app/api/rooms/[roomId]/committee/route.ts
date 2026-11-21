@@ -1,3 +1,4 @@
+import { getRoom } from "@/lib/store/rooms";
 import { z } from "zod";
 import { buildCommitteeBrief, closeSession, openCommitteeSession } from "@/integrations/committee-channel";
 import { callCommittee, voiceStatus } from "@/integrations/elevenlabs";
@@ -42,7 +43,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ roo
         results.whatsapp = { ok: false, code: opened.code, error: opened.message };
       } else {
         try {
-          await sendCommitteeCase(opened.session.id, buildCommitteeBrief(opened.session));
+          const resource = getRoom(roomId)?.scarcity?.resource ?? "recurso en disputa";
+          await sendCommitteeCase(opened.session.id, buildCommitteeBrief(opened.session), {
+            room: roomId.slice(0, 6).toUpperCase(),
+            resource,
+          });
           results.whatsapp = { ok: true, detail: "Caso enviado por WhatsApp" };
         } catch (error) {
           closeSession(opened.session);

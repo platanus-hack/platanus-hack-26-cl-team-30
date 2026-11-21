@@ -16,7 +16,7 @@ import {
   getSession,
   openCommitteeSession,
 } from "../src/integrations/committee-channel";
-import { buttonId, extractIncomingMessages, parseButtonId, verifyWebhook } from "../src/integrations/kapso";
+import { buttonId, committeeTemplateComponents, extractIncomingMessages, parseButtonId, verifyWebhook } from "../src/integrations/kapso";
 import { applyAction, createRoom, getHostCredentials, getRoom } from "../src/lib/store/rooms";
 import { POST as kapsoWebhook } from "../src/app/api/integrations/kapso/webhook/route";
 import { POST as voiceTool } from "../src/app/api/integrations/voice/tool/route";
@@ -99,6 +99,16 @@ describe("WhatsApp (Kapso)", () => {
     const meta = { entry: [{ changes: [{ value: { messages: [{ from: "56911112222", type: "text", text: { body: "Por gravedad" } }] } }] }] };
     expect(extractIncomingMessages(kapso)).toEqual([{ from: "56911112222", text: null, buttonId: "nexo:approve:abcdefgh1234" }]);
     expect(extractIncomingMessages(meta)).toEqual([{ from: "56911112222", text: "Por gravedad", buttonId: null }]);
+  });
+
+  it("la plantilla lleva sala y recurso sin saltos de línea, y botones con el id de sesión", () => {
+    const [body, approve, veto] = committeeTemplateComponents("abcdefgh1234", "ABC234", "Cama UCI\nde referencia");
+    expect(body).toMatchObject({ parameters: [{ text: "ABC234" }, { text: "Cama UCI de referencia" }] });
+    expect(approve).toMatchObject({ sub_type: "quick_reply", index: "0", parameters: [{ payload: "nexo:approve:abcdefgh1234" }] });
+    expect(veto).toMatchObject({ index: "1", parameters: [{ payload: "nexo:veto:abcdefgh1234" }] });
+    // La respuesta a un botón de plantilla llega como { button: { payload } } y se lee igual.
+    const reply = { message: { from: "56911112222", type: "button", button: { payload: "nexo:veto:abcdefgh1234", text: "Vetar" } } };
+    expect(extractIncomingMessages(reply)).toEqual([{ from: "56911112222", text: null, buttonId: "nexo:veto:abcdefgh1234" }]);
   });
 
   it("verifica la firma HMAC del webhook", async () => {
