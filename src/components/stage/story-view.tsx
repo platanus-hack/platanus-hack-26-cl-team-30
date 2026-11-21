@@ -1,0 +1,126 @@
+"use client";
+
+import { BellRing, Check, CircleCheck, Clock3, Hourglass, Lock, Star, UserRound } from "lucide-react";
+import type { ProjectedRoomState } from "@/lib/genome/schema";
+import { formatClock } from "@/components/organs/format";
+import { cn } from "@/lib/utils";
+import { deadlineWindow } from "./metrics";
+import { storyCards, storyMissing, storyProgress, storyResource } from "./story";
+
+/**
+ * «Historia de la decisión»: la vista principal de la pantalla grande, para leer
+ * de lejos. Cuatro partes, de arriba abajo: los pasos, el recurso con su plazo,
+ * una tarjeta por candidato y una sola frase con lo que falta ahora.
+ */
+export function StoryView({ room, onNotify }: { room: ProjectedRoomState; onNotify?: () => void }) {
+  const progress = storyProgress(room);
+  const resource = storyResource(room);
+  const cards = storyCards(room);
+  const missing = storyMissing(room);
+  const window = deadlineWindow(room);
+  const bleeding = room.stakes.status === "BLEEDING";
+  const elapsed = room.stakes.timeToDecisionMs ?? room.stakes.elapsedMs;
+
+  return (
+    <div className="nx-story">
+      {/* 1. Pasos */}
+      <ol className="nx-steps" style={{ ["--nx-steps" as string]: progress.steps.length }} aria-label={`Paso ${progress.index + 1} de ${progress.steps.length}`}>
+        {progress.steps.map((step, i) => {
+          // Al cerrar la sala, «Acta» es el paso en curso: queda resaltado, no tachado como hecho.
+          const state = i < progress.index ? "done" : i === progress.index ? "current" : "next";
+          return (
+            <li key={step.id} data-state={state} aria-current={state === "current" ? "step" : undefined}>
+              <span className="nx-step-dot" aria-hidden="true">
+                {state === "done" || (state === "current" && progress.done) ? <Check /> : i + 1}
+              </span>
+              <span className="nx-step-label">{step.label}</span>
+            </li>
+          );
+        })}
+      </ol>
+
+      {/* 2. Recurso, plazo y tiempo */}
+      <section className="nx-resource gd-panel" aria-label="Recurso en disputa">
+        <p className="nx-resource-name">
+          <span className="nx-resource-qty">{resource.quantity}</span>
+          <span>{resource.name}</span>
+        </p>
+        <div className="nx-resource-facts">
+          <p>
+            <Clock3 aria-hidden="true" />
+            <span>
+              <small>Plazo</small>
+              <strong>{window.remainingMs !== null ? `quedan ${formatClock(window.remainingMs)}` : window.label}</strong>
+            </span>
+          </p>
+          <p className="nx-elapsed" data-state={bleeding ? "block" : "calm"}>
+            {bleeding ? <Hourglass aria-hidden="true" /> : <CircleCheck aria-hidden="true" />}
+            <span>
+              <small>{bleeding ? "Esperando" : "Se decidió en"}</small>
+              <strong>{formatClock(elapsed)}</strong>
+            </span>
+          </p>
+        </div>
+      </section>
+
+      {/* 3. Candidatos */}
+      <section className="nx-cards" aria-label="Candidatos">
+        {cards.map((card) => (
+          <article key={card.id} className={cn("nx-card gd-panel", card.proposed && "is-proposed", card.winner && "is-winner")}>
+            <header>
+              <p className="nx-card-org">{card.org}</p>
+              {card.proposed && (
+                <span className="nx-star" title="Propuesto por la regla">
+                  <Star aria-hidden="true" />
+                  <span className="gd-sr">Propuesto por la regla</span>
+                </span>
+              )}
+            </header>
+            <p className="nx-card-title">{card.title}</p>
+            <p className="nx-card-score">
+              {card.score ?? "—"}
+              <small>{room.allocation ? "puntaje" : "propuesto"}</small>
+            </p>
+            <p className="nx-state" data-state={card.state.tone}>
+              {card.state.text}
+            </p>
+            {card.note && <p className="nx-card-note">{card.note}</p>}
+            {card.locked.length > 0 && (
+              <ul className="nx-locked" aria-label="Datos reservados que no viajan a esta pantalla">
+                {card.locked.map((label) => (
+                  <li key={label}>
+                    <Lock aria-hidden="true" />
+                    {label}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+        ))}
+      </section>
+
+      {/* 4. Lo que falta */}
+      <section className="nx-missing gd-panel" data-lead={missing.lead} aria-live="polite" aria-label="Lo que falta ahora">
+        <p className="nx-missing-text">
+          <b>{missing.lead}:</b> {missing.text}
+        </p>
+        <div className="nx-missing-who">
+          <p>
+            <UserRound aria-hidden="true" />
+            <span>{missing.who}</span>
+            {missing.whoConnected !== null && (
+              <span className="nx-state" data-state={missing.whoConnected ? "calm" : "plain"}>
+                {missing.whoConnected ? "conectado" : "todavía no entra"}
+              </span>
+            )}
+          </p>
+          {onNotify && room.allocation?.status === "PROPOSED" && (
+            <button type="button" className="gd-secondary" onClick={onNotify}>
+              <BellRing aria-hidden="true" /> Avisar al Comité
+            </button>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
