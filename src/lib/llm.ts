@@ -7,6 +7,9 @@
 //     que no puede llegar al Spark porque el Spark vive en la red local.
 //
 // Pasar de uno a otro es cambiar variables de entorno, sin tocar código.
+//
+// Toda llamada pasa por una cola que limita cuántas corren a la vez
+// (LLM_MAX_CONCURRENT). chatJson pide JSON y lo valida antes de devolverlo.
 
 import Anthropic from "@anthropic-ai/sdk";
 
@@ -38,21 +41,220 @@ export function llmConfig() {
   };
 }
 
-/** Respuesta completa de una vez. */
+/** Respuesta completa de una vez. Espera turno en la cola si el modelo está ocupado. */
 export async function chat(messages: ChatMessage[], signal?: AbortSignal): Promise<string> {
-  return llmConfig().provider === "anthropic"
-    ? anthropicChat(messages, signal)
-    : openaiChat(messages, signal);
+  await acquireSlot(signal);
+  const startedAt = Date.now();
+  let failed = false;
+  try {
+    return llmConfig().provider === "anthropic"
+      ? await anthropicChat(messages, signal)
+      : await openaiChat(messages, signal);
+  } catch (error) {
+    failed = true;
+    throw error;
+  } finally {
+    releaseSlot(startedAt, failed);
+  }
 }
 
-/** Respuesta en streaming como texto plano, lista para devolver desde una ruta. */
+/**
+ * Respuesta en streaming como texto plano, lista para devolver desde una ruta.
+ * El turno en la cola se ocupa hasta que el stream termina, falla o se cancela.
+ */
 export async function chatStream(
   messages: ChatMessage[],
   signal?: AbortSignal,
 ): Promise<ReadableStream<Uint8Array>> {
-  return llmConfig().provider === "anthropic"
-    ? anthropicChatStream(messages, signal)
-    : openaiChatStream(messages, signal);
+  await acquireSlot(signal);
+  const startedAt = Date.now();
+  let inner: ReadableStream<Uint8Array>;
+  try {
+    inner =
+      llmConfig().provider === "anthropic"
+        ? await anthropicChatStream(messages, signal)
+        : await openaiChatStream(messages, signal);
+  } catch (error) {
+    releaseSlot(startedAt, true);
+    throw error;
+  }
+
+  const reader = inner.getReader();
+  let released = false;
+  const finish = (failed: boolean) => {
+    if (released) return;
+    released = true;
+    releaseSlot(startedAt, failed);
+  };
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read();
+        if (done) {
+          finish(false);
+          controller.close();
+          return;
+        }
+        controller.enqueue(value);
+      } catch (error) {
+        finish(true);
+        controller.error(error);
+      }
+    },
+    cancel(reason) {
+      finish(false);
+      return reader.cancel(reason);
+    },
+  });
+}
+
+/**
+ * Respuesta en JSON validado. Pide un objeto JSON, lo extrae del texto, lo pasa por
+ * `validate` (que debe lanzar un Error si la forma no sirve) y, si falla, reintenta
+ * una sola vez mostrándole al modelo el error. Funciona igual con ambos proveedores.
+ */
+export async function chatJson<T>(
+  messages: ChatMessage[],
+  validate: (value: unknown) => T,
+  signal?: AbortSignal,
+): Promise<T> {
+  const conversation: ChatMessage[] = [
+    ...messages,
+    {
+      role: "system",
+      content: "Responde únicamente con un objeto JSON válido. Sin texto antes ni después y sin bloques de código.",
+    },
+  ];
+
+  let lastError = "";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const text = await chat(conversation, signal);
+    try {
+      return validate(extractJson(text));
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+      conversation.push(
+        { role: "assistant", content: text || "(respuesta vacía)" },
+        {
+          role: "user",
+          content: `Tu respuesta no sirvió: ${lastError}. Responde de nuevo solo con el objeto JSON corregido.`,
+        },
+      );
+    }
+  }
+  throw new Error(`El modelo no devolvió un JSON válido tras reintentar: ${lastError}`);
+}
+
+/** Saca el primer objeto JSON de un texto, tolerando bloques de código o texto alrededor. */
+export function extractJson(text: string): unknown {
+  const trimmed = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```$/, "").trim();
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    // Sigue abajo: busca el objeto dentro del texto.
+  }
+  const start = trimmed.indexOf("{");
+  if (start === -1) throw new Error("la respuesta no contiene un objeto JSON");
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < trimmed.length; i++) {
+    const char = trimmed[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') inString = false;
+      continue;
+    }
+    if (char === '"') inString = true;
+    else if (char === "{") depth++;
+    else if (char === "}" && --depth === 0) {
+      try {
+        return JSON.parse(trimmed.slice(start, i + 1));
+      } catch {
+        throw new Error("el objeto JSON de la respuesta está mal formado");
+      }
+    }
+  }
+  throw new Error("el objeto JSON de la respuesta está incompleto");
+}
+
+// --- Cola de concurrencia ---------------------------------------------------
+//
+// Limita cuántas llamadas al modelo corren a la vez (LLM_MAX_CONCURRENT, por
+// defecto 2). Las demás esperan en orden de llegada. Protege el límite de uso de
+// Anthropic y evita saturar el Spark cuando varios agentes piden a la vez.
+
+type Waiter = { resolve: () => void; reject: (reason: unknown) => void; signal?: AbortSignal; onAbort?: () => void };
+
+type QueueState = {
+  running: number;
+  waiting: Waiter[];
+  lastLatencyMs: number | null;
+  completed: number;
+  failed: number;
+};
+
+// En globalThis para que la recarga en caliente de desarrollo no duplique la cola.
+const globalQueue = globalThis as unknown as { __llmQueue?: QueueState };
+const queue: QueueState = (globalQueue.__llmQueue ??= {
+  running: 0,
+  waiting: [],
+  lastLatencyMs: null,
+  completed: 0,
+  failed: 0,
+});
+
+function maxConcurrent(): number {
+  const value = Number.parseInt(process.env.LLM_MAX_CONCURRENT ?? "", 10);
+  return Number.isFinite(value) && value > 0 ? value : 2;
+}
+
+function acquireSlot(signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) return Promise.reject(signal.reason);
+  if (queue.running < maxConcurrent()) {
+    queue.running++;
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve, reject) => {
+    const waiter: Waiter = { resolve, reject, signal };
+    if (signal) {
+      // Si quien pidió se va mientras espera, sale de la cola sin ocupar turno.
+      waiter.onAbort = () => {
+        const index = queue.waiting.indexOf(waiter);
+        if (index !== -1) queue.waiting.splice(index, 1);
+        reject(signal.reason);
+      };
+      signal.addEventListener("abort", waiter.onAbort, { once: true });
+    }
+    queue.waiting.push(waiter);
+  });
+}
+
+function releaseSlot(startedAt: number, failed: boolean) {
+  queue.lastLatencyMs = Date.now() - startedAt;
+  if (failed) queue.failed++;
+  else queue.completed++;
+  queue.running--;
+  while (queue.running < maxConcurrent() && queue.waiting.length > 0) {
+    const next = queue.waiting.shift()!;
+    if (next.onAbort) next.signal?.removeEventListener("abort", next.onAbort);
+    queue.running++;
+    next.resolve();
+  }
+}
+
+/** Telemetría de la cola: llamadas en curso, en espera y latencia de la última. */
+export function llmStats() {
+  return {
+    running: queue.running,
+    queued: queue.waiting.length,
+    maxConcurrent: maxConcurrent(),
+    lastLatencyMs: queue.lastLatencyMs,
+    completed: queue.completed,
+    failed: queue.failed,
+  };
 }
 
 /** Comprueba que el proveedor configurado responde y que el modelo existe. */

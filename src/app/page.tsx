@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -13,6 +14,7 @@ type Health = {
 // Pantalla de prueba: confirma que la app habla con el modelo de punta a punta.
 // El viernes se reemplaza por el producto real.
 export default function Home() {
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -85,7 +87,7 @@ export default function Home() {
           onClick={async () => {
             const res = await fetch("/api/rooms", { method: "POST" });
             const { id } = await res.json();
-            window.location.href = `/room/${id}`;
+            router.push(`/room/${id}`);
           }}
         >
           Crear sala multijugador de prueba

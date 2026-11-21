@@ -1,15 +1,19 @@
-import { getRoom, projectForRole, subscribe, type Viewer } from "@/lib/rooms";
+import { getRoom, projectForRole, resolveRoom, resolveViewer, subscribe } from "@/lib/rooms";
 
-// GET /api/rooms/:roomId/events?role=role_a
+// GET /api/rooms/:roomId/events?role=role_a&token=...
 // Flujo de eventos (SSE). Cada conexión recibe la sala ya filtrada para su rol,
-// y un mensaje nuevo cada vez que alguien cambia algo.
+// y un mensaje nuevo cada vez que alguien cambia algo. Sin token válido para el
+// rol pedido, la conexión recibe la vista "stage" (solo lo que todos pueden ver).
+// La sala "demo" se recrea al vuelo si el servidor se reinició.
 export async function GET(request: Request, { params }: { params: Promise<{ roomId: string }> }) {
   const { roomId } = await params;
-  const room = getRoom(roomId);
-  if (!room) return Response.json({ error: "La sala no existe" }, { status: 404 });
+  const room = resolveRoom(roomId);
+  if (!room) return Response.json({ error: "La sala no existe", code: "ROOM_NOT_FOUND" }, { status: 404 });
 
-  const requested = new URL(request.url).searchParams.get("role") ?? "stage";
-  const viewer: Viewer = room.roles.some((role) => role.id === requested) ? requested : "stage";
+  const search = new URL(request.url).searchParams;
+  // El token se valida una vez al abrir la conexión. Si el rol se libera, el
+  // cliente debe reconectar; ver pendientes en docs/ARQUITECTURA.md.
+  const viewer = resolveViewer(room, search.get("role"), search.get("token"));
 
   const encoder = new TextEncoder();
   let cleanup = () => {};

@@ -25,12 +25,14 @@ Formato de cada entrada:
 - **Por qué:** no requiere configurar ningún servicio externo, funciona igual en el deploy y en una red local sin internet, y SSE basta porque los clientes solo necesitan recibir; las acciones van por peticiones normales.
 - **Costo:** el estado se pierde al reiniciar y no se reparte entre varios servidores.
 
-## Dos proveedores de modelo detrás de la misma capa
+## Una sola capa de modelos con dos proveedores
 
-- **Decisión:** `src/lib/llm.ts` soporta Claude con el SDK oficial de Anthropic y modelos locales con el protocolo compatible con OpenAI. `LLM_PROVIDER` elige cuál.
-- **Alternativa descartada:** usar solo el modelo local del Spark.
-- **Por qué:** el deploy público corre en internet y no puede llegar al Spark, que está en la red local de la sede. El mismo código debe funcionar en ambos lugares.
-- **Costo:** hay dos caminos de código que probar, y las respuestas pueden diferir entre modelos.
+- **Decisión:** todo el código llama a `src/lib/llm.ts`; nadie habla con un proveedor directamente. Adentro hay dos caminos, elegidos con `LLM_PROVIDER`:
+  - `anthropic`: Claude con el SDK oficial de Anthropic. Usa `fallbacks` (si el modelo declina, la API reintenta sola en un modelo de respaldo) y `effort` configurable con `LLM_EFFORT`. Es lo que usa el deploy público.
+  - cualquier otro valor: protocolo de chat compatible con OpenAI, que es lo que expone Ollama en el Spark o en un notebook (`LLM_BASE_URL`, `LLM_API_KEY`).
+- **Alternativa descartada:** usar solo el modelo local del Spark, o llamar al SDK de cada proveedor donde se necesite.
+- **Por qué:** el deploy público corre en internet y no puede llegar al Spark, que está en la red local de la sede. Con una sola capa, pasar de uno a otro es cambiar variables de entorno (`LLM_PROVIDER`, `LLM_MODEL` y las del proveedor), sin tocar código. Si el Spark falla en la demo, el cambio toma segundos.
+- **Costo:** hay dos caminos de código que probar, las respuestas pueden diferir entre modelos y las funciones exclusivas de Claude (fallbacks, effort) no existen en el camino local.
 
 ## Render para el deploy público
 
@@ -45,13 +47,6 @@ Formato de cada entrada:
 - **Alternativa descartada:** usar `/api/health` como chequeo de la plataforma.
 - **Por qué:** si el proveedor del modelo falla, la plataforma no debe sacar el servidor de rotación; la app puede seguir mostrando datos.
 - **Costo:** ninguno relevante.
-
-## Una sola capa para hablar con modelos
-
-- **Decisión:** todo el código llama a `src/lib/llm.ts`, que habla el protocolo de chat compatible con OpenAI.
-- **Alternativa descartada:** usar el SDK de cada proveedor directamente donde se necesite.
-- **Por qué:** permite pasar de un modelo local en el Spark a uno en la nube cambiando tres variables de entorno, sin tocar código. Si el Spark falla durante la demo, el cambio toma segundos.
-- **Costo:** no usamos funciones exclusivas de un proveedor.
 
 ## Respuestas en streaming como texto plano
 
