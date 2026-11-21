@@ -18,6 +18,10 @@ _Por completar: cinco líneas. Qué problema resuelve, quiénes participan a la 
 | Ruta de estado | Informa si el modelo y la base están disponibles | `src/app/api/health/route.ts` | Route Handler |
 | Ruta de vida | Responde 200 si el servidor está arriba; la usa la plataforma de deploy | `src/app/api/ping/route.ts` | Route Handler |
 | Deploy | Describe el servicio público | `render.yaml` | Render, servidor Node siempre encendido |
+| Núcleo multijugador | Salas, roles, presencia, bitácora y vista distinta por rol | `src/lib/rooms.ts` | TypeScript, estado en memoria del servidor |
+| Flujo en tiempo real | Envía a cada conexión la sala ya filtrada para su rol | `src/app/api/rooms/[roomId]/events/route.ts` | Server-Sent Events |
+| Puerta de acciones | Única entrada para cambiar una sala; revisa permisos | `src/app/api/rooms/[roomId]/action/route.ts` | Route Handler |
+| Pantalla de sala | Entrar con un rol, por botón o código QR, y ver la sala en vivo | `src/app/room/[roomId]/` | React, `qrcode` |
 | Cliente de datos | Acceso a la base desde el navegador | `src/lib/supabase.ts` | Supabase |
 
 _Por completar: agentes, tiempo real, almacenamiento y cualquier componente nuevo._
@@ -56,7 +60,15 @@ El Spark es un NVIDIA DGX Spark de 128 GB que sirve modelos con Ollama en el pue
 
 ## Colaboración en tiempo real
 
-_Por completar: cómo se enteran todos los participantes de un cambio, qué pasa si dos actúan a la vez y cuántos participantes simultáneos se probaron._
+Cada navegador abre una conexión de eventos (SSE) a `/api/rooms/:id/events?role=...`. Cuando alguien ejecuta una acción, el servidor cambia el estado de la sala y avisa a todas las conexiones, que reciben la sala completa de nuevo.
+
+**Vista por rol.** Antes de enviar, `projectForRole` arma un paquete distinto para cada rol y elimina los valores que ese rol no puede ver. El dato oculto no viaja por la red hacia quien no debe verlo: no se esconde en el navegador, no se envía. La pantalla general ("stage") recibe solo lo que todos los roles pueden ver.
+
+**Acciones.** Todo cambio pasa por `applyAction`, que revisa permisos en el servidor. Un intento de leer o modificar un campo ajeno devuelve 403 y queda en la bitácora.
+
+**Dos personas a la vez.** El servidor procesa las acciones de a una, en el orden en que llegan, y cada cambio aumenta un número de versión.
+
+**Probado.** Tres conexiones simultáneas (dos roles y la pantalla general) sobre una sala. Falta probar con decenas de conexiones.
 
 ## Qué es real y qué es simulado
 
@@ -67,6 +79,10 @@ Esta tabla es la respuesta honesta a "¿esto funciona de verdad?".
 | _Por completar_ | | | |
 
 ## Límites conocidos
+
+- El estado de las salas vive en la memoria de un solo proceso: se pierde si el servidor se reinicia y no escala a varios servidores.
+- No hay autenticación: quien tiene el enlace de un rol entra como ese rol.
+
 
 _Por completar: qué no hace, qué se rompería con más carga y qué haríamos con una semana más._
 

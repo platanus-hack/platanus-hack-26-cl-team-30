@@ -11,6 +11,20 @@ Formato de cada entrada:
 
 ---
 
+## Permisos aplicados en el servidor, no en el navegador ni en el prompt
+
+- **Decisión:** el servidor arma un paquete distinto por rol (`projectForRole`) y elimina los valores que ese rol no puede ver.
+- **Alternativa descartada:** enviar todo y ocultarlo en la interfaz, o pedirle al modelo que no revele ciertos datos.
+- **Por qué:** lo que no se envía no se puede filtrar. Se puede comprobar mirando el tráfico de red del navegador.
+- **Costo:** cada cambio se proyecta una vez por conexión.
+
+## Estado de salas en memoria y eventos SSE
+
+- **Decisión:** las salas viven en memoria del servidor y los cambios se envían por Server-Sent Events.
+- **Alternativa descartada:** base de datos con suscripciones en tiempo real, o WebSockets.
+- **Por qué:** no requiere configurar ningún servicio externo, funciona igual en el deploy y en una red local sin internet, y SSE basta porque los clientes solo necesitan recibir; las acciones van por peticiones normales.
+- **Costo:** el estado se pierde al reiniciar y no se reparte entre varios servidores.
+
 ## Dos proveedores de modelo detrás de la misma capa
 
 - **Decisión:** `src/lib/llm.ts` soporta Claude con el SDK oficial de Anthropic y modelos locales con el protocolo compatible con OpenAI. `LLM_PROVIDER` elige cuál.

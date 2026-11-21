@@ -79,6 +79,17 @@ export default function Home() {
               : `Modelo sin conexión en ${health.llm.baseUrl}: ${health.llm.detail}`}
           {health && !health.supabase.configured ? " · Supabase sin configurar" : ""}
         </p>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={async () => {
+            const res = await fetch("/api/rooms", { method: "POST" });
+            const { id } = await res.json();
+            window.location.href = `/room/${id}`;
+          }}
+        >
+          Crear sala multijugador de prueba
+        </Button>
       </header>
 
       <section className="flex-1 space-y-3 overflow-y-auto">
