@@ -67,9 +67,9 @@ export function friendlyError(code: string | undefined, fallback: string): strin
   return (code && FRIENDLY_ERRORS[code]) || fallback;
 }
 
-async function postAction(roomId: string, body: Record<string, unknown>): Promise<ActResult> {
+async function postAction(roomId: string, body: Record<string, unknown>, path: "action" | "seat" = "action"): Promise<ActResult> {
   try {
-    const res = await fetch(`/api/rooms/${encodeURIComponent(roomId)}/action`, {
+    const res = await fetch(`/api/rooms/${encodeURIComponent(roomId)}/${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -336,6 +336,8 @@ export function useRoom(roomId: string, { spectator = false }: Options = {}) {
   // y la entrada por enlace pedía el mismo rol dos veces: la segunda respondía
   // 409 y mostraba "ese rol ya lo tiene otra persona" a quien sí lo tenía.
   const joining = useRef(new Map<string, Promise<ActResult>>());
+  /** Último token cuya pérdida ya se atendió (recuperación o cambio de silla). */
+  const recoveredToken = useRef<string | null>(null);
 
   const joinOnce = useCallback(
     async (orgId: string, roleId: string, committeeKey?: string): Promise<ActResult> => {
@@ -380,6 +382,35 @@ export function useRoom(roomId: string, { spectator = false }: Options = {}) {
     [joinOnce],
   );
 
+  // Sorteo de silla (POST /api/rooms/:id/seat): el servidor elige una silla
+  // libre al azar. Si ya se tiene una, es «sortear otro rol»: el servidor entrega
+  // una distinta y libera la anterior en el mismo paso.
+  const joinRandom = useCallback(
+    (committeeKey?: string): Promise<ActResult> => {
+      const pending = joining.current.get("*");
+      if (pending) return pending;
+      const previous = sessionRef.current;
+      // El servidor revoca el token anterior en este mismo paso y su conexión pasa
+      // a la vista "stage": se marca como ya atendido para que la recuperación
+      // automática (más abajo) no vuelva a tomar la silla que se acaba de soltar.
+      if (previous) recoveredToken.current = previous.token;
+      const request = postAction(roomId, { ...(committeeKey ? { committeeKey } : {}), ...(previous ? { current: previous } : {}) }, "seat")
+        .then((result) => {
+          if (result.ok && result.data.token && result.data.seat) {
+            setSession({ ...result.data.seat, token: result.data.token });
+            setNotice(null);
+          } else if (!result.ok) {
+            setNotice(result.code === "NO_FREE_SEAT" ? (previous ? "No queda otra silla libre." : "No quedan sillas libres en esta sala.") : result.error);
+          }
+          return result;
+        })
+        .finally(() => joining.current.delete("*"));
+      joining.current.set("*", request);
+      return request;
+    },
+    [roomId, setSession],
+  );
+
   const leave = useCallback(async () => {
     const previous = sessionRef.current;
     setSession(null);
@@ -402,13 +433,15 @@ export function useRoom(roomId: string, { spectator = false }: Options = {}) {
 
   // El servidor entrega la vista "stage" cuando el token no es el vigente (por
   // ejemplo, tras un reinicio). Se intenta recuperar el rol una vez por token.
-  const recoveredToken = useRef<string | null>(null);
   const downgraded = !!session && freshRoom?.viewer === "stage";
   useEffect(() => {
     if (!downgraded || !session || recoveredToken.current === session.token) return;
+    // Con un cambio de silla en curso (sorteo u otro rol), la vista "stage" es la
+    // de la silla que se acaba de soltar: recuperarla la volvería a ocupar.
+    if (joining.current.size > 0) return;
     recoveredToken.current = session.token;
     void join(session.orgId, session.roleId);
   }, [downgraded, session, join]);
 
-  return { room, status, unreachable, problem: status === "connected" ? null : problem, session, notice, setNotice, join, leave, act };
+  return { room, status, unreachable, problem: status === "connected" ? null : problem, session, notice, setNotice, join, joinRandom, leave, act };
 }

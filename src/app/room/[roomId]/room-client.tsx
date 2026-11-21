@@ -1,42 +1,75 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Dices } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ChevronDown, LogOut, MonitorPlay } from "lucide-react";
-import { ConnectionBadge } from "@/components/nexo/connection-badge";
-import { roomStep, seatTurn } from "@/components/nexo/guide";
-import { RoleHeaderChip } from "@/components/nexo/role-chip";
-import { RoleHeaderPlaceholder, RoomHeader } from "@/components/nexo/room-header";
-import { RolePicker } from "@/components/nexo/role-picker";
-import { Stepper } from "@/components/nexo/stepper";
-import { TurnCard } from "@/components/nexo/turn-card";
-import { VoiceAssistant, committeeKeyStorageKey } from "@/components/nexo/voice-assistant";
-import { AllocationBoardOrgan } from "@/components/organs/allocation-board-organ";
-import { AllocationConflictOrgan } from "@/components/organs/allocation-conflict-organ";
-import { DynamicCaseCardOrgan } from "@/components/organs/dynamic-case-card-organ";
-import { FogOfWarPanelOrgan } from "@/components/organs/fog-of-war-panel-organ";
-import { findOrg, isArbiter, isRoleViewer, orgLabel, roleLabel } from "@/components/organs/format";
-import { LivingGraphOrgan } from "@/components/organs/living-graph-organ";
-import { RoleAgentPanelOrgan } from "@/components/organs/role-agent-panel-organ";
-import { SharedStakesCounterOrgan } from "@/components/organs/shared-stakes-counter-organ";
+import { seatTurn } from "@/components/nexo/guide";
+import { committeeKeyStorageKey } from "@/components/nexo/voice-assistant";
+import { findOrg, isArbiter, isRoleViewer, roleLabel } from "@/components/organs/format";
+import { RevealCard } from "@/components/seat/reveal-card";
+import { RoomView } from "@/components/seat/room-view";
+import { SeatPicker } from "@/components/seat/seat-picker";
+import { freeDrawSeats } from "@/components/seat/screen";
+import { SeatActions, SeatMain, SeatShell, type SeatTab } from "@/components/seat/seat-shell";
+import { SecretsView } from "@/components/seat/secrets-view";
+import { TurnView } from "@/components/seat/turn-view";
 import { actaUrl, useRoom } from "@/lib/client/use-room";
-import type { HumanDecision, ProjectedOrg, ProjectedRoomState } from "@/lib/genome/schema";
 
-/** Última decisión humana sobre la compuerta de una organización. */
-function lastGateDecision(room: ProjectedRoomState, org: ProjectedOrg): HumanDecision | null {
-  const own = room.decisions.filter((decision) => decision.scope === "gate" && (decision.targetOrgId ?? decision.byOrgId) === org.orgId);
-  return own.at(-1) ?? null;
+// La tarjeta «Te tocó» se muestra una vez por silla: al tocar «Entrar a mi
+// silla» se recuerda en esta pestaña, y recargar no la vuelve a mostrar.
+const enteredKey = (roomId: string) => `nexo:${roomId}:entered`;
+
+function loadEntered(roomId: string): string | null {
+  try {
+    return window.sessionStorage.getItem(enteredKey(roomId));
+  } catch {
+    return null;
+  }
 }
 
-// Estación de un jugador, pensada para el teléfono. Arriba, lo único que le toca
-// hacer ahora; el resto queda plegado en «Ver más». No muestra la bitácora: la
-// bitácora es para el acta y para la consola de auditoría de la pantalla grande.
+function storeEntered(roomId: string, seat: string | null): void {
+  try {
+    if (seat) window.sessionStorage.setItem(enteredKey(roomId), seat);
+    else window.sessionStorage.removeItem(enteredKey(roomId));
+  } catch {
+    // Sin almacenamiento la tarjeta de entrada vuelve a aparecer al recargar.
+  }
+}
+
+/** Clave del QR del Comité, si este teléfono entró con ella. Solo así el Comité entra a su sorteo. */
+function loadCommitteeKey(roomId: string): string | undefined {
+  try {
+    return new URLSearchParams(window.location.search).get("key") ?? window.sessionStorage.getItem(committeeKeyStorageKey(roomId)) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** true si el enlace nombra un rol (QR de un rol): entonces no hay sorteo. */
+function linkNamesRole(): boolean {
+  const query = new URLSearchParams(window.location.search);
+  return query.has("orgId") && query.has("roleId");
+}
+
+// Silla de un rol, pensada para el celular: una tarjeta por pantalla, un botón
+// en la zona del pulgar y tres pestañas (Tu turno, Secretos, Sala). Solo dibuja
+// el estado que el servidor ya filtró para este rol y envía las mismas acciones
+// de siempre; las piezas están en src/components/seat/.
 export default function RoomClient() {
   const { roomId } = useParams<{ roomId: string }>();
-  const { room, status, unreachable, problem, session, notice, join, leave, act } = useRoom(roomId);
+  const { room, status, unreachable, problem, session, notice, join, joinRandom, leave, act } = useRoom(roomId);
+  const [tab, setTab] = useState<SeatTab>("turn");
+  const [enteredSeat, setEnteredSeat] = useState<string | null>(() => (typeof window === "undefined" ? null : loadEntered(roomId)));
+  // Sorteo de silla: quien llega con el QR único de la sala (sin rol en el enlace
+  // y sin silla guardada) recibe una al azar. "failed": no quedaban sillas libres.
+  const [draw, setDraw] = useState<"idle" | "pending" | "failed">(() => (typeof window !== "undefined" && !session && !linkNamesRole() ? "pending" : "idle"));
+  const [byLink] = useState(() => typeof window !== "undefined" && linkNamesRole());
 
-  // Entrada por código QR: el enlace trae la organización, el rol y, para el Comité, su clave.
+  const drawSeat = () => joinRandom(loadCommitteeKey(roomId));
+
+  // Entrada por código QR. El de un rol trae la organización, el rol y, para el
+  // Comité, su clave. El QR único de la sala no trae rol: se sortea una silla.
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
     const orgId = query.get("orgId");
@@ -50,138 +83,136 @@ export default function RoomClient() {
       }
     }
     if (orgId && roleId && !(session?.orgId === orgId && session.roleId === roleId)) void join(orgId, roleId, key);
+    else if (draw === "pending") void joinRandom(key).then((result) => setDraw(result.ok ? "idle" : "failed"));
     // Solo al cargar: después manda lo que la persona elija en pantalla.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const alert = notice ?? problem;
+
   if (!room) {
     return (
-      <>
-        <RoomHeader subtitle={`Sala ${roomId}`}>
-          <ConnectionBadge status={status} />
-        </RoomHeader>
-        <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-3 p-6">
-          {unreachable ? (
-            <>
-              <h1 className="h-sub">No encontramos esta sala</h1>
-              <p className="text-muted-foreground">Las salas viven en la memoria del servidor: si se reinició, la sala ya no existe. Pide un código nuevo o vuelve a la portada.</p>
-              <Link className="btn btn-primary mt-2 self-start" href="/">
-                Volver a la portada
-              </Link>
-            </>
-          ) : (
-            <p className="text-muted-foreground">Conectando con la sala…</p>
-          )}
-          {problem && (
-            <p role="alert" className="small rounded-xl bg-clash-soft px-3 py-2 text-clash">
-              {problem}
-            </p>
-          )}
-        </main>
-      </>
+      <SeatShell who={{ title: "Nexo", org: `Sala ${roomId}` }} stakes={null} status={status} alert={alert}>
+        <SeatMain>
+          <section className="st-card">
+            {unreachable ? (
+              <>
+                <h1 className="st-title" style={{ marginBlockStart: 0 }}>
+                  No encontramos esta sala
+                </h1>
+                <p className="st-support">Pide un código nuevo en la pantalla grande.</p>
+                <Link className="st-btn" style={{ marginBlockStart: 16 }} href="/">
+                  Volver a la portada
+                </Link>
+              </>
+            ) : (
+              <Entering title="Conectando con la sala" />
+            )}
+          </section>
+        </SeatMain>
+      </SeatShell>
     );
   }
 
   const me = isRoleViewer(room.viewer) ? room.viewer : null;
-  const myOrg = me ? findOrg(room, me.orgId) : undefined;
-  const myRole = myOrg?.roles.find((role) => role.id === me?.roleId);
-  const arbiter = isArbiter(room);
-  const acta = { md: actaUrl(roomId, "md"), json: actaUrl(roomId, "json") };
-  const turn = seatTurn(room);
-  // El Comité: el árbitro entre organizaciones o, en una sola organización, el rol que entra por QR.
-  const isCommitteeSeat = arbiter || myRole?.isQrOptional === true;
-  const step = roomStep(room);
   const subtitle = room.mode === "cross_org" && room.scarcity ? room.scarcity.resource : (room.orgs[0]?.orgName ?? `Sala ${roomId}`);
 
+  // Sin silla todavía: elegir una (o esperar a que el servidor confirme la del enlace).
+  if (!me) {
+    return (
+      <SeatShell who={{ title: "Nexo", org: subtitle }} stakes={room.stakes} status={status} alert={alert}>
+        {session || draw === "pending" ? (
+          <SeatMain>
+            <section className="st-card">
+              <Entering title={session ? "Entrando a tu silla" : "Sorteando tu silla"} />
+            </section>
+          </SeatMain>
+        ) : (
+          <SeatPicker room={room} onJoin={join}>
+            {freeDrawSeats(room, !!loadCommitteeKey(roomId)) > 0 && (
+              <SeatActions>
+                <button type="button" className="st-btn" onClick={() => void drawSeat()}>
+                  <Dices aria-hidden />
+                  Sortear mi rol
+                </button>
+              </SeatActions>
+            )}
+          </SeatPicker>
+        )}
+      </SeatShell>
+    );
+  }
+
+  const myOrg = findOrg(room, me.orgId);
+  const myRole = myOrg?.roles.find((role) => role.id === me.roleId);
+  const arbiter = isArbiter(room);
+  const seat = `${me.orgId}/${me.roleId}`;
+  const who = { title: roleLabel(room, me.orgId, me.roleId), org: arbiter ? "Entre organizaciones" : myOrg?.orgName, accent: myRole?.accentColor ?? ("violet" as const) };
+
+  function leaveSeat() {
+    storeEntered(roomId, null);
+    setEnteredSeat(null);
+    setTab("turn");
+    void leave();
+  }
+
+  // «Sortear otro rol» solo para quien llegó por sorteo y mientras quede otra silla libre.
+  const canReroll = !byLink && freeDrawSeats(room, !!loadCommitteeKey(roomId), me) > 0;
+
+  // Recién llegado: la tarjeta «Te tocó», antes de mostrar el turno.
+  if (enteredSeat !== seat) {
+    return (
+      <SeatShell who={who} stakes={room.stakes} status={status} alert={alert}>
+        <RevealCard
+          room={room}
+          me={me}
+          onEnter={() => {
+            storeEntered(roomId, seat);
+            setEnteredSeat(seat);
+          }}
+          onChange={canReroll ? drawSeat : undefined}
+          changeLabel="Sortear otro rol"
+        />
+      </SeatShell>
+    );
+  }
+
+  const turn = seatTurn(room);
+  const acta = { md: actaUrl(roomId, "md"), json: actaUrl(roomId, "json") };
+  // El Comité: el árbitro entre organizaciones o, en una sola organización, el rol que entra por QR.
+  const committee = arbiter || myRole?.isQrOptional === true;
+  const myMove = turn?.kind === "action" || turn?.kind === "sign-gate" || turn?.kind === "sign-allocation";
+
+  return (
+    <SeatShell who={who} stakes={room.stakes} status={status} alert={alert} tab={tab} onTab={setTab} turnPending={myMove}>
+      {tab === "turn" &&
+        (turn ? (
+          // La clave reinicia el formulario (razón, valor) cuando cambia el turno.
+          <TurnView key={`${turn.kind}/${room.allocation?.winnerCaseId ?? ""}`} room={room} me={me} turn={turn} act={act} acta={acta} />
+        ) : (
+          <SeatMain>
+            <section className="st-card">
+              <Entering title="Preparando tu turno" />
+            </section>
+          </SeatMain>
+        ))}
+      {tab === "secrets" && <SecretsView room={room} me={me} act={act} />}
+      {tab === "room" && <RoomView room={room} me={me} roomId={roomId} act={act} acta={acta} committee={committee} onLeave={leaveSeat} />}
+    </SeatShell>
+  );
+}
+
+function Entering({ title }: { title: string }) {
   return (
     <>
-      <RoomHeader subtitle={subtitle}>
-        {me ? <RoleHeaderChip title={roleLabel(room, me.orgId, me.roleId)} org={arbiter ? undefined : myOrg?.orgName} /> : <RoleHeaderPlaceholder />}
-        <ConnectionBadge status={status} />
-      </RoomHeader>
-
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-4 py-5 sm:px-6">
-        {(notice || problem) && (
-          <p role="alert" className="small rounded-xl bg-clash-soft px-3 py-2 text-clash">
-            {notice ?? problem}
-          </p>
-        )}
-
-        <Stepper step={step} />
-        <SharedStakesCounterOrgan stakes={room.stakes} />
-
-        {!me && (
-          <>
-            <div>
-              <h1 className="h-sub">{session ? "Entrando a tu rol…" : "¿Con qué rol entras?"}</h1>
-              {!session && <p className="mt-1 text-muted-foreground">Elige tu organización y tu rol. Verás solo lo que ese rol puede ver.</p>}
-            </div>
-            {!session && <RolePicker room={room} onJoin={join} />}
-          </>
-        )}
-
-        {me && turn && <TurnCard room={room} turn={turn} act={act} acta={acta} />}
-
-        {me && isCommitteeSeat && turn?.kind !== "done" && <VoiceAssistant roomId={roomId} />}
-
-        {me && (
-          <details className="group panel">
-            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 font-semibold">
-              Ver más: el caso, los datos, el agente y el grafo
-              <ChevronDown className="size-5 shrink-0 transition-transform group-open:rotate-180" aria-hidden />
-            </summary>
-            <div className="space-y-4 px-3 pb-4 sm:px-5">
-              {myOrg && (
-                <DynamicCaseCardOrgan
-                  org={myOrg}
-                  candidate={room.scarcity?.candidates.find((candidate) => candidate.orgId === myOrg.orgId) ?? null}
-                  decision={lastGateDecision(room, myOrg)}
-                  decisionRoleTitle={(() => {
-                    const decision = lastGateDecision(room, myOrg);
-                    return decision ? roleLabel(room, decision.byOrgId, decision.byRoleId) : undefined;
-                  })()}
-                />
-              )}
-              {arbiter &&
-                room.orgs.map((org) => (
-                  <DynamicCaseCardOrgan key={org.orgId} org={org} candidate={room.scarcity?.candidates.find((candidate) => candidate.orgId === org.orgId) ?? null} />
-                ))}
-              {room.scarcity && room.allocation && !arbiter && (
-                <AllocationBoardOrgan allocation={room.allocation} scarcity={room.scarcity} orgName={(orgId) => orgLabel(room, orgId)} decisions={room.decisions} />
-              )}
-              <FogOfWarPanelOrgan
-                orgs={room.orgs}
-                viewer={room.viewer}
-                onBreach={(targetOrgId, fieldKey) => act("TEST_RBAC_BREACH", { targetOrgId, fieldKey })}
-                onToggleSecret={myOrg ? (fieldKey) => act("TOGGLE_FIELD_SECRET", { fieldKey }) : undefined}
-              />
-              {myOrg && (
-                <AllocationConflictOrgan
-                  org={myOrg}
-                  viewerRoleId={me.roleId}
-                  onSlider={(value) => act("UPDATE_AUTHORITY_SLIDER", { value })}
-                  onSeal={(payload) => act("SEAL_RULE", payload)}
-                />
-              )}
-              {myOrg && myRole && <RoleAgentPanelOrgan role={myRole} org={myOrg} telemetry={room.telemetry} onRun={() => act("RUN_ROLE_AGENT", {})} />}
-              <LivingGraphOrgan room={room} />
-            </div>
-          </details>
-        )}
-
-        <p className="flex flex-wrap gap-x-5 gap-y-2 pt-2 text-sm">
-          <Link className="inline-flex min-h-10 items-center gap-1.5 font-medium text-muted-foreground underline underline-offset-4" href={`/stage/${encodeURIComponent(roomId)}`}>
-            <MonitorPlay className="size-4" aria-hidden />
-            Ver la pantalla grande
-          </Link>
-          {me && (
-            <button type="button" className="inline-flex min-h-10 items-center gap-1.5 font-medium text-muted-foreground underline underline-offset-4" onClick={() => void leave()}>
-              <LogOut className="size-4" aria-hidden />
-              Salir de este rol
-            </button>
-          )}
-        </p>
-      </main>
+      <h1 className="st-title" style={{ marginBlockStart: 0 }}>
+        {title}
+      </h1>
+      <p className="st-dots" aria-hidden>
+        <i />
+        <i />
+        <i />
+      </p>
     </>
   );
 }

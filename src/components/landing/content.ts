@@ -6,11 +6,15 @@ export const TEAM = [
   { name: "Sebastián Vargas Webster", short: "Sebastián", github: "iswebster1401" },
 ] as const;
 
-export const STORY = [
-  "Somos Ramón, Nahum y Sebastián. Llegamos a Platanus Hack 26 con una pregunta del track Multiplayer: ¿qué decisión compartida se sigue coordinando mal por chat?",
-  "La respuesta fue incómoda. Las decisiones que más cuestan, como una cama, una grúa, un camión o un presupuesto, se toman por WhatsApp y planillas entre personas que no pueden mostrarse todos sus datos.",
-  "Usamos las 36 horas en construir el lugar donde esa decisión se toma entre varios, a la vista de todos y con registro de quién firmó y por qué.",
-];
+/** La historia del equipo, en una pregunta y tres números. */
+export const ORIGIN = {
+  question: "¿Qué decisión compartida se sigue coordinando mal por chat?",
+  stats: [
+    { value: "3", label: "amigos" },
+    { value: "36", label: "horas" },
+    { value: "3", label: "rubros de ejemplo" },
+  ],
+} as const;
 
 /**
  * Otros rubros donde aplica lo mismo. Son ejemplos ilustrativos, no clientes.
@@ -21,22 +25,22 @@ export const OTHER_EXAMPLES = [
     icon: "construction",
     scenario: "construccion",
     who: "Dos constructoras",
-    resource: "una grúa torre para el jueves",
-    privateData: "El atraso real de cada obra y lo que les cuesta cada día de multa.",
+    resource: "una grúa torre",
+    privateData: "Atraso y multas",
   },
   {
     icon: "truck",
     scenario: "logistica",
     who: "Dos distribuidoras",
-    resource: "el único camión refrigerado disponible",
-    privateData: "El margen de cada pedido y qué cliente están por perder.",
+    resource: "un camión refrigerado",
+    privateData: "Margen y clientes",
   },
   {
     icon: "wallet",
     scenario: null,
     who: "Dos áreas de una empresa",
-    resource: "el presupuesto que queda del trimestre",
-    privateData: "Los sueldos y contratos de cada equipo.",
+    resource: "un presupuesto",
+    privateData: "Sueldos y contratos",
   },
 ] as const;
 
@@ -58,11 +62,15 @@ export const SPONSORS = [
   { name: "T3C", file: "t3c.svg", ratio: 953.93 / 176.9 },
 ] as const;
 
-/** Preguntas de la entrevista a quien dirige una clínica. Las claves se guardan en la base: no renombrar. */
+/**
+ * Preguntas de la entrevista a quien dirige una clínica, en su versión corta para
+ * la portada. Las claves se guardan en la base: no renombrar. El texto completo
+ * que se guarda con cada respuesta está en src/lib/supabase/interviews.ts.
+ */
 export const INTERVIEW_QUESTIONS = [
-  { key: "q_today", question: "Cuando hay una sola cama UCI y dos pacientes, ¿cómo se decide hoy quién la recibe?" },
-  { key: "q_channel", question: "¿Por dónde pasa esa conversación: teléfono, WhatsApp, planillas, correo?" },
-  { key: "q_missing", question: "¿Qué dato de otra institución necesitas para decidir y casi nunca te llega a tiempo?" },
-  { key: "q_private", question: "¿Qué dato tuyo no podrías compartir con otra institución, aunque ayudara a decidir?" },
-  { key: "q_trust", question: "Si decidiera una regla conocida y un comité que firma con su razón, ¿qué te daría confianza y qué te preocuparía?" },
+  { key: "q_today", question: "Una cama UCI y dos pacientes: ¿cómo se decide hoy?" },
+  { key: "q_channel", question: "¿Por dónde pasa esa conversación?" },
+  { key: "q_missing", question: "¿Qué dato ajeno necesitas y casi nunca llega a tiempo?" },
+  { key: "q_private", question: "¿Qué dato tuyo no podrías compartir?" },
+  { key: "q_trust", question: "Regla conocida y comité que firma: ¿qué te da confianza y qué te preocupa?" },
 ] as const;

@@ -8,6 +8,7 @@ import { createRoom } from "@/lib/client/use-room";
 import { CROSS_ORG_SCENARIOS } from "@/lib/genome/scenarios";
 import { OTHER_EXAMPLES } from "./content";
 import { Heading, Stagger } from "./motion";
+import { Why } from "./why";
 
 const ICONS = { construction: Construction, truck: Truck, wallet: Wallet } as const;
 
@@ -49,12 +50,8 @@ export function Others() {
     <section id="otros-rubros" className="band" aria-labelledby="otros-titulo">
       <div className="wrap">
         <Heading id="otros-titulo" className="max-w-[18ch]">
-          Los hospitales son un ejemplo. <span className="serif text-brand">Lo mismo pasa en cualquier rubro.</span>
+          Lo mismo pasa <span className="serif text-brand">en cualquier rubro.</span>
         </Heading>
-        <p className="lede mt-6 max-w-[40rem] text-muted-foreground">
-          Siempre que dos organizaciones necesitan la misma cosa y no pueden mostrarse todos sus datos, la conversación termina en un chat y nadie sabe
-          por qué se decidió así.
-        </p>
 
         <Stagger className="mt-12 grid gap-5 md:grid-cols-3">
           {OTHER_EXAMPLES.map((example) => {
@@ -69,12 +66,12 @@ export function Others() {
                 <p className="mt-1 text-muted-foreground">y {example.resource}.</p>
                 <p className="small mt-4 flex flex-1 items-start gap-2 text-brand-ink">
                   <Lock className="mt-0.5 size-4 shrink-0" aria-hidden />
-                  <span>Lo que no se muestra: {example.privateData.charAt(0).toLowerCase() + example.privateData.slice(1)}</span>
+                  <span>{example.privateData}</span>
                 </p>
                 {fixedRoom ? (
                   <Link href={`/stage/${fixedRoom}`} className="btn btn-line mt-5 w-full">
                     <MonitorPlay className="size-4" aria-hidden />
-                    Ver este ejemplo
+                    Ver ejemplo
                   </Link>
                 ) : (
                   <button
@@ -86,7 +83,7 @@ export function Others() {
                     }}
                   >
                     <ArrowRight className="size-4" aria-hidden />
-                    Usar este ejemplo
+                    Usar ejemplo
                   </button>
                 )}
               </div>
@@ -97,15 +94,12 @@ export function Others() {
         <div id="probar" className="panel mt-10 grid gap-8 p-6 md:p-10 lg:grid-cols-[1fr_1.2fr] lg:gap-14">
           <div>
             <p className="h-sub flex items-center gap-2">
-              <Sparkles className="size-5 text-brand" aria-hidden /> Probar con otra organización
+              <Sparkles className="size-5 text-brand" aria-hidden /> Prueba con tu caso
             </p>
-            <p className="mt-3 text-muted-foreground">
-              Describe tu caso en una frase. Armamos una sala con sus roles, sus datos y su regla, y la abrimos en la pantalla grande.
-            </p>
-            <p className="small mt-3 text-muted-foreground">
-              Un modelo propone los nombres y los datos; el servidor los revisa antes de usarlos. Quién ve qué y cómo se decide lo sigue haciendo el
-              código.
-            </p>
+            <p className="mt-3 text-muted-foreground">Una frase basta: armamos la sala.</p>
+            <Why label="¿Qué hace el modelo?" className="mt-4">
+              <p>Propone los nombres y los datos; el servidor los revisa antes de usarlos. Quién ve qué y cómo se decide lo sigue haciendo el código.</p>
+            </Why>
           </div>
           <form onSubmit={submit} className="space-y-3">
             <label className="block">
@@ -127,10 +121,10 @@ export function Others() {
               </button>
               <Link href="/stage/demo-cross" className="btn btn-line btn-lg">
                 <MonitorPlay className="size-5" aria-hidden />
-                Mejor ver el ejemplo
+                Ver el ejemplo
               </Link>
             </div>
-            {!ready && !busy && <p className="small text-muted-foreground">Escribe al menos una frase corta para armar la sala.</p>}
+            {!ready && !busy && <p className="small text-muted-foreground">Escribe una frase corta.</p>}
             {busy && <p className="small text-muted-foreground">Puede tardar unos segundos.</p>}
             {message && (
               <p role="alert" className={`small rounded-xl px-3 py-2 ${message.ok ? "bg-calm-soft text-calm" : "bg-bleed-soft text-bleed"}`}>

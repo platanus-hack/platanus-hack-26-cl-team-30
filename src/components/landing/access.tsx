@@ -104,7 +104,7 @@ export function Access() {
             Llévalo a tu <span className="serif">organización.</span>
           </Heading>
           <p className="lede mt-8 max-w-[32rem] text-white/90">
-            Si tu equipo decide con otros sobre algo que escasea, déjanos tus datos y te escribimos para probarlo con tu caso.
+            Déjanos tus datos y lo probamos con tu caso.
           </p>
         </div>
 

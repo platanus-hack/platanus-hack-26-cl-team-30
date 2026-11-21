@@ -4,6 +4,7 @@
 
 import type { ProjectedOrg, ProjectedRoomState } from "@/lib/genome/schema";
 import { formatScore, formatValue } from "@/components/organs/format";
+import { shortLabel, stageSeats } from "./seats";
 
 export type StoryStep = { id: string; label: string };
 export type StoryProgress = { steps: StoryStep[]; index: number; done: boolean };
@@ -24,11 +25,24 @@ const SINGLE_STEPS: StoryStep[] = [
 
 const roleTitle = (org: ProjectedOrg, roleId: string | null | undefined) => org.roles.find((role) => role.id === roleId)?.title ?? "una persona";
 
-/** Paso en que va la sala. Unirse mientras nadie entró; Acta cuando la decisión quedó sellada. */
+// Lo que ya es trabajo sobre el caso: si pasó algo de esto, la sala dejó atrás el paso «Unirse».
+const WORK: ReadonlySet<string> = new Set(["RULE_SEALED", "HITL_APPROVED", "HITL_VETOED", "COUNTER_PROPOSED", "CANDIDATE_SUBMITTED", "ALLOCATION_PROPOSED", "ALLOCATION_SEALED", "AGENT_PROPOSED", "AUTOPILOT"]);
+
+/**
+ * La sala ya partió: están sentados todos los que trabajan el caso (el Comité
+ * entra después, por su código) o alguien ya hizo algo. Antes de eso, la
+ * pantalla grande muestra el paso «Unirse» con la galaxia.
+ */
+export function roomStarted(room: ProjectedRoomState): boolean {
+  const players = stageSeats(room).filter((seat) => seat.kind !== "arbiter");
+  return (players.length > 0 && players.every((seat) => seat.connected)) || room.auditLog.some((event) => WORK.has(event.type));
+}
+
+/** Paso en que va la sala. Unirse mientras falta gente; Acta cuando la decisión quedó sellada. */
 export function storyProgress(room: ProjectedRoomState): StoryProgress {
   const cross = room.mode === "cross_org" && !!room.allocation;
   const steps = cross ? CROSS_STEPS : SINGLE_STEPS;
-  const anyone = room.connectedPlayers.length > 0;
+  const anyone = roomStarted(room);
   const conflict = room.orgs.some((org) => org.conflict.hasConflict);
   let index: number;
   if (cross) {
@@ -68,10 +82,15 @@ export type StoryCard = {
   /** Recibe el recurso: el Comité ya selló. */
   winner: boolean;
   state: { tone: "calm" | "sign" | "block" | "plain"; text: string };
-  /** Datos que no viajan a esta pantalla: solo su nombre, nunca el valor. */
+  /** Datos que no viajan a esta pantalla: solo su nombre (una o dos palabras), nunca el valor. */
   locked: string[];
+  /** Un número de apoyo, corto. */
   note?: string;
+  /** Explicación que va detrás de «¿Por qué?». */
+  why?: string;
 };
+
+const lockedLabels = (labels: string[]) => [...new Set(labels.map(shortLabel))].slice(0, 3);
 
 export function storyCards(room: ProjectedRoomState): StoryCard[] {
   const allocation = room.allocation;
@@ -83,18 +102,18 @@ export function storyCards(room: ProjectedRoomState): StoryCard[] {
       const vetoed = allocation.vetoedCaseIds.includes(candidate.caseId);
       const proposed = allocation.winnerCaseId === candidate.caseId;
       const winner = proposed && allocation.status === "SEALED";
-      const locked = [
-        ...(typeof candidate.coverageCost === "number" ? [] : ["Costo de cobertura"]),
+      const locked = lockedLabels([
+        ...(typeof candidate.coverageCost === "number" ? [] : ["Costo"]),
         ...(org?.fields.filter((field) => field.redacted && field.key !== "coverage_cost").map((field) => field.label) ?? []),
-      ].slice(0, 3);
+      ]);
       const state: StoryCard["state"] = vetoed
-        ? { tone: "block", text: "Vetado por el Comité" }
+        ? { tone: "block", text: "Vetado" }
         : winner
-          ? { tone: "calm", text: "Recibe el recurso" }
+          ? { tone: "calm", text: "Recibe" }
           : proposed
-            ? { tone: "sign", text: "Propuesto por la regla" }
+            ? { tone: "sign", text: "Propuesto" }
             : candidate.submitted
-              ? { tone: "plain", text: "Caso presentado" }
+              ? { tone: "plain", text: "Presentado" }
               : { tone: "plain", text: "Sin presentar" };
       return {
         id: candidate.caseId,
@@ -105,7 +124,7 @@ export function storyCards(room: ProjectedRoomState): StoryCard[] {
         winner,
         state,
         locked,
-        note: proposed && allocation.tieBreakApplied ? "Casi empatados: va primero quien tiene más necesidad sin cubrir." : undefined,
+        why: proposed && allocation.tieBreakApplied ? "Casi empatados: va primero quien tiene más necesidad sin cubrir." : undefined,
       };
     });
   }
@@ -116,10 +135,10 @@ export function storyCards(room: ProjectedRoomState): StoryCard[] {
       gate.status === "SEALED"
         ? { tone: "calm", text: "Firmado" }
         : gate.status === "BLOCKED_HITL_REQUIRED"
-          ? { tone: "block", text: "Falta una firma" }
+          ? { tone: "block", text: "Falta firma" }
           : org.conflict.hasConflict
-            ? { tone: "sign", text: "Límite en disputa" }
-            : { tone: "plain", text: "Sin firma pendiente" };
+            ? { tone: "sign", text: "En disputa" }
+            : { tone: "plain", text: "Sin pendientes" };
     return {
       id: org.orgId,
       org: org.orgName,
@@ -128,8 +147,8 @@ export function storyCards(room: ProjectedRoomState): StoryCard[] {
       proposed: false,
       winner: gate.status === "SEALED",
       state,
-      locked: org.fields.filter((field) => field.redacted).map((field) => field.label).slice(0, 3),
-      note: `Límite acordado: ${formatValue(gate.effectiveThreshold, rule.unit)}`,
+      locked: lockedLabels(org.fields.filter((field) => field.redacted).map((field) => field.label)),
+      note: `Límite: ${formatValue(gate.effectiveThreshold, rule.unit)}`,
     };
   });
 }
@@ -143,14 +162,15 @@ export function storyMissing(room: ProjectedRoomState): { lead: "Falta" | "Listo
   if (allocation && scarcity) {
     if (allocation.status === "SEALED") {
       const winner = allocation.ranking.find((entry) => entry.caseId === allocation.winnerCaseId);
-      return { lead: "Listo", text: `${winner?.patientLabel ?? "El caso"} de ${orgOf(winner?.orgId)?.orgName ?? ""} recibe el recurso`.trim(), who: "El acta ya se puede descargar", whoConnected: null };
+      return { lead: "Listo", text: `${orgOf(winner?.orgId)?.orgName ?? winner?.patientLabel ?? "El caso"} recibe el recurso`, who: "Acta lista", whoConnected: null };
     }
     if (allocation.status === "PROPOSED") {
-      return { lead: "Falta", text: "el Comité decide — aprobar o vetar con razón", who: scarcity.arbiter.title, whoConnected: scarcity.arbiter.connected };
+      return { lead: "Falta", text: "el Comité decide", who: scarcity.arbiter.title, whoConnected: scarcity.arbiter.connected };
     }
   }
-  if (room.connectedPlayers.length === 0) {
-    return { lead: "Falta", text: "que cada persona entre con su teléfono", who: "Escaneen el código de su rol en Organizaciones", whoConnected: null };
+  if (!roomStarted(room)) {
+    const seats = stageSeats(room);
+    return { lead: "Falta", text: "que entren todos", who: `${seats.filter((seat) => seat.connected).length}/${seats.length} conectados`, whoConnected: null };
   }
   for (const org of room.orgs) {
     if (org.conflict.hasConflict) {
@@ -159,7 +179,7 @@ export function storyMissing(room: ProjectedRoomState): { lead: "Falta" | "Listo
       const approver = org.roles.find((role) => role.id === rule.approverRoleId);
       return {
         lead: "Falta",
-        text: `${org.orgName} acuerda hasta dónde se decide sin firma`,
+        text: `${org.orgName} acuerda su límite`,
         who: `${proposer?.title ?? "Quien propone"} y ${approver?.title ?? "quien aprueba"}`,
         whoConnected: !!proposer?.connected || !!approver?.connected,
       };
@@ -168,7 +188,7 @@ export function storyMissing(room: ProjectedRoomState): { lead: "Falta" | "Listo
   for (const org of room.orgs) {
     if (org.gate.status === "BLOCKED_HITL_REQUIRED" && !(allocation && scarcity)) {
       const role = org.roles.find((entry) => entry.id === org.gate.pendingApproverRoleId);
-      return { lead: "Falta", text: "firmar la propuesta — aprobar, vetar o proponer otro valor con razón", who: `${role?.title ?? "Una persona"} · ${org.orgName}`, whoConnected: role?.connected ?? null };
+      return { lead: "Falta", text: "una firma", who: `${role?.title ?? "Una persona"} · ${org.orgName}`, whoConnected: role?.connected ?? null };
     }
   }
   if (allocation && scarcity) {
@@ -188,6 +208,6 @@ export function storyMissing(room: ProjectedRoomState): { lead: "Falta" | "Listo
     }
   }
   const org = room.orgs[0];
-  if (org && org.gate.status === "SEALED") return { lead: "Listo", text: "la decisión quedó firmada", who: "El acta ya se puede descargar", whoConnected: null };
-  return { lead: "Falta", text: "que alguien haga la propuesta", who: org ? roleTitle(org, org.authorityRule.proposerRoleId) : "", whoConnected: null };
+  if (org && org.gate.status === "SEALED") return { lead: "Listo", text: "decisión firmada", who: "Acta lista", whoConnected: null };
+  return { lead: "Falta", text: "la primera propuesta", who: org ? roleTitle(org, org.authorityRule.proposerRoleId) : "", whoConnected: null };
 }

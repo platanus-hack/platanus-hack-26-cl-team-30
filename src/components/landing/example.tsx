@@ -7,6 +7,7 @@ import { resolveAllocation } from "@/lib/engine/deterministic";
 import type { SharedScarcity } from "@/lib/genome/schema";
 import type { LandingExample } from "./data";
 import { Heading } from "./motion";
+import { Why } from "./why";
 
 const d2 = new Intl.NumberFormat("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -60,17 +61,9 @@ export function Example({ example }: { example: LandingExample }) {
         </p>
         <div className="mt-5 grid gap-8 lg:grid-cols-2 lg:items-end lg:gap-20">
           <Heading id="ejemplo-titulo" className="max-w-[16ch]">
-            Dos hospitales y una cama UCI. <span className="serif text-brand">Decide una fórmula, no una opinión.</span>
+            Dos hospitales, <span className="serif text-brand">una cama UCI.</span>
           </Heading>
-          <div className="space-y-4">
-            <p className="lede max-w-[34rem] text-muted-foreground">
-              Cada hospital presenta a su paciente sin revelar cuánto le cuesta. La regla puntúa solo lo clínico y, si quedan muy parejos, va primero
-              quien queda peor si espera. No gana quien más puede pagar.
-            </p>
-            <p className="small text-muted-foreground">
-              {example.resource}. {example.deadlineLabel}.
-            </p>
-          </div>
+          <p className="lede max-w-[34rem] text-muted-foreground">Decide una fórmula, no quien más puede pagar.</p>
         </div>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-[1fr_1.4fr]">
@@ -78,7 +71,7 @@ export function Example({ example }: { example: LandingExample }) {
             <p className="h-sub flex items-center gap-2">
               <Scale className="size-5 text-brand" aria-hidden /> La regla acordada
             </p>
-            <p className="small mt-2 text-muted-foreground">Mueve los pesos y mira cómo cambia el orden. Es la misma cuenta que hace la sala.</p>
+            <p className="small mt-2 text-muted-foreground">Mueve los pesos: cambia el orden.</p>
             <div className="mt-6 space-y-3">
               {WEIGHTS.map(({ key, label, sign }) => (
                 <label key={key} className="block">
@@ -102,7 +95,7 @@ export function Example({ example }: { example: LandingExample }) {
             </div>
             <button type="button" className="btn btn-line mt-4" disabled={!changed} onClick={() => setWeights(example.rule.weights)}>
               <RotateCcw className="size-4" aria-hidden />
-              Volver a la regla acordada
+              Restablecer
             </button>
           </div>
 
@@ -138,20 +131,22 @@ export function Example({ example }: { example: LandingExample }) {
                     <Meter label="Gravedad" value={candidate.clinicalSeverityScore} />
                     <Meter label="Urgencia" value={candidate.timeCriticality} />
                     <Meter label="Riesgo de espera" value={candidate.delayRiskScore} />
-                    <Meter label="Necesidad sin cubrir" value={candidate.unmetNeedScore} />
+                    <Meter label="Sin cubrir" value={candidate.unmetNeedScore} />
                   </div>
                 </div>
               );
             })}
-            <p className="small text-muted-foreground" aria-live="polite">
-              {result.tieBreakApplied
-                ? `Diferencia de ${d2.format(result.scoreGap)}: menos que el margen de ${d2.format(example.rule.tieEpsilon)}. Es un empate, así que decide la equidad: va primero quien tiene más necesidad sin cubrir.`
-                : `Diferencia de ${d2.format(result.scoreGap)}: supera el margen de ${d2.format(example.rule.tieEpsilon)}, así que decide el puntaje.`}{" "}
-              El costo de cada hospital no entra en la cuenta.
-            </p>
+            <Why>
+              <p aria-live="polite">
+                {result.tieBreakApplied
+                  ? `Diferencia de ${d2.format(result.scoreGap)}: menos que el margen de ${d2.format(example.rule.tieEpsilon)}. Es un empate, así que decide la equidad: va primero quien tiene más necesidad sin cubrir.`
+                  : `Diferencia de ${d2.format(result.scoreGap)}: supera el margen de ${d2.format(example.rule.tieEpsilon)}, así que decide el puntaje.`}{" "}
+                El costo de cada hospital no entra en la cuenta: no llegó a este navegador.
+              </p>
+            </Why>
             <Link href="/stage/demo-cross" className="btn btn-primary btn-lg w-full sm:w-auto">
               <MonitorPlay className="size-5" aria-hidden />
-              Ver el ejemplo en vivo
+              Verlo en vivo
             </Link>
           </div>
         </div>

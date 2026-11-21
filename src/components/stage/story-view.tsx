@@ -1,19 +1,41 @@
 "use client";
 
 import { BellRing, Check, CircleCheck, Clock3, Hourglass, Lock, Star, UserRound } from "lucide-react";
+import { Ecg } from "./ecg";
 import type { ProjectedRoomState } from "@/lib/genome/schema";
 import { formatClock } from "@/components/organs/format";
 import { cn } from "@/lib/utils";
 import { deadlineWindow } from "./metrics";
 import { storyCards, storyMissing, storyProgress, storyResource } from "./story";
 
+/** Los pasos de la sala, con el actual resaltado. Los comparten «Unirse» y la Historia. */
+export function StorySteps({ room }: { room: ProjectedRoomState }) {
+  const progress = storyProgress(room);
+  return (
+    <ol className="nx-steps" style={{ ["--nx-steps" as string]: progress.steps.length }} aria-label={`Paso ${progress.index + 1} de ${progress.steps.length}`}>
+      {progress.steps.map((step, i) => {
+        // Al cerrar la sala, «Acta» es el paso en curso: queda resaltado, no tachado como hecho.
+        const state = i < progress.index ? "done" : i === progress.index ? "current" : "next";
+        return (
+          <li key={step.id} data-state={state} aria-current={state === "current" ? "step" : undefined}>
+            <span className="nx-step-dot" aria-hidden="true">
+              {state === "done" || (state === "current" && progress.done) ? <Check /> : i + 1}
+            </span>
+            <span className="nx-step-label">{step.label}</span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 /**
  * «Historia de la decisión»: la vista principal de la pantalla grande, para leer
  * de lejos. Cuatro partes, de arriba abajo: los pasos, el recurso con su plazo,
- * una tarjeta por candidato y una sola frase con lo que falta ahora.
+ * una tarjeta por candidato y una sola frase con lo que falta ahora. Pocas
+ * palabras: lo que hay que explicar va detrás de «¿Por qué?».
  */
 export function StoryView({ room, onNotify }: { room: ProjectedRoomState; onNotify?: () => void }) {
-  const progress = storyProgress(room);
   const resource = storyResource(room);
   const cards = storyCards(room);
   const missing = storyMissing(room);
@@ -24,20 +46,7 @@ export function StoryView({ room, onNotify }: { room: ProjectedRoomState; onNoti
   return (
     <div className="nx-story">
       {/* 1. Pasos */}
-      <ol className="nx-steps" style={{ ["--nx-steps" as string]: progress.steps.length }} aria-label={`Paso ${progress.index + 1} de ${progress.steps.length}`}>
-        {progress.steps.map((step, i) => {
-          // Al cerrar la sala, «Acta» es el paso en curso: queda resaltado, no tachado como hecho.
-          const state = i < progress.index ? "done" : i === progress.index ? "current" : "next";
-          return (
-            <li key={step.id} data-state={state} aria-current={state === "current" ? "step" : undefined}>
-              <span className="nx-step-dot" aria-hidden="true">
-                {state === "done" || (state === "current" && progress.done) ? <Check /> : i + 1}
-              </span>
-              <span className="nx-step-label">{step.label}</span>
-            </li>
-          );
-        })}
-      </ol>
+      <StorySteps room={room} />
 
       {/* 2. Recurso, plazo y tiempo */}
       <section className="nx-resource gd-panel" aria-label="Recurso en disputa">
@@ -56,11 +65,13 @@ export function StoryView({ room, onNotify }: { room: ProjectedRoomState; onNoti
           <p className="nx-elapsed" data-state={bleeding ? "block" : "calm"}>
             {bleeding ? <Hourglass aria-hidden="true" /> : <CircleCheck aria-hidden="true" />}
             <span>
-              <small>{bleeding ? "Esperando" : "Se decidió en"}</small>
+              <small>{bleeding ? "Esperando" : "Decidido en"}</small>
               <strong>{formatClock(elapsed)}</strong>
             </span>
           </p>
         </div>
+        {/* Pulso rojo mientras se espera; línea verde y plana cuando se decidió. */}
+        <Ecg calm={!bleeding} />
       </section>
 
       {/* 3. Candidatos */}
@@ -70,9 +81,8 @@ export function StoryView({ room, onNotify }: { room: ProjectedRoomState; onNoti
             <header>
               <p className="nx-card-org">{card.org}</p>
               {card.proposed && (
-                <span className="nx-star" title="Propuesto por la regla">
+                <span className="nx-star">
                   <Star aria-hidden="true" />
-                  <span className="gd-sr">Propuesto por la regla</span>
                 </span>
               )}
             </header>
@@ -81,16 +91,26 @@ export function StoryView({ room, onNotify }: { room: ProjectedRoomState; onNoti
               {card.score ?? "—"}
               <small>{room.allocation ? "puntaje" : "propuesto"}</small>
             </p>
-            <p className="nx-state" data-state={card.state.tone}>
-              {card.state.text}
-            </p>
-            {card.note && <p className="nx-card-note">{card.note}</p>}
+            <div className="nx-card-row">
+              <p className="nx-state" data-state={card.state.tone}>
+                {card.state.text}
+              </p>
+              {card.note && <p className="nx-card-note">{card.note}</p>}
+              {card.why && (
+                <details className="nx-why">
+                  <summary>¿Por qué?</summary>
+                  <p>{card.why}</p>
+                </details>
+              )}
+            </div>
             {card.locked.length > 0 && (
-              <ul className="nx-locked" aria-label="Datos reservados que no viajan a esta pantalla">
+              <ul className="nx-locked" aria-label="Datos reservados">
                 {card.locked.map((label) => (
                   <li key={label}>
                     <Lock aria-hidden="true" />
-                    {label}
+                    <span>{label}</span>
+                    {/* El valor nunca llega a esta pantalla: en su lugar va una barra tachada. */}
+                    <i aria-hidden="true" />
                   </li>
                 ))}
               </ul>
@@ -110,7 +130,7 @@ export function StoryView({ room, onNotify }: { room: ProjectedRoomState; onNoti
             <span>{missing.who}</span>
             {missing.whoConnected !== null && (
               <span className="nx-state" data-state={missing.whoConnected ? "calm" : "plain"}>
-                {missing.whoConnected ? "conectado" : "todavía no entra"}
+                {missing.whoConnected ? "conectado" : "sin entrar"}
               </span>
             )}
           </p>

@@ -6,17 +6,17 @@ const STEPS = [
   {
     icon: EyeOff,
     title: "Cada uno entra con su rol",
-    body: "Desde su teléfono, con un código QR. Ve solo lo que su rol puede ver: el dato ajeno no llega a su pantalla.",
+    body: "Por QR. Ve solo lo que su rol permite.",
   },
   {
     icon: Scale,
     title: "Una regla conocida ordena los casos",
-    body: "La misma fórmula para todos, escrita en código. Si dos casos quedan parejos, va primero quien queda peor si espera.",
+    body: "La misma fórmula para todos. El costo no entra.",
   },
   {
     icon: PenLine,
     title: "Una persona firma con su razón",
-    body: "Un comité aprueba o veta, y tiene que escribir por qué. Todo queda en un acta que se puede descargar.",
+    body: "Aprueba o veta por escrito. Queda en un acta.",
   },
 ];
 
@@ -25,7 +25,7 @@ export function How() {
     <section id="como-funciona" className="band border-t border-border" aria-labelledby="como-titulo">
       <div className="wrap">
         <Heading id="como-titulo" className="max-w-[18ch]">
-          Tres pasos, <span className="serif text-brand">y todos ven lo mismo al mismo tiempo.</span>
+          Tres pasos, <span className="serif text-brand">todos lo ven.</span>
         </Heading>
         <Stagger className="mt-12 grid gap-5 md:grid-cols-3">
           {STEPS.map((step, i) => (
@@ -34,7 +34,9 @@ export function How() {
                 <span className="grid size-11 place-items-center rounded-full bg-brand-soft text-brand-ink">
                   <step.icon className="size-5" aria-hidden />
                 </span>
-                <span className="text-sm font-semibold text-muted-foreground">Paso {i + 1}</span>
+                <span className="serif tabular text-clash" style={{ fontSize: "2.75rem", lineHeight: 0.9 }} aria-label={`Paso ${i + 1}`}>
+                  {i + 1}
+                </span>
               </div>
               <h3 className="h-sub mt-5">{step.title}</h3>
               <p className="mt-2 text-muted-foreground">{step.body}</p>

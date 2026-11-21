@@ -37,12 +37,12 @@ export function AllocationConflictOrgan({ org, viewerRoleId, onSlider, onSeal }:
     setError(null);
     const result = await action();
     setBusy(false);
-    if (!result.ok) setError(`${result.status} ${result.code ?? ""}: ${result.error ?? "No se pudo aplicar"}`);
+    if (!result.ok) setError(result.error ?? "No se pudo aplicar el cambio.");
   }
 
   const commit = (value: number) => {
     if (!onSlider) return;
-    void onSlider(value).then((result) => setError(result.ok ? null : `${result.status} ${result.code ?? ""}: ${result.error ?? ""}`));
+    void onSlider(value).then((result) => setError(result.ok ? null : (result.error ?? "No se pudo mover el límite.")));
   };
 
   return (

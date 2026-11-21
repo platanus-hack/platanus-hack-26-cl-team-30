@@ -6,6 +6,7 @@ import type { ProjectedField } from "@/lib/genome/schema";
 import type { RoleProjection } from "./data";
 import { EXPO, MOTION_OK, gsap, useGSAP } from "./gsap";
 import { Heading } from "./motion";
+import { Why } from "./why";
 
 const clp = new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
 
@@ -40,17 +41,13 @@ export function Shielding({ projections }: { projections: RoleProjection[] }) {
       <div className="wrap grid gap-12 lg:grid-cols-[1fr_1.15fr] lg:gap-20">
         <div>
           <Heading id="blindaje-titulo" className="max-w-[15ch]">
-            Lo que no te corresponde ver <span className="serif text-brand">nunca llega a tu pantalla.</span>
+            El dato ajeno <span className="serif text-brand">nunca llega.</span>
           </Heading>
-          <div className="mt-8 max-w-[34rem] space-y-5 text-muted-foreground">
-            <p className="lede text-foreground">
-              No lo tapamos con un borrón: el servidor no lo envía. Cada rol recibe solo su parte, y el agente de ese rol tiene los mismos límites.
-            </p>
-            <p>
-              Cambia de rol y mira qué datos llegan. En la sala, si alguien pide un dato ajeno, ve «No disponible para tu rol» y el intento queda
-              registrado para el comité.
-            </p>
-          </div>
+          <p className="lede mt-8 max-w-[34rem]">No se tapa: el servidor no lo envía.</p>
+          <Why className="mt-6">
+            <p>Cada rol recibe solo su parte, y el agente de ese rol tiene los mismos límites.</p>
+            <p>En la sala, si alguien pide un dato ajeno, no lo recibe y el intento queda registrado para el comité.</p>
+          </Why>
         </div>
 
         <div className="self-start rounded-[1.5rem] bg-brand-soft p-3 shadow-lift md:p-6">
@@ -72,9 +69,6 @@ export function Shielding({ projections }: { projections: RoleProjection[] }) {
           </div>
           <div className="mt-5 px-1">
             <p className="h-sub">{current.title}</p>
-            <p className="small mt-1 text-muted-foreground">
-              {current.objective} Su agente: {current.agentName}.
-            </p>
           </div>
           <ul className="mt-5 space-y-2" aria-live="polite">
             {current.fields.map((field) => (
@@ -88,7 +82,7 @@ export function Shielding({ projections }: { projections: RoleProjection[] }) {
                 <span className={field.redacted ? "" : "text-muted-foreground"}>{field.label}</span>
                 {field.redacted ? (
                   <span className="small flex items-center gap-1.5 font-semibold">
-                    <Lock className="size-4" aria-hidden /> No disponible para este rol
+                    <Lock className="size-4" aria-hidden /> Reservado
                   </span>
                 ) : (
                   <span className="tabular font-semibold">{value(field)}</span>

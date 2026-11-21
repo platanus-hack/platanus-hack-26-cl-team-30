@@ -43,8 +43,9 @@ El agente de rol entra por la misma puerta: `RUN_ROLE_AGENT` llega a `applyActio
 | --- | --- |
 | `src/agents/mutate-genome.ts` (`mutateGenomeFromPrompt`) | Cómo una frase se convierte en una organización: el modelo escribe el contenido, `normalizeGenome` fija la estructura y el esquema decide si entra |
 | `src/lib/client/use-room.ts` (`useRoom`) | El único lugar de la interfaz que habla con la API: abre el SSE, guarda el token y envía acciones |
-| `src/app/room/[roomId]/room-client.tsx` y `src/app/stage/[roomId]/stage-client.tsx` | La estación de un rol y la pantalla para proyectar |
-| `src/components/organs/` | Los siete órganos de interfaz. Dibujan el estado proyectado; no calculan ni ocultan nada |
+| `src/app/room/[roomId]/room-client.tsx` y `src/components/seat/` | La silla de cada rol en el celular: revelación «Te tocó», turno, secretos y sala |
+| `src/app/stage/[roomId]/stage-client.tsx` y `src/components/stage/` | La pantalla para proyectar |
+| `src/components/organs/` | Piezas que quedan de la primera versión (grafo vivo, choque de autoridad, medidor p^n, telemetría). Dibujan el estado proyectado; no calculan ni ocultan nada |
 | `scripts/e2e.mjs` | Prueba de punta a punta por HTTP: varios participantes independientes, cada uno con su SSE, recorren las salas de una y de dos organizaciones, un escenario de construcción ensayado con el piloto automático y una sala creada desde una frase |
 | `src/lib/engine/autopilot.ts` | El ensayo automático: el guion de la demo como datos, con las mismas funciones del motor |
 | `src/lib/store/rate-limit.ts`, `src/lib/store/host.ts` | Límite de peticiones por cliente y controles de anfitrión |

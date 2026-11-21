@@ -44,7 +44,9 @@ La paleta es la de la landing original de Ramón. Tiene un modo claro (marfil y 
 
 Los valores exactos en CSS están en `src/components/ui/glassy-dashboard.tsx`, en las variables `--gd-*` de `.gd-app` y `.gd-app[data-theme="dark"]`.
 
-**Pendiente:** la portada y las salas (`src/app/globals.css`) todavía usan la paleta teal anterior (`--brand: #0f766e`). Hay que migrarlas a esta paleta para que todo se vea como una sola app.
+Los tokens globales (`src/app/globals.css`: `--brand`, `--primary`, `--background`, `--clash`…) ya usan esta paleta en claro: la portada, las salas y la pantalla grande se ven como una sola app. El botón primario va en tinta y `--brand` es sage. El teléfono tiene sus propios tokens con los mismos valores (`--st-*` en `src/components/seat/seat.css`).
+
+**Pendiente:** el modo «night» de los tokens globales existe, pero es opcional (`data-theme="dark"` en un contenedor) y no sigue a `prefers-color-scheme`. Antes de activarlo hay que cambiar los `bg-white` fijos de la portada y de `src/components/nexo/` por `bg-card`. La tipografía global sigue siendo Geist; la pantalla grande usa Manrope.
 
 ### Reglas de color
 
@@ -76,13 +78,55 @@ Falta: el Comité decide — aprobar o vetar con razón      ← una sola frase,
 - Siguen los QR para unirse y el dock: Centro de mando / Ranking / Organizaciones / Acta.
 - No es un tablero de métricas: sin gráficos de ingresos ni tablas en la vista principal.
 
+### Paso «Unirse»: la galaxia
+
+Mientras falta gente, la pantalla grande no muestra la Historia sino esto:
+
+```
+Escanea y entra
+●① Unirse ─ ② Límites ─ ③ Casos ─ ④ Comité ─ ⑤ Acta
+3/5            (esfera con un nodo        ┌────────┐
+conectados      y una órbita por          │   QR   │
+● Urgencias ✓   cada rol conectado)       │ grande │
+○ Comité                                  └────────┘
+```
+
+- La galaxia (`src/components/stage/galaxy.tsx`) es un canvas que vive detrás del contenido. Cada rol conectado enciende un nodo, una órbita de su color y su parte de la esfera; con todos conectados la esfera queda completa.
+- Los nodos salen de los asientos reales del SSE. No hay teclas ni simulador.
+- En los pasos siguientes la misma galaxia queda de fondo, tenue. Al sellar se calma y se vuelve verde.
+- Colores de los asientos (`SEAT_TONES` en `src/components/stage/seats.ts`): quien propone va en eucalipto, quien aprueba en ocre o arcilla y el Comité en marfil (tinta en claro). Lima sigue reservado para «lo de ahora».
+- Con `prefers-reduced-motion` no gira ni anima: se dibuja quieta y cambia solo cuando entra alguien.
+
+### Motivos tomados de los prototipos de Nahum
+
+Están en `docs/diseno/nahum/`. Usamos sus motivos con la paleta oficial, no con su paleta petróleo:
+
+- **Rojo de espera y verde de resuelto**, siempre con icono y palabra.
+- **Pulso** (`src/components/stage/ecg.tsx`): un trazo de electrocardiograma rojo mientras la decisión sigue abierta, que pasa a una línea verde y plana al sellar.
+- **Franjas diagonales** para el dato tachado: el nombre del dato en una o dos palabras y una barra rayada en lugar del valor.
+
+## Reglas de texto
+
+Vienen del mentor («bombardean con texto todo, eso no aporta») y valen para toda pantalla:
+
+1. Un título de máximo 6 palabras.
+2. Como mucho una frase de apoyo, de máximo 12 palabras.
+3. Números grandes en vez de párrafos.
+4. Las explicaciones van detrás de un «¿Por qué?» que se despliega, o se eliminan.
+5. Un solo aviso de «demostración simulada» por pantalla, pequeño, en el pie.
+6. Las etiquetas de candado llevan una o dos palabras.
+
 ## Teléfonos
 
-Cada persona ve solo su rol y su turno. Pantalla de 390 px:
+Cada persona ve solo su rol y su turno. La silla vive en `src/components/seat/` (estilos en `seat.css`, con la paleta oficial y modo oscuro según el teléfono). Pantalla de 390 px:
 
-- Un botón principal por pantalla, grande (mínimo 44 px de alto).
-- La tarjeta de turno dice qué hacer ahora y por qué.
-- Las decisiones del Comité exigen escribir una razón, y la interfaz lo explica antes de que falle.
+- Al entrar, la tarjeta «Te tocó <rol>» con la organización, la misión en una frase y dos chips (qué ves / cuántos datos no). Un botón: «Entrar a mi silla».
+- Cada turno cabe en una pantalla: una tarjeta, un solo botón primario anclado abajo (56 px, ancho completo, respeta el área segura) y tres pestañas: Tu turno, Secretos y Sala.
+- El Comité ve un duelo de dos tarjetas (puntaje grande, el recomendado con borde verde), chips de razón que rellenan el texto editable, y «Vetar» / «Aprobar y asignar». Sin razón los botones no se habilitan.
+- Los datos reservados son barras de franjas diagonales. Pedir uno ajeno muestra «Este dato nunca llegó a tu celular».
+- Arriba, el pulso ECG late en rojo mientras se espera y queda verde y plano al sellar.
+
+Reglas de texto (feedback del mentor: «bombardean con texto todo»): título de máximo 6 palabras, a lo más una frase de apoyo de 12 palabras, números grandes en vez de párrafos, explicaciones detrás de «¿Por qué?», un solo aviso de demostración simulada por pantalla (pequeño, al pie) y cero jerga.
 
 ## Dónde está cada cosa
 
@@ -90,9 +134,9 @@ Cada persona ve solo su rol y su turno. Pantalla de 390 px:
 |---|---|
 | Portada (landing) | `src/app/page.tsx` y `src/components/landing/` |
 | Pantalla grande | `src/app/stage/[roomId]/stage-client.tsx` |
-| Teléfono de cada rol | `src/app/room/[roomId]/room-client.tsx` |
-| Piezas de sala (turnos, pasos, QR, avisos) | `src/components/nexo/` |
-| Tarjetas de caso, ranking, contador | `src/components/organs/` |
+| Teléfono de cada rol | `src/app/room/[roomId]/room-client.tsx` y `src/components/seat/` |
+| Piezas de sala (guía de turnos, QR, avisos, voz) | `src/components/nexo/` |
+| Grafo vivo, choque de autoridad, medidor p^n, telemetría | `src/components/organs/` |
 | Panel de vidrio (base visual) | `src/components/ui/glassy-dashboard.tsx`, demo en `/centro` |
 | Tokens globales y tipografías | `src/app/globals.css` y `src/app/layout.tsx` |
 | Componentes base (shadcn) | `src/components/ui/` |

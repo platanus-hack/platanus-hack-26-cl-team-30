@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>[NOMBRE_APP] — Prototipo Mobile Jurado & Público (10 en sala)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@88..112,400..800&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #eef2f1;
+      --card: #ffffff;
+      --secondary: #e1e8e6;
+      --muted-bg: #e6ecea;
+      --ink: #0e2a33;
+      --muted: #51676d;
+      --border: #c7d2d0;
+      --border-strong: #9fb0ad;
+
+      --bleed: #d3273e;
+      --bleed-soft: #fbe9ec;
+      --calm: #14795a;
+      --calm-soft: #e3f3ec;
+      --clash: #a86c00;
+      --clash-soft: #fbf1d9;
+      --violet: #6a4bd6;
+      --violet-soft: #eeeafc;
+      --emerald: #2ba36b;
+      --emerald-soft: #e4f5ec;
+      --amber: #d59411;
+      --amber-soft: #fcf3dc;
+
+      --font-sans: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      --font-serif: 'Newsreader', Georgia, serif;
+      --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    ::selection { background: rgba(14, 42, 51, 0.14); color: var(--ink); }
+
+    html, body {
+      height: 100%;
+      background: #d7e0de;
+      color: var(--ink);
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* En desktop: marco iPhone 390x844 + panel externo de control para el equipo. En móvil real: full-bleed nativo. */
+    .workspace {
+      min-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      padding: 20px;
+    }
+
+    .phone-frame {
+      position: relative;
+      width: 390px;
+      height: 844px;
+      max-height: calc(100vh - 36px);
+      background: var(--bg);
+      border-radius: 40px;
+      border: 8px solid #0e2a33;
+      box-shadow: 0 28px 70px -20px rgba(14, 42, 51, 0.38);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    /* Panel externo de laboratorio (solo visible en desktop >= 900px) */
+    .director-panel {
+      width: 340px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 12px 32px -18px rgba(14, 42, 51, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .director-panel h2 {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.015em;
+    }
+
+    .director-sub {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+      margin-top: 4px;
+    }
+
+    .dir-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 12px;
+      border-top: 1px solid var(--secondary);
+    }
+
+    .dir-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .dir-role-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .dir-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: left;
+      transition: transform 140ms var(--ease-out), background 160ms ease, border-color 160ms ease;
+    }
+
+    .dir-btn:active { transform: scale(0.97); }
+    .dir-btn.active { background: var(--ink); color: #f4f8f7; border-color: var(--ink); }
+
+    .dir-input {
+      width: 100%;
+      padding: 9px 11px;
+      border-radius: 9px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      font-size: 13.5px;
+      caret-color: var(--ink);
+    }
+
+    .dir-input:focus-visible, button:focus-visible, textarea:focus-visible, input[type="range"]:focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: 2px;
+    }
+
+    @media (max-width: 899px) {
+      .workspace { padding: 0; align-items: stretch; }
+      .director-panel { display: none; }
+      .phone-frame {
+        width: 100vw;
+        height: 100dvh;
+        max-height: none;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+      }
+    }
+
+    /* ================= DENTRO DEL TELÉFONO ================= */
+    .app-header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-shrink: 0;
+      z-index: 20;
+    }
+
+    .role-id-chip {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .role-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .role-name-stack {
+      min-width: 0;
+    }
+
+    .role-name-main {
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .role-name-sub {
+      font-size: 11.5px;
+      color: var(--muted);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .clock-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--bleed-soft);
+      color: var(--bleed);
+      border: 1px solid rgba(211, 39, 62, 0.28);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+      transition: background 240ms ease, color 240ms ease, border-color 240ms ease;
+    }
+
+    .clock-pill.calm {
+      background: var(--calm-soft);
+      color: var(--calm);
+      border-color: rgba(20, 121, 90, 0.3);
+    }
+
+    .beat-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: heartbeat 1.15s ease-in-out infinite;
+    }
+
+    .clock-pill.calm .beat-dot { animation: none; }
+
+    @keyframes heartbeat {
+      0%, 42%, 100% { transform: scale(1); }
+      12% { transform: scale(1.45); }
+      24% { transform: scale(1); }
+      32% { transform: scale(1.22); }
+    }
+
+    @keyframes pulse-scroll {
+      to { transform: translateX(-160px); }
+    }
+
+    @keyframes shake-x {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-5px); }
+      45% { transform: translateX(5px); }
+      70% { transform: translateX(-3px); }
+      90% { transform: translateX(2px); }
+    }
+
+    .shake { animation: shake-x 280ms var(--ease-out); }
+
+    .app-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-strong) transparent;
+    }
+
+    /* Superficies planas limpias (cero tarjetas anidadas) */
+    .surface {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .surface-calm {
+      background: var(--card);
+      border: 1.5px solid var(--calm);
+    }
+
+    .h-screen {
+      font-size: 22px;
+      font-weight: 800;
+      font-stretch: 94%;
+      letter-spacing: -0.02em;
+      line-height: 1.12;
+    }
+
+    .h-card {
+      font-size: 16.5px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+
+    .body-muted {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.42;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 700;
+      width: fit-content;
+    }
+
+    .pill-emerald { background: var(--emerald-soft); color: #166a44; }
+    .pill-amber { background: var(--amber-soft); color: #8c5c00; }
+    .pill-violet { background: var(--violet-soft); color: var(--violet); }
+    .pill-bleed { background: var(--bleed-soft); color: var(--bleed); }
+    .pill-calm { background: var(--calm-soft); color: var(--calm); }
+    .pill-clash { background: var(--clash-soft); color: var(--clash); }
+    .pill-neutral { background: var(--muted-bg); color: var(--ink); }
+
+    /* Tachadura diagonal fiel al producto */
+    .redaction {
+      display: inline-block;
+      height: 15px;
+      width: 96px;
+      background-image: repeating-linear-gradient(135deg, var(--ink) 0 2px, transparent 2px 5px);
+      border-radius: 3px;
+      opacity: 0.85;
+      vertical-align: middle;
+    }
+
+    /* Banda de métricas planas (sin tarjetas anidadas) */
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      background: var(--bg);
+      border-radius: var(--radius-md);
+      padding: 12px 10px;
+      text-align: center;
+    }
+
+    .metric-val {
+      font-size: 18px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.15;
+    }
+
+    .metric-lbl {
+      font-size: 11.5px;
+      color: var(--muted);
+      font-weight: 600;
+      margin-top: 3px;
+    }
+
+    /* Botones táctiles >= 44-52px */
+    .cta-btn {
+      width: 100%;
+      min-height: 52px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1.5px solid var(--ink);
+      background: var(--ink);
+      color: #f4f8f7;
+      font-family: var(--font-sans);
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 140ms var(--ease-out), background 180ms ease, opacity 180ms ease;
+    }
+
+    .cta-btn:active { transform: scale(0.97); }
+    .cta-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .cta-calm { background: var(--calm); border-color: var(--calm); color: #fff; }
+    .cta-bleed-outline { background: var(--card); border-color: var(--bleed); color: var(--bleed); }
+    .cta-outline { background: var(--card); border-color: var(--border-strong); color: var(--ink); min-height: 44px; font-size: 13.5px; }
+
+    /* Slider táctil de autoridad */
+    .range-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    input[type="range"].thumb-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--secondary);
+      cursor: pointer;
+    }
+
+    input[type="range"].thumb-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--ink);
+      border: 3px solid var(--card);
+      box-shadow: 0 2px 8px rgba(14, 42, 51, 0.28);
+    }
+
+    /* Switch táctil iOS-style */
+    .toggle-btn {
+      position: relative;
+      width: 48px;
+      height: 28px;
+      border-radius: 999px;
+      border: none;
+      background: var(--border-strong);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 180ms ease;
+    }
+
+    .toggle-btn.on { background: var(--ink); }
+    .toggle-btn::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform 180ms var(--ease-out);
+    }
+    .toggle-btn.on::after { transform: translateX(20px); }
+
+    /* Lista con divisores planos */
+    .row-list {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .row-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--secondary);
+    }
+
+    .row-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .row-item:first-child { padding-top: 0; }
+
+    /* Chips de razón rápida 1-tap (Comité) */
+    .chip-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .quick-chip {
+      min-height: 38px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: var(--card);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 120ms var(--ease-out), background 150ms ease, color 150ms ease;
+    }
+
+    .quick-chip:active { transform: scale(0.96); }
+    .quick-chip.selected { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+    .reason-box {
+      width: 100%;
+      min-height: 66px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 15px;
+      line-height: 1.38;
+      resize: none;
+      caret-color: var(--ink);
+    }
+
+    /* Duelo Comité */
+    .duel-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .duel-col {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .duel-col.winner {
+      background: var(--card);
+      border: 1.5px solid var(--calm);
+    }
+
+    .duel-score {
+      font-size: 28px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    /* Banner toast flotante (403 / co-piloto) */
+    .live-toast {
+      position: absolute;
+      top: 72px;
+      left: 14px;
+      right: 14px;
+      padding: 11px 14px;
+      border-radius: 12px;
+      background: var(--ink);
+      color: #f4f8f7;
+      font-size: 13px;
+      line-height: 1.35;
+      box-shadow: 0 12px 28px -10px rgba(14, 42, 51, 0.4);
+      z-index: 50;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      opacity: 0;
+      transform: translateY(-8px) scale(0.97);
+      pointer-events: none;
+      transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+    }
+
+    .live-toast.show { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+    .live-toast.bleed { background: var(--bleed); color: #fff; }
+    .live-toast.calm { background: var(--calm); color: #fff; }
+
+    /* Dock inferior sticky (CTA + 4 Tabs) */
+    .bottom-dock {
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      padding: 10px 16px calc(env(safe-area-inset-bottom, 0px) + 8px);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex-shrink: 0;
+      z-index: 25;
+    }
+
+    .dual-cta {
+      display: grid;
+      grid-template-columns: 0.72fr 1.28fr;
+      gap: 10px;
+    }
+
+    .tab-bar {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 1fr;
+      gap: 4px;
+      border-top: 1px solid var(--secondary);
+      padding-top: 6px;
+    }
+
+    .tab-btn {
+      min-height: 46px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: color 150ms ease, background 150ms ease, transform 120ms var(--ease-out);
+    }
+
+    .tab-btn:active { transform: scale(0.95); }
+    .tab-btn.active { color: var(--ink); background: var(--bg); }
+
+    /* Pantalla 1: Revelación de Rol */
+    .reveal-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 18px 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+      gap: 14px;
+    }
+
+    .reveal-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 22px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: transform 220ms var(--ease-out), opacity 220ms var(--ease-out);
+    }
+
+    .reveal-card.shuffling {
+      transform: scale(0.96);
+      opacity: 0.65;
+    }
+
+    .ecg-strip {
+      position: relative;
+      height: 34px;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .ecg-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: calc(100% + 160px);
+      height: 34px;
+    }
+
+    .ecg-scroll { animation: pulse-scroll 1.5s linear infinite; }
+
+    /* Pulso calmado Pantalla 6 */
+    .verdict-quote {
+      background: var(--calm-soft);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 16.5px;
+      line-height: 1.4;
+      color: var(--ink);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .dir-btn:hover:not(.active) { background: var(--secondary); }
+      .cta-btn:hover:not(:disabled) { opacity: 0.93; }
+      .quick-chip:hover:not(.selected) { background: var(--bg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .beat-dot, .ecg-scroll, .shake { animation: none !important; }
+      * { transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="workspace">
+    <!-- ==================== TELÉFONO MOBILE 390x844 ==================== -->
+    <div class="phone-frame" id="phoneFrame">
+      <!-- Toast en vivo (403 / Co-piloto / Confirmación) -->
+      <div class="live-toast" id="liveToast" role="status" aria-live="polite">
+        <span id="toastIcon"></span>
+        <div id="toastMsg"></div>
+      </div>
+
+      <!-- Header dinámico -->
+      <header class="app-header" id="appHeader"></header>
+
+      <!-- Cuerpo principal (Pantalla 1 Reveal, Tabs 1-4 o Pantalla 6 Veredicto) -->
+      <main class="app-body" id="appBody"></main>
+
+      <!-- Dock inferior (Thumb Zone: CTA sticky + Tabs) -->
+      <div class="bottom-dock" id="bottomDock"></div>
+    </div>
+
+    <!-- ==================== PANEL EXTERNO DE CONTROL (Solo Desktop) ==================== -->
+    <aside class="director-panel" aria-label="Panel de prueba del equipo">
+      <div>
+        <h2>Laboratorio Mobile · 10 en Sala</h2>
+        <p class="director-sub">
+          Prueba aquí el flujo exacto que vivirán los <strong>3 jurados + 7 del público</strong> (2 co-pilotos en cada uno de los 5 roles clave) y saca capturas para <strong>UX Pilot</strong>.
+        </p>
+      </div>
+
+      <div class="dir-section">
+        <span class="dir-label">1. Simular escaneo QR (Sorteo aleatorio)</span>
+        <button class="cta-btn" id="dirSpinBtn" type="button" style="min-height:44px;font-size:13.5px;">
+          Simular escaneo QR aleatorio
+        </button>
+      </div>
+
+      <div class="dir-section">
+        <span class="dir-label">2. Inspeccionar cualquiera de los 5 roles</span>
+        <div class="dir-role-grid" id="dirRoleList"></div>
+      </div>
+
+      <div class="dir-section">
+        <span class="dir-label">3. Probar eventos multiplayer en vivo</span>
+        <button class="dir-btn" id="dirCopilotBtn" type="button">
+          <span>Simular acción de tu co-piloto</span>
+          <span style="color:var(--calm);">+1 vivo</span>
+        </button>
+        <button class="dir-btn" id="dirSubmitAllBtn" type="button">
+          <span>Ambos hospitales presentan caso</span>
+          <span style="color:var(--violet);">Listo Comité</span>
+        </button>
+        <button class="dir-btn" id="dirResetBtn" type="button">
+          <span>Reiniciar sala limpia</span>
+          <span style="color:var(--muted);">Reset</span>
+        </button>
+      </div>
+
+      <div class="dir-section">
+        <label class="dir-label" for="dirBrandInput">4. Placeholder de marca (en vivo)</label>
+        <input class="dir-input" id="dirBrandInput" type="text" value="[NOMBRE_APP]" />
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    /* =========================================================================
+       ICONOS SVG UNIFORMES (1.8px stroke, cero emojis como sistema de iconos)
+       ========================================================================= */
+    const ICONS = {
+      turn: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`,
+      lock: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`,
+      lockSmall: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`,
+      unlockSmall: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.4-2"/></svg>`,
+      agent: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="3"/><path d="M9 11h.01M15 11h.01M9 15h6M12 6V3"/></svg>`,
+      room: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M8.7 10.7 15.3 7.3M8.7 13.3l6.6 3.4"/></svg>`,
+      shield: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 7v5c0 5 3.5 8.5 8 9 4.5-.5 8-4 8-9V7l-8-4Z"/><path d="m9.5 12 1.8 1.8 3.5-3.8"/></svg>`,
+      ban: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m6 6 12 12"/></svg>`,
+      arrow: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`,
+      download: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 19h16"/></svg>`,
+      users: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 19a6 6 0 0 1 12 0"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14a4.5 4.5 0 0 1 4 4.5"/></svg>`,
+    };
+
+    /* =========================================================================
+       DATOS EXACTOS DE RENDER (seeds.ts + deterministic.ts · demo-cross)
+       ========================================================================= */
+    const ROLES = [
+      {
+        key: "andes_a",
+        orgId: "clinica_andes",
+        orgName: "Clínica Andes",
+        title: "Jefatura de Urgencias",
+        shortTag: "URGENCIAS",
+        kind: "proposer",
+        accent: "#2ba36b",
+        pillClass: "pill-emerald",
+        coPilots: 2,
+        mission: "Tienes a Paciente A en estado crítico. No puedes ver el costo del otro hospital. Tu meta: presentar tu caso antes de las 18:00.",
+        patient: "Paciente A",
+        gravity: "18/40 pts",
+        score: "0,52",
+        unmetNeed: "0,40",
+        proposedPct: 82,
+        rivalLabel: "Costo traslado · Hospital Rural",
+        agentName: "Agente Triaje",
+        agentText: "Con gravedad 18/40 y cierre 18:00, conviene presentar a Paciente A ahora. No tengo acceso a costos de cobertura ni al presupuesto del otro hospital.",
+        visibleFields: [
+          { key: "triage_criticality", label: "Gravedad clínica", val: "18/40 pts", tag: "Solo tú", ownSecret: true },
+          { key: "icu_beds_available", label: "Camas UCI disponibles", val: "1 cama", tag: "Tu clínica", ownSecret: false },
+          { key: "deadline_window", label: "Ventana de cierre", val: "18:00 hoy", tag: "Compartido", ownSecret: false },
+        ],
+        hiddenFields: [
+          { key: "andes_cost", label: "Costo cobertura · Clínica Andes", owner: "Solo Gestión Andes" },
+          { key: "rural_cost", label: "Costo traslado · Hospital Rural", owner: "Solo Convenios Rural" },
+          { key: "rural_triage", label: "Gravedad clínica · Hospital Rural", owner: "Solo Turno Rural" },
+        ],
+      },
+      {
+        key: "andes_b",
+        orgId: "clinica_andes",
+        orgName: "Clínica Andes",
+        title: "Dirección Administrativa",
+        shortTag: "GESTIÓN",
+        kind: "approver",
+        accent: "#d59411",
+        pillClass: "pill-amber",
+        coPilots: 2,
+        mission: "Resguardas el costo real ($2.400.000). Urgencias quiere decidir sin límite. Fija tu tope para frenar gastos sin firma.",
+        secretLabel: "Costo cobertura UCI",
+        secretValue: "$2.400.000 CLP",
+        capLabel: "Tope de contrato: $3.100.000 CLP",
+        proposerLimit: 100,
+        defaultApproverLimit: 60,
+        proposedPct: 82,
+        pnBefore: "43,4%",
+        pnAfter: "96,1%",
+        agentName: "Agente Cobertura",
+        agentText: "El costo de $2.400.000 cabe en el tope de $3.100.000, pero 82% supera tu umbral de 60%. Recomiendo sellar el freno humano antes de autorizar.",
+        visibleFields: [
+          { key: "coverage_cost", label: "Costo cobertura UCI", val: "$2.400.000 CLP", tag: "Solo tú", ownSecret: true },
+          { key: "insurance_contract_cap", label: "Tope de contrato", val: "$3.100.000 CLP", tag: "Gestión y Comité", ownSecret: false },
+          { key: "icu_beds_available", label: "Camas UCI disponibles", val: "1 cama", tag: "Tu clínica", ownSecret: false },
+        ],
+        hiddenFields: [
+          { key: "andes_triage", label: "Gravedad clínica · Clínica Andes", owner: "Solo Urgencias Andes" },
+          { key: "rural_cost", label: "Costo traslado · Hospital Rural", owner: "Solo Convenios Rural" },
+        ],
+      },
+      {
+        key: "rural_a",
+        orgId: "hospital_rural",
+        orgName: "Hospital Rural Valle Sur",
+        title: "Médico Jefe de Turno",
+        shortTag: "TURNO",
+        kind: "proposer",
+        accent: "#2ba36b",
+        pillClass: "pill-emerald",
+        coPilots: 2,
+        mission: "Tienes a Paciente B a 140 km sin UCI local. No ves el presupuesto de Clínica Andes. Presenta tu derivación antes de las 18:00.",
+        patient: "Paciente B",
+        gravity: "22/40 pts",
+        score: "0,53",
+        unmetNeed: "0,90",
+        proposedPct: 84,
+        rivalLabel: "Costo cobertura · Clínica Andes",
+        agentName: "Agente Derivación",
+        agentText: "Con gravedad 22/40 y 140 km de traslado, presenta a Paciente B de inmediato. No puedo ver presupuestos ni el costo del hospital competidor.",
+        visibleFields: [
+          { key: "triage_criticality", label: "Gravedad clínica", val: "22/40 pts", tag: "Solo tú", ownSecret: true },
+          { key: "transfer_distance_km", label: "Distancia a centro UCI", val: "140 km", tag: "Tu hospital", ownSecret: false },
+          { key: "deadline_window", label: "Ventana de traslado", val: "18:00 hoy", tag: "Compartido", ownSecret: false },
+        ],
+        hiddenFields: [
+          { key: "rural_cost", label: "Costo traslado · Hospital Rural", owner: "Solo Convenios Rural" },
+          { key: "andes_cost", label: "Costo cobertura · Clínica Andes", owner: "Solo Gestión Andes" },
+          { key: "andes_triage", label: "Gravedad clínica · Clínica Andes", owner: "Solo Urgencias Andes" },
+        ],
+      },
+      {
+        key: "rural_b",
+        orgId: "hospital_rural",
+        orgName: "Hospital Rural Valle Sur",
+        title: "Administración y Convenios",
+        shortTag: "CONVENIOS",
+        kind: "approver",
+        accent: "#d59411",
+        pillClass: "pill-amber",
+        coPilots: 2,
+        mission: "Proteges el presupuesto de derivaciones ($1.600.000). El turno pide 100% de autonomía. Sella el tope en 50% para activar control.",
+        secretLabel: "Costo de traslado y cobertura",
+        secretValue: "$1.600.000 CLP",
+        capLabel: "Presupuesto disponible: $1.900.000 CLP",
+        proposerLimit: 100,
+        defaultApproverLimit: 50,
+        proposedPct: 84,
+        pnBefore: "28,2%",
+        pnAfter: "93,0%",
+        agentName: "Agente Convenios",
+        agentText: "El traslado de $1.600.000 consume 84% del presupuesto mensual disponible. Sella el umbral en 50% para exigir firma antes de despachar.",
+        visibleFields: [
+          { key: "coverage_cost", label: "Costo traslado y cobertura", val: "$1.600.000 CLP", tag: "Solo tú", ownSecret: true },
+          { key: "referral_budget_left", label: "Presupuesto disponible", val: "$1.900.000 CLP", tag: "Convenios y Dirección", ownSecret: false },
+          { key: "transfer_distance_km", label: "Distancia a centro UCI", val: "140 km", tag: "Tu hospital", ownSecret: false },
+        ],
+        hiddenFields: [
+          { key: "rural_triage", label: "Gravedad clínica · Hospital Rural", owner: "Solo Turno Rural" },
+          { key: "andes_cost", label: "Costo cobertura · Clínica Andes", owner: "Solo Gestión Andes" },
+        ],
+      },
+      {
+        key: "comite",
+        orgId: "comite_red",
+        orgName: "Red de Derivación",
+        title: "Comité Ético de la Red",
+        shortTag: "COMITÉ",
+        kind: "arbiter",
+        accent: "#6a4bd6",
+        pillClass: "pill-violet",
+        coPilots: 2,
+        mission: "Eres el árbitro neutral. No ves costos de ningún hospital. Apruebas o vetas la asignación final dejando tu razón por escrito.",
+        visibleFields: [
+          { key: "score_a", label: "Puntaje Paciente A (Andes)", val: "0,52 · nec. 0,40", tag: "Regla pública", ownSecret: false },
+          { key: "score_b", label: "Puntaje Paciente B (Rural)", val: "0,53 · nec. 0,90", tag: "Regla pública", ownSecret: false },
+          { key: "tie_rule", label: "Desempate equidad (< 0,02)", val: "Hospital Rural", tag: "Código fijo", ownSecret: false },
+        ],
+        hiddenFields: [
+          { key: "andes_cost", label: "Costo cobertura · Clínica Andes", owner: "Oculto por neutralidad" },
+          { key: "rural_cost", label: "Costo traslado · Hospital Rural", owner: "Oculto por neutralidad" },
+        ],
+      },
+    ];
+
+    const QUICK_REASONS = [
+      { label: "Equidad verificada", text: "Se asigna al Hospital Rural por criterio de equidad ante empate técnico (mayor necesidad sin cubrir)." },
+      { label: "Prioridad rural", text: "Priorizamos derivación del Hospital Rural a 140 km sin acceso alternativo a cama UCI." },
+      { label: "Urgencia clínica", text: "Ambos casos son críticos; se respeta el orden determinista público sin considerar costos privados." },
+      { label: "Vetar por revisión", text: "Veto preventivo: se reasigna a Clínica Andes por criterio clínico de gravedad 0,90." },
+    ];
+
+    /* =========================================================================
+       ESTADO VIVO DEL PROTOTIPO
+       ========================================================================= */
+    let state = {
+      brand: "[NOMBRE_APP]",
+      screen: "reveal", // reveal | app | verdict
+      roleKey: "comite",
+      tab: "turn", // turn | secrets | agent | room
+      elapsedSec: 42,
+      submitted: { clinica_andes: true, hospital_rural: true },
+      sealedRules: { clinica_andes: false, hospital_rural: false },
+      sliderVal: { clinica_andes: 60, hospital_rural: 50 },
+      ownSecretHidden: { andes_a: true, andes_b: true, rural_a: true, rural_b: true },
+      breachCount: 0,
+      agentReply: null,
+      agentBreachShown: false,
+      vetoedB: false,
+      selectedReasonIdx: 0,
+      reasonText: QUICK_REASONS[0].text,
+      sealedVerdict: null,
+      audit: [
+        { time: "00:08", text: "10 participantes conectados (2 co-pilotos por silla)." },
+        { time: "00:24", text: "Clínica Andes presentó a Paciente A (0,52)." },
+        { time: "00:36", text: "Hospital Rural presentó a Paciente B (0,53 · empate por equidad)." },
+      ],
+    };
+
+    let toastTimer = null;
+
+    const getRole = () => ROLES.find((r) => r.key === state.roleKey) || ROLES[0];
+    const fmtClock = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+    function showToast(message, tone = "ink") {
+      const el = document.getElementById("liveToast");
+      const icon = document.getElementById("toastIcon");
+      const msg = document.getElementById("toastMsg");
+      el.className = "live-toast show" + (tone === "bleed" ? " bleed" : tone === "calm" ? " calm" : "");
+      icon.innerHTML = tone === "bleed" ? ICONS.ban : tone === "calm" ? ICONS.shield : ICONS.users;
+      msg.innerHTML = message;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove("show"), 3200);
+    }
+
+    function addAudit(text) {
+      state.audit.unshift({ time: fmtClock(state.elapsedSec), text });
+    }
+
+    function triggerBreach(targetLabel, fromAgent = false) {
+      state.breachCount++;
+      const role = getRole();
+      const actor = fromAgent ? role.agentName : role.title;
+      addAudit(`Bloqueado (403): ${actor} intentó leer "${targetLabel}".`);
+      showToast(`<strong>Bloqueado por el servidor (403)</strong><br/>"${targetLabel}" nunca viajó a tu celular.`, "bleed");
+      const frame = document.getElementById("phoneFrame");
+      frame.classList.remove("shake");
+      void frame.offsetWidth;
+      frame.classList.add("shake");
+      if (fromAgent) state.agentBreachShown = true;
+      render();
+    }
+
+    /* =========================================================================
+       RENDERIZADORES POR PANTALLA
+       ========================================================================= */
+    function renderHeader() {
+      const header = document.getElementById("appHeader");
+      const role = getRole();
+      const sealed = state.screen === "verdict";
+
+      if (state.screen === "reveal") {
+        header.innerHTML = `
+          <div class="role-id-chip">
+            <span class="role-dot" style="background:var(--bleed);"></span>
+            <div class="role-name-stack">
+              <div class="role-name-main">${escapeHtml(state.brand)}</div>
+              <div class="role-name-sub">10 en sala · 2 por rol</div>
+            </div>
+          </div>
+          <span class="clock-pill">
+            <span class="beat-dot"></span>
+            <span id="liveClock">${fmtClock(state.elapsedSec)}</span>
+          </span>
+        `;
+        return;
+      }
+
+      header.innerHTML = `
+        <div class="role-id-chip">
+          <span class="role-dot" style="background:${sealed ? "var(--calm)" : role.accent};"></span>
+          <div class="role-name-stack">
+            <div class="role-name-main">${role.shortTag} · ${role.orgName}</div>
+            <div class="role-name-sub">${ICONS.users} ${role.coPilots}/2 en tu rol · 10 en sala</div>
+          </div>
+        </div>
+        <span class="clock-pill ${sealed ? "calm" : ""}">
+          <span class="beat-dot"></span>
+          <span id="liveClock">${fmtClock(state.elapsedSec)}</span>
+        </span>
+      `;
+    }
+
+    function renderReveal() {
+      const role = getRole();
+      const body = document.getElementById("appBody");
+      const dock = document.getElementById("bottomDock");
+
+      const previewLeft =
+        role.kind === "proposer"
+          ? `Ves gravedad: ${role.gravity}`
+          : role.kind === "approver"
+            ? `Secreto: ${role.secretValue}`
+            : `Ves duelo: 0,52 vs 0,53`;
+
+      body.style.padding = "0";
+      body.innerHTML = `
+        <div class="reveal-screen">
+          <div style="display:flex;flex-direction:column;gap:14px;margin-top:8px;">
+            <div class="ecg-strip" aria-hidden="true">
+              <svg class="ecg-svg ecg-scroll" preserveAspectRatio="none">
+                <defs>
+                  <pattern id="mob-ecg-red" width="160" height="34" patternUnits="userSpaceOnUse">
+                    <path d="M0 17 H44 L50 13 L56 17 H66 L72 3 L80 30 L87 10 L92 17 H112 L120 12 L128 17 H160"
+                          fill="none" stroke="#d3273e" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" />
+                  </pattern>
+                </defs>
+                <rect width="100%" height="34" fill="url(#mob-ecg-red)" />
+              </svg>
+            </div>
+
+            <div class="reveal-card" id="revealCard">
+              <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                <span class="pill ${role.pillClass}">${role.shortTag}</span>
+                <span class="pill pill-neutral">${ICONS.users} ${role.coPilots} de 2 en tu rol · Co-piloto activo</span>
+              </div>
+
+              <div>
+                <h1 class="h-screen" style="font-size:27px;">Te tocó: ${role.title}</h1>
+                <p style="font-size:15px;color:var(--muted);font-weight:600;margin-top:4px;">${role.orgName}</p>
+              </div>
+
+              <p style="font-size:15.5px;line-height:1.45;color:var(--ink);padding-top:10px;border-top:1px solid var(--secondary);">
+                ${role.mission}
+              </p>
+
+              <div style="display:flex;flex-wrap:wrap;gap:8px;padding-top:4px;">
+                <span class="pill pill-calm">${ICONS.unlockSmall} ${previewLeft}</span>
+                <span class="pill pill-bleed">${ICONS.lockSmall} Costos ajenos ocultos</span>
+              </div>
+            </div>
+
+            <button class="cta-btn cta-outline" id="reSpinBtn" type="button" style="border-style:dashed;">
+              Sortear otro rol al azar
+            </button>
+          </div>
+
+          <p style="font-size:11.5px;color:var(--muted);text-align:center;line-height:1.35;">
+            Escaneo QR único · Sin registro · Demostración simulada (no es herramienta clínica).
+          </p>
+        </div>
+      `;
+
+      dock.innerHTML = `
+        <button class="cta-btn" id="enterSeatBtn" type="button">
+          Entrar a mi silla ${ICONS.arrow}
+        </button>
+      `;
+
+      document.getElementById("enterSeatBtn").onclick = () => {
+        state.screen = "app";
+        state.tab = "turn";
+        render();
+      };
+      document.getElementById("reSpinBtn").onclick = spinRandomRole;
+    }
+
+    function renderTurnTab(role) {
+      if (role.kind === "proposer") {
+        const isSubmitted = state.submitted[role.orgId];
+        return `
+          <section class="surface">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <h1 class="h-screen">${role.patient} necesita la cama UCI</h1>
+              <span class="pill ${isSubmitted ? "pill-calm" : "pill-bleed"}">${isSubmitted ? "Presentado" : "Tu turno"}</span>
+            </div>
+            <p class="body-muted">Compites por la única cama contra ${role.orgId === "clinica_andes" ? "Hospital Rural" : "Clínica Andes"}. Cierre a las 18:00.</p>
+            <div class="metric-strip">
+              <div>
+                <div class="metric-val">${role.gravity.split(" ")[0]}</div>
+                <div class="metric-lbl">Gravedad (solo tú)</div>
+              </div>
+              <div>
+                <div class="metric-val" style="color:${role.score === "0,53" ? "var(--calm)" : "var(--ink)"};">${role.score}</div>
+                <div class="metric-lbl">Puntaje público</div>
+              </div>
+              <div>
+                <div class="metric-val">1 UCI</div>
+                <div class="metric-lbl">Recurso único</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="surface">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <h2 class="h-card">Lo que el servidor te ocultó</h2>
+              <span class="pill pill-bleed">${ICONS.lockSmall} Niebla activa</span>
+            </div>
+            <div class="row-item" style="padding:4px 0;">
+              <div>
+                <div style="font-size:14px;font-weight:700;">${role.rivalLabel}</div>
+                <div style="font-size:12px;color:var(--muted);">Jamás viaja a tu celular</div>
+              </div>
+              <span class="redaction" aria-label="Dato bloqueado"></span>
+            </div>
+            <button class="cta-btn cta-outline" id="peekBreachBtn" type="button">
+              ${ICONS.lockSmall} Intentar espiar dato rival (403)
+            </button>
+          </section>
+        `;
+      }
+
+      if (role.kind === "approver") {
+        const limit = state.sliderVal[role.orgId];
+        const sealed = state.sealedRules[role.orgId];
+        const clash = role.proposerLimit - limit;
+        const secretOn = state.ownSecretHidden[role.key];
+        return `
+          <section class="surface">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+              <div>
+                <h2 class="h-card">${role.secretLabel}</h2>
+                <p style="font-size:12px;color:var(--muted);">${secretOn ? "Oculto a los demás roles" : "Compartido con tu organización"}</p>
+              </div>
+              <button class="toggle-btn ${secretOn ? "on" : ""}" id="vaultToggle" type="button" aria-label="Alternar secreto"></button>
+            </div>
+            <div style="font-size:32px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.03em;line-height:1.05;">
+              ${role.secretValue}
+            </div>
+            <p class="body-muted">${role.capLabel}</p>
+          </section>
+
+          <section class="surface">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <h2 class="h-card">${sealed ? "Umbral sellado" : `Choque de autoridad (${clash}%)`}</h2>
+              <span class="pill ${sealed ? "pill-calm" : "pill-clash"}">${sealed ? "Protegido" : "Requiere acuerdo"}</span>
+            </div>
+
+            <div class="range-wrap">
+              <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;">
+                <span>Tu tope autónomo: <strong>${limit}%</strong></span>
+                <span style="color:var(--bleed);">Caso pide: ${role.proposedPct}%</span>
+              </div>
+              <input class="thumb-slider" id="limitSlider" type="range" min="20" max="100" step="5" value="${limit}" />
+            </div>
+
+            <div class="pill ${sealed ? "pill-calm" : "pill-neutral"}" style="width:100%;justify-content:space-between;padding:9px 12px;border-radius:10px;">
+              <span>Confiabilidad ilustrativa</span>
+              <strong>${sealed ? `${role.pnBefore} → ${role.pnAfter}` : `${role.pnBefore} (sin freno)`}</strong>
+            </div>
+          </section>
+        `;
+      }
+
+      // COMITÉ ÉTICO DE LA RED (Árbitro neutral)
+      const bothReady = state.submitted.clinica_andes && state.submitted.hospital_rural;
+      if (!bothReady) {
+        return `
+          <section class="surface">
+            <h1 class="h-screen">Esperando a los hospitales</h1>
+            <p class="body-muted">Apenas ambos presenten su caso, verás el empate técnico y tendrás la última palabra.</p>
+            <div class="row-list">
+              <div class="row-item">
+                <span style="font-weight:700;">Clínica Andes</span>
+                <span class="pill ${state.submitted.clinica_andes ? "pill-calm" : "pill-clash"}">${state.submitted.clinica_andes ? "Presentado" : "Esperando..."}</span>
+              </div>
+              <div class="row-item">
+                <span style="font-weight:700;">Hospital Rural Valle Sur</span>
+                <span class="pill ${state.submitted.hospital_rural ? "pill-calm" : "pill-clash"}">${state.submitted.hospital_rural ? "Presentado" : "Esperando..."}</span>
+              </div>
+            </div>
+          </section>
+        `;
+      }
+
+      const winnerName = state.vetoedB ? "Paciente A · Clínica Andes" : "Paciente B · Hospital Rural";
+      return `
+        <section class="surface">
+          <h1 class="h-screen">${state.vetoedB ? "Tras veto: pasa a Clínica Andes" : "Empate técnico: decide la equidad"}</h1>
+
+          <div class="duel-grid">
+            <div class="duel-col ${state.vetoedB ? "winner" : ""}">
+              <span class="pill ${state.vetoedB ? "pill-calm" : "pill-neutral"}" style="font-size:10.5px;">${state.vetoedB ? "Propuesto" : "Clínica Andes"}</span>
+              <div style="font-size:13.5px;font-weight:800;">Paciente A</div>
+              <div class="duel-score">0,52</div>
+              <div style="font-size:11.5px;color:var(--muted);">Necesidad: 0,40</div>
+              <div style="margin-top:4px;"><span class="redaction" style="width:70px;height:12px;"></span></div>
+            </div>
+
+            <div class="duel-col ${!state.vetoedB ? "winner" : ""}" style="${state.vetoedB ? "opacity:0.55;" : ""}">
+              <span class="pill ${!state.vetoedB ? "pill-calm" : "pill-bleed"}" style="font-size:10.5px;">${!state.vetoedB ? "Recomendado" : "Vetado"}</span>
+              <div style="font-size:13.5px;font-weight:800;">Paciente B</div>
+              <div class="duel-score" style="color:${!state.vetoedB ? "var(--calm)" : "var(--muted)"};">0,53</div>
+              <div style="font-size:11.5px;color:var(--muted);">Necesidad: 0,90</div>
+              <div style="margin-top:4px;"><span class="redaction" style="width:70px;height:12px;"></span></div>
+            </div>
+          </div>
+
+          <p style="font-size:12.5px;color:var(--muted);line-height:1.38;">
+            Diferencia <strong>0,01</strong> (&lt; 0,02). Gana <strong>${winnerName}</strong>. El costo de cobertura jamás entra en la fórmula.
+          </p>
+        </section>
+
+        <section class="surface">
+          <label for="reasonArea" class="h-card" style="font-size:14.5px;">Tu razón para el acta (1 toque o edita)</label>
+          <div class="chip-wrap" id="reasonChips">
+            ${QUICK_REASONS.map(
+              (r, idx) => `<button type="button" class="quick-chip ${state.selectedReasonIdx === idx ? "selected" : ""}" data-ridx="${idx}">${r.label}</button>`
+            ).join("")}
+          </div>
+          <textarea id="reasonArea" class="reason-box" rows="2">${escapeHtml(state.reasonText)}</textarea>
+        </section>
+      `;
+    }
+
+    function renderSecretsTab(role) {
+      return `
+        <section class="surface">
+          <h1 class="h-screen">Tus cartas visibles</h1>
+          <div class="row-list">
+            ${role.visibleFields
+              .map(
+                (f) => `
+              <div class="row-item">
+                <div>
+                  <div style="font-size:14px;font-weight:700;">${f.label}</div>
+                  <div style="font-size:12px;color:var(--muted);">${f.tag}</div>
+                </div>
+                <strong style="font-size:15px;font-variant-numeric:tabular-nums;">${f.val}</strong>
+              </div>
+            `
+              )
+              .join("")}
+          </div>
+        </section>
+
+        <section class="surface">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h2 class="h-card">Bloqueado en el servidor</h2>
+            <span class="pill pill-bleed">${state.breachCount} intentos 403</span>
+          </div>
+          <p class="body-muted">Estos números nunca salen del servidor hacia tu teléfono.</p>
+          <div class="row-list">
+            ${role.hiddenFields
+              .map(
+                (f) => `
+              <div class="row-item">
+                <div style="min-width:0;">
+                  <div style="font-size:13.5px;font-weight:700;">${f.label}</div>
+                  <div style="font-size:11.5px;color:var(--muted);">${f.owner}</div>
+                  <div style="margin-top:6px;"><span class="redaction"></span></div>
+                </div>
+                <button class="cta-btn cta-outline" data-breach="${escapeHtml(f.label)}" type="button" style="width:auto;min-height:40px;padding:8px 12px;flex-shrink:0;">
+                  Probar 403
+                </button>
+              </div>
+            `
+              )
+              .join("")}
+          </div>
+        </section>
+      `;
+    }
+
+    function renderAgentTab(role) {
+      return `
+        <section class="surface">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:42px;height:42px;border-radius:12px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:${role.accent};flex-shrink:0;">
+              ${ICONS.agent}
+            </div>
+            <div>
+              <h1 class="h-card">${role.agentName}</h1>
+              <p style="font-size:12.5px;color:var(--muted);">Hereda tus mismos permisos · No ve secretos ajenos</p>
+            </div>
+          </div>
+
+          <div style="background:var(--bg);border-radius:12px;padding:14px;font-size:14.5px;line-height:1.45;color:var(--ink);">
+            ${
+              state.agentReply
+                ? escapeHtml(state.agentReply)
+                : `<em>Toca una acción rápida abajo para pedirle análisis a ${role.agentName}.</em>`
+            }
+          </div>
+
+          ${
+            state.agentBreachShown
+              ? `<div class="pill pill-bleed" style="width:100%;padding:10px 12px;border-radius:10px;">
+                  ${ICONS.ban} El agente intentó leer el costo ajeno y el servidor lo rechazó (403).
+                 </div>`
+              : ""
+          }
+
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button class="cta-btn cta-outline" id="agentAdviseBtn" type="button">
+              ¿Qué jugada recomiendas ahora?
+            </button>
+            <button class="cta-btn cta-bleed-outline" id="agentSpyBtn" type="button" style="min-height:44px;font-size:13.5px;">
+              ${ICONS.lockSmall} Pídele leer el costo del otro hospital (403)
+            </button>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderRoomTab() {
+      return `
+        <section class="surface">
+          <h1 class="h-screen">Estado de la sala (10 activos)</h1>
+          <div class="row-list">
+            ${ROLES.map(
+              (r) => `
+              <div class="row-item">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <span class="role-dot" style="background:${r.accent};"></span>
+                  <div>
+                    <div style="font-size:13.5px;font-weight:700;">${r.title}</div>
+                    <div style="font-size:11.5px;color:var(--muted);">${r.orgName}</div>
+                  </div>
+                </div>
+                <span class="pill pill-neutral">${r.coPilots}/2</span>
+              </div>
+            `
+            ).join("")}
+          </div>
+        </section>
+
+        <section class="surface">
+          <h2 class="h-card">Bitácora en vivo</h2>
+          <div class="row-list">
+            ${state.audit
+              .slice(0, 6)
+              .map(
+                (ev) => `
+              <div class="row-item" style="align-items:flex-start;justify-content:flex-start;gap:10px;">
+                <span style="font-family:var(--font-mono);font-size:11.5px;color:var(--muted);flex-shrink:0;">${ev.time}</span>
+                <span style="font-size:13px;line-height:1.35;">${escapeHtml(ev.text)}</span>
+              </div>
+            `
+              )
+              .join("")}
+          </div>
+        </section>
+      `;
+    }
+
+    function renderVerdict() {
+      const v = state.sealedVerdict;
+      const body = document.getElementById("appBody");
+      const dock = document.getElementById("bottomDock");
+      body.style.padding = "14px 16px 20px";
+
+      body.innerHTML = `
+        <div class="ecg-strip" style="height:28px;" aria-hidden="true">
+          <svg class="ecg-svg" style="width:100%;height:28px;" preserveAspectRatio="none">
+            <defs>
+              <pattern id="mob-ecg-green" width="160" height="28" patternUnits="userSpaceOnUse">
+                <path d="M0 14 H60 Q70 11 80 14 T100 14 H160" fill="none" stroke="#14795a" stroke-width="2.4" stroke-linecap="round" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="28" fill="url(#mob-ecg-green)" />
+          </svg>
+        </div>
+
+        <section class="surface surface-calm">
+          <span class="pill pill-calm">${ICONS.shield} RECURSO CONTENIDO · ${v.time}</span>
+          <h1 class="h-screen" style="font-size:24px;">Cama UCI asignada a ${v.winnerOrg}</h1>
+          <p class="body-muted">${v.winnerPatient} · ${v.basis}</p>
+
+          <div class="verdict-quote">
+            “${escapeHtml(v.reason)}”
+            <div style="font-family:var(--font-sans);font-style:normal;font-size:12px;font-weight:700;color:var(--calm);margin-top:8px;">
+              Firmado por Comité Ético · 10 pantallas actualizadas
+            </div>
+          </div>
+        </section>
+
+        <div class="duel-grid">
+          <div class="surface" style="padding:12px;">
+            <div style="font-size:11.5px;color:var(--muted);font-weight:700;">Confiabilidad</div>
+            <div style="font-size:19px;font-weight:800;color:var(--calm);font-variant-numeric:tabular-nums;">12,3% → 89,4%</div>
+          </div>
+          <div class="surface" style="padding:12px;">
+            <div style="font-size:11.5px;color:var(--muted);font-weight:700;">Secretos filtrados</div>
+            <div style="font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;">0 fugas</div>
+          </div>
+        </div>
+
+        <p style="font-size:11px;color:var(--muted);text-align:center;line-height:1.35;">
+          Demostración simulada de coordinación organizacional. No es diagnóstico ni herramienta clínica.
+        </p>
+      `;
+
+      dock.innerHTML = `
+        <button class="cta-btn" id="downloadActaBtn" type="button">
+          ${ICONS.download} Descargar Acta (.md / .json)
+        </button>
+        <button class="cta-btn cta-outline" id="backToRoleBtn" type="button">
+          Volver a probar otro rol
+        </button>
+      `;
+
+      document.getElementById("downloadActaBtn").onclick = () => {
+        showToast("<strong>Acta generada sin secretos</strong><br/>Incluye puntajes públicos, razón firmada y bitácora 403.", "calm");
+      };
+      document.getElementById("backToRoleBtn").onclick = () => {
+        resetDemo();
+        spinRandomRole();
+      };
+    }
+
+    function renderDockForApp(role) {
+      const dock = document.getElementById("bottomDock");
+      let primaryHtml = "";
+
+      if (state.tab === "turn") {
+        if (role.kind === "proposer") {
+          const done = state.submitted[role.orgId];
+          primaryHtml = `
+            <button class="cta-btn ${done ? "cta-calm" : ""}" id="submitCandBtn" type="button" ${done ? "disabled" : ""}>
+              ${done ? `${ICONS.shield} ${role.patient} ya presentado` : `Presentar a ${role.patient} para la cama ${ICONS.arrow}`}
+            </button>
+          `;
+        } else if (role.kind === "approver") {
+          const sealed = state.sealedRules[role.orgId];
+          const lim = state.sliderVal[role.orgId];
+          primaryHtml = `
+            <button class="cta-btn cta-calm" id="sealRuleBtn" type="button">
+              ${sealed ? `${ICONS.shield} Umbral sellado en ${lim}% (editar arriba)` : `Sellar tope en ${lim}% ${ICONS.arrow}`}
+            </button>
+          `;
+        } else if (role.kind === "arbiter") {
+          const bothReady = state.submitted.clinica_andes && state.submitted.hospital_rural;
+          primaryHtml = `
+            <div class="dual-cta">
+              <button class="cta-btn cta-bleed-outline" id="vetoBtn" type="button" ${!bothReady || state.vetoedB ? "disabled" : ""}>
+                Vetar a B
+              </button>
+              <button class="cta-btn cta-calm" id="approveBtn" type="button" ${!bothReady ? "disabled" : ""}>
+                Aprobar y asignar
+              </button>
+            </div>
+          `;
+        }
+      }
+
+      const tabs = [
+        { id: "turn", label: "Tu turno", icon: ICONS.turn },
+        { id: "secrets", label: "Secretos", icon: ICONS.lock },
+        ...(role.kind !== "arbiter" ? [{ id: "agent", label: "Mi agente", icon: ICONS.agent }] : []),
+        { id: "room", label: "Sala", icon: ICONS.room },
+      ];
+
+      dock.innerHTML = `
+        ${primaryHtml}
+        <nav class="tab-bar" aria-label="Navegación móvil">
+          ${tabs
+            .map(
+              (t) => `
+            <button class="tab-btn ${state.tab === t.id ? "active" : ""}" data-tab="${t.id}" type="button">
+              ${t.icon}
+              <span>${t.label}</span>
+            </button>
+          `
+            )
+            .join("")}
+        </nav>
+      `;
+
+      dock.querySelectorAll("[data-tab]").forEach((btn) => {
+        btn.onclick = () => {
+          state.tab = btn.dataset.tab;
+          render();
+        };
+      });
+
+      const subBtn = document.getElementById("submitCandBtn");
+      if (subBtn) {
+        subBtn.onclick = () => {
+          state.submitted[role.orgId] = true;
+          addAudit(`${role.title} presentó a ${role.patient} (${role.score}).`);
+          showToast(`<strong>${role.patient} presentado en vivo</strong><br/>Tu co-piloto y el escenario se actualizaron.`, "calm");
+          render();
+        };
+      }
+
+      const sealBtn = document.getElementById("sealRuleBtn");
+      if (sealBtn) {
+        sealBtn.onclick = () => {
+          state.sealedRules[role.orgId] = true;
+          const lim = state.sliderVal[role.orgId];
+          addAudit(`${role.title} selló el umbral en ${lim}% (confiabilidad ${role.pnAfter}).`);
+          showToast(`<strong>Regla sellada en ${lim}%</strong><br/>Confiabilidad ilustrativa subió a ${role.pnAfter}.`, "calm");
+          render();
+        };
+      }
+
+      const vetoBtn = document.getElementById("vetoBtn");
+      if (vetoBtn) {
+        vetoBtn.onclick = () => {
+          const reason = (document.getElementById("reasonArea")?.value || "").trim();
+          if (!reason) { showToast("Escribe o elige una razón obligatoria para vetar.", "bleed"); return; }
+          state.vetoedB = true;
+          state.reasonText = reason;
+          addAudit(`Comité vetó a Paciente B: "${reason}"`);
+          showToast("<strong>Veto registrado en bitácora</strong><br/>La propuesta pasó a Paciente A (Clínica Andes).", "bleed");
+          render();
+        };
+      }
+
+      const approveBtn = document.getElementById("approveBtn");
+      if (approveBtn) {
+        approveBtn.onclick = () => {
+          const reason = (document.getElementById("reasonArea")?.value || "").trim();
+          if (!reason) { showToast("Elige un chip o escribe una razón obligatoria.", "bleed"); return; }
+          state.reasonText = reason;
+          state.sealedVerdict = {
+            time: fmtClock(state.elapsedSec),
+            winnerOrg: state.vetoedB ? "Clínica Andes" : "Hospital Rural Valle Sur",
+            winnerPatient: state.vetoedB ? "Paciente A (0,52)" : "Paciente B (0,53)",
+            basis: state.vetoedB ? "Reasignado tras veto auditado" : "Empate < 0,02 · Desempate por equidad",
+            reason,
+          };
+          addAudit(`Comité selló la cama para ${state.sealedVerdict.winnerOrg}.`);
+          state.screen = "verdict";
+          render();
+        };
+      }
+    }
+
+    function wireAppListeners(role) {
+      const peek = document.getElementById("peekBreachBtn");
+      if (peek) peek.onclick = () => triggerBreach(role.rivalLabel, false);
+
+      const vaultToggle = document.getElementById("vaultToggle");
+      if (vaultToggle) {
+        vaultToggle.onclick = () => {
+          state.ownSecretHidden[role.key] = !state.ownSecretHidden[role.key];
+          showToast(
+            state.ownSecretHidden[role.key]
+              ? "<strong>Dato reservado nuevamente</strong><br/>Oculto para los demás roles."
+              : "<strong>Dato compartido en tu organización</strong><br/>Actualizado por SSE.",
+            "ink"
+          );
+          render();
+        };
+      }
+
+      const slider = document.getElementById("limitSlider");
+      if (slider) {
+        slider.oninput = (e) => {
+          state.sliderVal[role.orgId] = Number(e.target.value);
+          state.sealedRules[role.orgId] = false;
+          render();
+        };
+      }
+
+      document.querySelectorAll("[data-breach]").forEach((btn) => {
+        btn.onclick = () => triggerBreach(btn.dataset.breach, false);
+      });
+
+      const advBtn = document.getElementById("agentAdviseBtn");
+      if (advBtn) {
+        advBtn.onclick = () => {
+          state.agentReply = role.agentText;
+          addAudit(`${role.agentName} redactó una propuesta desde tu vista filtrada.`);
+          render();
+        };
+      }
+
+      const spyBtn = document.getElementById("agentSpyBtn");
+      if (spyBtn) {
+        spyBtn.onclick = () => triggerBreach(role.hiddenFields[0].label, true);
+      }
+
+      document.querySelectorAll("[data-ridx]").forEach((chip) => {
+        chip.onclick = () => {
+          const idx = Number(chip.dataset.ridx);
+          state.selectedReasonIdx = idx;
+          state.reasonText = QUICK_REASONS[idx].text;
+          render();
+        };
+      });
+
+      const rArea = document.getElementById("reasonArea");
+      if (rArea) {
+        rArea.oninput = (e) => { state.reasonText = e.target.value; };
+      }
+    }
+
+    function renderDirectorPanel() {
+      const list = document.getElementById("dirRoleList");
+      list.innerHTML = ROLES.map(
+        (r) => `
+        <button class="dir-btn ${state.roleKey === r.key ? "active" : ""}" data-pick-role="${r.key}" type="button">
+          <span style="display:flex;align-items:center;gap:8px;">
+            <span class="role-dot" style="background:${r.accent};width:9px;height:9px;"></span>
+            <span>${r.shortTag} · ${r.orgName}</span>
+          </span>
+          <span style="font-size:11px;opacity:0.75;">2/2</span>
+        </button>
+      `
+      ).join("");
+
+      list.querySelectorAll("[data-pick-role]").forEach((b) => {
+        b.onclick = () => {
+          state.roleKey = b.dataset.pickRole;
+          state.screen = "app";
+          state.tab = "turn";
+          state.agentReply = null;
+          state.agentBreachShown = false;
+          render();
+        };
+      });
+    }
+
+    function render() {
+      document.title = `${state.brand} — Prototipo Mobile Jurado & Público`;
+      renderHeader();
+      renderDirectorPanel();
+
+      if (state.screen === "reveal") {
+        renderReveal();
+        return;
+      }
+      if (state.screen === "verdict") {
+        renderVerdict();
+        return;
+      }
+
+      const role = getRole();
+      if (role.kind === "arbiter" && state.tab === "agent") state.tab = "turn";
+
+      const body = document.getElementById("appBody");
+      body.style.padding = "14px 16px 20px";
+
+      if (state.tab === "turn") body.innerHTML = renderTurnTab(role);
+      else if (state.tab === "secrets") body.innerHTML = renderSecretsTab(role);
+      else if (state.tab === "agent") body.innerHTML = renderAgentTab(role);
+      else body.innerHTML = renderRoomTab();
+
+      renderDockForApp(role);
+      wireAppListeners(role);
+    }
+
+    function spinRandomRole() {
+      state.screen = "reveal";
+      state.agentReply = null;
+      state.agentBreachShown = false;
+      render();
+      const card = document.getElementById("revealCard");
+      if (card) card.classList.add("shuffling");
+
+      let ticks = 0;
+      const timer = setInterval(() => {
+        const next = ROLES[Math.floor(Math.random() * ROLES.length)];
+        state.roleKey = next.key;
+        renderReveal();
+        const c2 = document.getElementById("revealCard");
+        if (c2) c2.classList.add("shuffling");
+        ticks++;
+        if (ticks >= 6) {
+          clearInterval(timer);
+          render();
+          showToast(`<strong>Rol asignado al azar</strong><br/>Compartes silla con 1 co-piloto (10 en sala).`, "ink");
+        }
+      }, 70);
+    }
+
+    function resetDemo() {
+      state.screen = "reveal";
+      state.tab = "turn";
+      state.elapsedSec = 18;
+      state.submitted = { clinica_andes: false, hospital_rural: false };
+      state.sealedRules = { clinica_andes: false, hospital_rural: false };
+      state.sliderVal = { clinica_andes: 60, hospital_rural: 50 };
+      state.breachCount = 0;
+      state.agentReply = null;
+      state.agentBreachShown = false;
+      state.vetoedB = false;
+      state.sealedVerdict = null;
+      render();
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    // Listeners panel de laboratorio
+    document.getElementById("dirSpinBtn").onclick = spinRandomRole;
+    document.getElementById("dirCopilotBtn").onclick = () => {
+      const r = getRole();
+      addAudit(`Co-piloto en ${r.shortTag} interactuó en vivo.`);
+      showToast(`<strong>Tu co-piloto actuó en vivo</strong><br/>Ambos comparten el rol ${r.shortTag} sin colisión 409.`, "calm");
+      render();
+    };
+    document.getElementById("dirSubmitAllBtn").onclick = () => {
+      state.submitted = { clinica_andes: true, hospital_rural: true };
+      addAudit("Ambos hospitales presentaron sus casos (0,52 vs 0,53).");
+      showToast("<strong>Casos listos para el Comité Ético</strong><br/>Empate técnico 0,52 vs 0,53.", "calm");
+      render();
+    };
+    document.getElementById("dirResetBtn").onclick = resetDemo;
+    document.getElementById("dirBrandInput").oninput = (e) => {
+      state.brand = e.target.value.trim() || "[NOMBRE_APP]";
+      render();
+    };
+
+    // Reloj vivo de espera
+    setInterval(() => {
+      if (state.screen === "verdict") return;
+      state.elapsedSec++;
+      const c = document.getElementById("liveClock");
+      if (c) c.textContent = fmtClock(state.elapsedSec);
+    }, 1000);
+
+    // Arranque inicial con revelación aleatoria
+    render();
+  </script>
+</body>
+</html>

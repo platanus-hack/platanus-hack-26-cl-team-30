@@ -53,56 +53,99 @@
 
   --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
   /* Sombras teñidas con la tinta, nunca gris neutro. */
-  --shadow-soft: 0 1px 2px rgb(28 40 38 / 0.05), 0 6px 18px -8px rgb(28 40 38 / 0.16);
-  --shadow-lift: 0 2px 4px rgb(28 40 38 / 0.05), 0 20px 44px -20px rgb(28 40 38 / 0.28);
+  --shadow-soft: 0 1px 2px rgb(36 64 58 / 0.05), 0 6px 18px -8px rgb(36 64 58 / 0.16);
+  --shadow-lift: 0 2px 4px rgb(36 64 58 / 0.05), 0 20px 44px -20px rgb(36 64 58 / 0.28);
 }
 
 /*
- * Paleta de Nexo. Todos los pares texto/fondo cumplen contraste AA (4,5:1).
- *   teal    #0F766E  acción principal y marca
- *   fondo   #FAFAF7  cálido, nunca blanco puro de fondo
- *   verde   #15803D  resuelto
- *   ámbar   #B45309  por firmar o en disputa
- *   rojo    #B91C1C  solo bloqueado o esperando
+ * Paleta oficial de Nexo (docs/DISENO.md): la misma de la pantalla grande
+ * (src/components/stage/command-styles.ts) y del teléfono (src/components/seat/seat.css).
+ *   ivory       #FFFDF8  superficies y tarjetas
+ *   mint        #CFEAE3  fondos de marca        mint-soft #EAF5F1  fondos suaves
+ *   sage        #4F7C6D  acento y foco          ink       #24403A  texto y botón primario
+ *   clay-ink    #8F5743  atención               verde     #15803D  resuelto
+ *   rojo        #B91C1C  solo bloqueado o esperando
+ * Pares de texto y fondo con contraste AA (4,5:1).
  */
 :root {
-  --background: #fafaf7;
-  --foreground: #1c2826;
-  --card: #ffffff;
-  --card-foreground: #1c2826;
-  --popover: #ffffff;
-  --popover-foreground: #1c2826;
-  --primary: #0f766e;
-  --primary-foreground: #ffffff;
-  --secondary: #f0efe9;
-  --secondary-foreground: #1c2826;
-  --muted: #f0efe9;
-  --muted-foreground: #57534e;
-  --accent: #e6f2f0;
-  --accent-foreground: #134e4a;
+  --background: #fffdf8;
+  --foreground: #24403a;
+  --card: #fffdf8;
+  --card-foreground: #24403a;
+  --popover: #fffdf8;
+  --popover-foreground: #24403a;
+  --primary: #24403a;
+  --primary-foreground: #fffdf8;
+  --secondary: #eaf5f1;
+  --secondary-foreground: #24403a;
+  --muted: #eaf5f1;
+  --muted-foreground: #4d6860;
+  --accent: #eaf5f1;
+  --accent-foreground: #24403a;
   --destructive: #b91c1c;
-  --border: #e2e0d8;
-  --input: #cfccc2;
-  --ring: #0f766e;
+  --border: #d7e6e0;
+  --input: #b7cdc5;
+  --ring: #4f7c6d;
   --radius: 0.75rem;
 
-  --brand: #0f766e;
-  --brand-soft: #e6f2f0;
-  --brand-ink: #134e4a;
+  --brand: #4f7c6d;
+  --brand-soft: #cfeae3;
+  --brand-ink: #24403a;
   --bleed: #b91c1c;
-  --bleed-soft: #fdf2f2;
+  --bleed-soft: #fbe9e6;
   --calm: #15803d;
-  --calm-soft: #f0f8f2;
-  --clash: #b45309;
-  --clash-soft: #fef7ec;
-  /* Acento de cada rol (viene del genoma: emerald, amber, violet). No son estados. */
-  --role-emerald: #0f766e;
-  --role-amber: #1d4ed8;
-  --role-violet: #6d28d9;
-  --violet-soft: #f3eefd;
+  --calm-soft: #e2f3e7;
+  --clash: #8f5743;
+  --clash-soft: #f6e9e3;
+  /* Acento de cada rol (viene del genoma: emerald, amber, violet). No son estados. Iguales al teléfono. */
+  --role-emerald: #4f7c6d;
+  --role-amber: #b0745c;
+  --role-violet: #6a5aa8;
+  --violet-soft: #eeebf8;
 
   --nav-h: 4rem;
   color-scheme: light;
+}
+
+/*
+ * Modo «night» de la paleta oficial. Es opcional: se activa con data-theme="dark"
+ * en un contenedor. No sigue a prefers-color-scheme todavía porque varias piezas
+ * de la portada y de las salas usan bg-white fijo (ver docs/DISENO.md).
+ */
+[data-theme="dark"] {
+  --background: #151515;
+  --foreground: #fffdf8;
+  --card: #222220;
+  --card-foreground: #fffdf8;
+  --popover: #222220;
+  --popover-foreground: #fffdf8;
+  --primary: #6faf9b;
+  --primary-foreground: #151515;
+  --secondary: #2c2c2a;
+  --secondary-foreground: #fffdf8;
+  --muted: #2c2c2a;
+  --muted-foreground: #b4b4ac;
+  --accent: #2c2c2a;
+  --accent-foreground: #fffdf8;
+  --destructive: #fca5a5;
+  --border: rgb(255 253 248 / 13%);
+  --input: rgb(255 253 248 / 24%);
+  --ring: #e1ff00;
+
+  --brand: #6faf9b;
+  --brand-soft: #24302c;
+  --brand-ink: #cfeae3;
+  --bleed: #fca5a5;
+  --bleed-soft: #3a2220;
+  --calm: #86efac;
+  --calm-soft: #1d3324;
+  --clash: #e0a891;
+  --clash-soft: #3a2b24;
+  --role-emerald: #8fd3bd;
+  --role-amber: #e0a891;
+  --role-violet: #b9aaf0;
+  --violet-soft: #2a2638;
+  color-scheme: dark;
 }
 
 @layer base {
@@ -244,20 +287,21 @@
     padding: 0.9rem 1.75rem;
     font-size: 1.125rem;
   }
+  /* Botón primario en tinta, como en la pantalla grande y el teléfono. */
   .btn-primary {
-    background: var(--brand);
-    color: #ffffff;
+    background: var(--primary);
+    color: var(--primary-foreground);
     box-shadow:
       inset 0 1px 0 rgb(255 255 255 / 0.14),
-      0 1px 2px rgb(28 40 38 / 0.2),
-      0 8px 18px -10px rgb(15 118 110 / 0.6);
+      0 1px 2px rgb(36 64 58 / 0.2),
+      0 8px 18px -10px rgb(36 64 58 / 0.6);
   }
   .btn-primary:hover:not([disabled]) {
-    background: var(--brand-ink);
+    background: color-mix(in srgb, var(--primary) 82%, #000);
   }
   .btn-line {
     color: var(--foreground);
-    background: #ffffff;
+    background: var(--card);
     box-shadow: inset 0 0 0 1.5px var(--input);
   }
   .btn-line:hover:not([disabled]) {
@@ -289,9 +333,9 @@
   /* Superficie: panel blanco sobre el fondo cálido. */
   .panel {
     border-radius: 1.25rem;
-    background: #ffffff;
+    background: var(--card);
     box-shadow:
-      0 0 0 1px rgb(28 40 38 / 0.06),
+      0 0 0 1px rgb(36 64 58 / 0.08),
       var(--shadow-soft);
   }
 
@@ -300,12 +344,12 @@
     min-height: 3rem;
     padding: 0.7rem 0.95rem;
     border-radius: 0.75rem;
-    background: #ffffff;
+    background: var(--card);
     color: var(--foreground);
     font-size: 1rem;
     box-shadow:
       inset 0 0 0 1.5px var(--input),
-      inset 0 2px 3px rgb(28 40 38 / 0.04);
+      inset 0 2px 3px rgb(36 64 58 / 0.04);
     transition: box-shadow 160ms var(--ease-expo);
   }
   .field::placeholder {
@@ -348,7 +392,7 @@
     border-radius: 50%;
     background: var(--brand);
     border: 3px solid #ffffff;
-    box-shadow: 0 1px 4px rgb(28 40 38 / 0.3);
+    box-shadow: 0 1px 4px rgb(36 64 58 / 0.3);
   }
   .slider::-moz-range-thumb {
     width: 1.1rem;
@@ -356,7 +400,7 @@
     border-radius: 50%;
     background: var(--brand);
     border: 3px solid #ffffff;
-    box-shadow: 0 1px 4px rgb(28 40 38 / 0.3);
+    box-shadow: 0 1px 4px rgb(36 64 58 / 0.3);
   }
   .slider:disabled {
     cursor: default;

@@ -39,7 +39,6 @@ import {
 } from "lucide-react";
 import { CommitteeNotify } from "@/components/nexo/committee-notify";
 import { EventToasts } from "@/components/nexo/event-toasts";
-import { roomStep } from "@/components/nexo/guide";
 import { useIntegrations } from "@/components/nexo/integrations";
 import { isLocalUrl, publicBaseUrl, roleJoinUrl } from "@/components/nexo/public-url";
 import { QrCode } from "@/components/nexo/qr-code";
@@ -51,6 +50,10 @@ import { CROSS_ORG_SCENARIOS, CROSS_ORG_SCENARIO_IDS } from "@/lib/genome/scenar
 import { SUGGESTIONS, answer } from "./ask";
 import { commandStyles } from "./command-styles";
 import { Dialog, Dock, Panel, State, type ViewId, type ViewInfo } from "./command-parts";
+import { Galaxy } from "./galaxy";
+import { JoinView } from "./join-view";
+import { shortLabel, stageSeats } from "./seats";
+import { storyProgress } from "./story";
 import { StoryView } from "./story-view";
 
 const VIEWS: ViewInfo[] = [
@@ -60,16 +63,21 @@ const VIEWS: ViewInfo[] = [
   { id: "acta", label: "Acta", short: "Acta", icon: FileText },
 ];
 
-const DESCRIPTION: Record<ViewId, string> = {
-  mando: "La historia de la decisión: en qué paso vamos, qué se disputa y qué falta ahora.",
-  ranking: "El orden que da la regla. Es la misma para todos y el costo no entra.",
-  organizaciones: "Quién está conectado, qué datos no viajan a esta pantalla y los códigos para entrar.",
-  acta: "Quién decidió qué, cuándo y por qué. Lo mismo que va en el archivo.",
-};
-
 const SCENARIO_SHORT: Record<string, string> = { hospitales: "Hospitales", construccion: "Construcción", logistica: "Logística" };
 const THEME_KEY = "nexo:stage-theme";
 const noopSubscribe = () => () => {};
+/** Tiempo que el paso «Unirse» sigue a la vista después de completarse, para que se vea la esfera armada. */
+const JOIN_LINGER_MS = 2600;
+
+/** Sigue en true un rato después de que «active» pasa a false. */
+function useLinger(active: boolean, ms: number): boolean {
+  const [held, setHeld] = useState(active);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setHeld(active), active ? 0 : ms);
+    return () => window.clearTimeout(timer);
+  }, [active, ms]);
+  return active || held;
+}
 
 type Props = {
   room: ProjectedRoomState;
@@ -108,7 +116,11 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
   };
 
   const cross = room.mode === "cross_org" && !!room.scarcity && !!room.allocation;
-  const step = roomStep(room);
+  // La galaxia sale de los asientos reales de la sala: un nodo por rol conectado.
+  const seats = stageSeats(room);
+  const progress = storyProgress(room);
+  const joining = useLinger(progress.index === 0, JOIN_LINGER_MS);
+  const sealed = progress.done;
   const canNotify = !!host && cross && !!integrations && (integrations.whatsapp || (integrations.voice && integrations.canCall));
   const current = VIEWS.find((entry) => entry.id === view)!;
 
@@ -152,12 +164,12 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
 
         <div className="gd-stage-wrap">
           <Dock views={VIEWS} active={view} side select={setView} />
-          <main className="gd-stage">
+          <main className="gd-stage" data-join={view === "mando" && joining}>
+            {view === "mando" && <Galaxy seats={seats} sealed={sealed} variant={joining ? "hero" : "backdrop"} theme={theme} />}
             <div className="gd-stage-scroll">
               <header className="gd-view-head">
                 <div>
-                  <h1>{current.label}</h1>
-                  <p>{view === "mando" ? DESCRIPTION.mando : `Paso ${step.index + 1} de ${step.total}: ${step.labels[step.index]}. ${DESCRIPTION[view]}`}</p>
+                  <h1>{view === "mando" && joining ? "Escanea y entra" : current.label}</h1>
                 </div>
                 <div className="gd-view-actions">
                   {cross && (
@@ -173,7 +185,8 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
               </header>
 
               <div className="gd-content" data-view={view}>
-                {view === "mando" && <StoryView room={room} onNotify={canNotify ? () => setModal("notify") : undefined} />}
+                {view === "mando" &&
+                  (joining ? <JoinView room={room} seats={seats} theme={theme} baseUrl={baseUrl} /> : <StoryView room={room} onNotify={canNotify ? () => setModal("notify") : undefined} />)}
                 {view === "ranking" && <RankingView room={room} />}
                 {view === "organizaciones" && <OrgsView room={room} baseUrl={baseUrl} committeeKey={host?.committeeKey ?? null} onOpenOwnRoom={onOpenOwnRoom} />}
                 {view === "acta" && (
@@ -185,7 +198,7 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
           <Dock views={VIEWS} active={view} select={setView} />
         </div>
         <footer className="gd-footer">
-          <span className="nx-footer-note">Demostración simulada de coordinación organizacional; no constituye diagnóstico ni uso real de datos de pacientes.</span>
+          <span className="nx-footer-note">Demostración simulada. No es una herramienta clínica.</span>
           <Link href={`/room/${encodeURIComponent(room.roomId)}`}>
             <Smartphone aria-hidden="true" width={12} height={12} /> Entrar con un rol
           </Link>
@@ -198,12 +211,24 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
           <CommitteeNotify room={room} credentials={host} />
         </Dialog>
       )}
-      <EventToasts room={room} />
+      {/* Al unirse, las entradas ya se ven en la galaxia y los avisos taparían el código. */}
+      {!(view === "mando" && joining) && <EventToasts room={room} />}
     </div>
   );
 }
 
 // --- Vistas ---------------------------------------------------------------------
+
+/** Una explicación que no va a la vista: queda detrás de «¿Por qué?». */
+function Why({ children }: { children: React.ReactNode }) {
+  if (!children) return null;
+  return (
+    <details className="nx-why">
+      <summary>¿Por qué?</summary>
+      <p>{children}</p>
+    </details>
+  );
+}
 
 const DENIED: AuditEvent["type"][] = ["RBAC_DENIED", "AUTH_FAILED", "GATE_BLOCKED", "HITL_VETOED"];
 const SETTLED: AuditEvent["type"][] = ["RULE_SEALED", "HITL_APPROVED", "ALLOCATION_SEALED", "STAKES_CONTAINED"];
@@ -249,9 +274,8 @@ function AuditTable({ room, acta }: { room: ProjectedRoomState; acta: { md: stri
           </tbody>
         </table>
       </div>
-      {events.length === 0 && <p className="gd-empty">Todavía no pasa nada en esta sala.</p>}
+      {events.length === 0 && <p className="gd-empty">Sin eventos todavía.</p>}
       <p className="nx-meta" style={{ marginTop: 10 }}>
-        Es la misma bitácora que va en el acta.{" "}
         <a href={acta.md} download style={{ textDecoration: "underline" }}>
           Descargar el acta
         </a>
@@ -267,8 +291,8 @@ function RankingView({ room }: { room: ProjectedRoomState }) {
     const org = room.orgs[0];
     return (
       <div className="gd-analytics">
-        <Panel title="Esta sala tiene una sola organización" subtitle="No hay ranking: se decide la compuerta del caso.">
-          <p className="nx-note">{org?.gate.message}</p>
+        <Panel title="Una sola organización: sin ranking">
+          <Why>{org?.gate.message}</Why>
         </Panel>
       </div>
     );
@@ -278,7 +302,7 @@ function RankingView({ room }: { room: ProjectedRoomState }) {
   return (
     <div className="gd-analytics">
       <div>
-        <Panel title="Orden y razones" subtitle={allocation.status === "SEALED" ? "Sellado por el Comité" : allocation.status === "PROPOSED" ? "Propuesto por la regla, falta el Comité" : "Esperando los casos"}>
+        <Panel title="Orden" subtitle={allocation.status === "SEALED" ? "Sellado por el Comité" : allocation.status === "PROPOSED" ? "Falta el Comité" : "Esperando los casos"}>
           <div className="nx-rank">
             {allocation.ranking.map((entry) => (
               <div key={entry.caseId} className="nx-rank-row" data-winner={entry.caseId === allocation.winnerCaseId}>
@@ -298,16 +322,16 @@ function RankingView({ room }: { room: ProjectedRoomState }) {
                     Urgencia<b>+{formatScore(entry.terms.timeCriticality)}</b>
                   </span>
                   <span>
-                    Riesgo por demora<b>−{formatScore(Math.abs(entry.terms.delayRisk))}</b>
+                    Demora<b>−{formatScore(Math.abs(entry.terms.delayRisk))}</b>
                   </span>
                   <span>
-                    Necesidad sin cubrir<b>{formatScore(entry.unmetNeedScore)}</b>
+                    Sin cubrir<b>{formatScore(entry.unmetNeedScore)}</b>
                   </span>
                 </span>
               </div>
             ))}
-            {allocation.ranking.length === 0 && <p className="gd-empty">Ninguna organización presentó su caso todavía.</p>}
-            {allocation.ranking.length > 1 && <p className="nx-note">{allocation.explanation}</p>}
+            {allocation.ranking.length === 0 && <p className="gd-empty">Sin casos todavía.</p>}
+            {allocation.ranking.length > 1 && <Why>{allocation.explanation}</Why>}
             {decision && (
               <figure>
                 <figcaption className="nx-meta">
@@ -344,20 +368,20 @@ function OrgsView({ room, baseUrl, committeeKey, onOpenOwnRoom }: { room: Projec
           const connected = org.roles.filter((role) => role.connected).length;
           const hidden = org.fields.filter((field) => field.redacted);
           return (
-            <Panel key={org.orgId} title={org.orgName} subtitle={connected === 0 ? "Nadie conectado todavía" : connected === 1 ? "1 persona conectada" : `${connected} personas conectadas`}>
+            <Panel key={org.orgId} title={org.orgName} subtitle={`${connected}/${org.roles.length} conectados`}>
               <div className="nx-chips">
                 {org.conflict.hasConflict ? (
                   <State state="sign" icon={Scale}>
-                    Límite en disputa
+                    En disputa
                   </State>
                 ) : (
                   <State state={org.authorityRule.sealedThreshold !== null ? "calm" : "plain"} icon={CircleCheck}>
-                    {org.authorityRule.sealedThreshold !== null ? "Límite acordado" : "Sin límite acordado"}
+                    {org.authorityRule.sealedThreshold !== null ? "Límite acordado" : "Sin límite"}
                   </State>
                 )}
                 {org.gate.status === "BLOCKED_HITL_REQUIRED" && (
                   <State state="block" icon={TriangleAlert}>
-                    Falta una firma
+                    Falta firma
                   </State>
                 )}
                 {org.gate.status === "SEALED" && (
@@ -367,20 +391,21 @@ function OrgsView({ room, baseUrl, committeeKey, onOpenOwnRoom }: { room: Projec
                 )}
                 {candidate && (
                   <State state={candidate.submitted ? "calm" : "plain"} icon={Send}>
-                    {candidate.submitted ? "Caso presentado" : "Caso sin presentar"}
+                    {candidate.submitted ? "Presentado" : "Sin presentar"}
                   </State>
                 )}
               </div>
               {hidden.length > 0 && (
                 <>
                   <p className="nx-meta" style={{ marginBottom: 6 }}>
-                    Datos que no viajan a esta pantalla
+                    Reservado
                   </p>
-                  <ul className="nx-fields">
+                  <ul className="nx-locked">
                     {hidden.map((field) => (
                       <li key={field.key}>
-                        <span>{field.label}</span>
-                        <Lock aria-label="No viaja" />
+                        <Lock aria-hidden="true" />
+                        <span>{shortLabel(field.label)}</span>
+                        <i aria-hidden="true" />
                       </li>
                     ))}
                   </ul>
@@ -391,11 +416,11 @@ function OrgsView({ room, baseUrl, committeeKey, onOpenOwnRoom }: { room: Projec
         })}
       </div>
 
-      <Panel title="Entrar con el teléfono" subtitle="Un código por rol. El del Comité es el que escanea una persona del público.">
+      <Panel title="Un código por rol">
         {baseUrl && isLocalUrl(baseUrl) && (
           <p className="nx-warn" role="alert">
             <TriangleAlert aria-hidden="true" width={16} height={16} />
-            Los códigos apuntan a {baseUrl} y un teléfono no puede abrir esa dirección. Abre esta pantalla con la IP de la red local o define NEXT_PUBLIC_BASE_URL.
+            Códigos locales: un teléfono no los abre. Usa la IP de la red.
           </p>
         )}
         {committee &&
@@ -404,10 +429,7 @@ function OrgsView({ room, baseUrl, committeeKey, onOpenOwnRoom }: { room: Projec
             <div className="nx-qr-hero">
               <QrCode url={roleJoinUrl(baseUrl, room.roomId, committee.orgId, committee.roleId, committeeKey)} label={`Código para entrar como ${committee.title}`} size={180} />
               <div style={{ minWidth: 200, flex: 1 }}>
-                <h3>Escanea y decide como {committee.title}</h3>
-                <p className="nx-meta" style={{ marginTop: 6 }}>
-                  Vas a aprobar o vetar, y tendrás que escribir por qué.
-                </p>
+                <h3>Escanea y decide: {committee.title}</h3>
                 <p style={{ marginTop: 8 }}>
                   <State state={committee.connected ? "calm" : "plain"} icon={committee.connected ? CircleCheck : Hourglass}>
                     {committee.connected ? "Comité conectado" : "Esperando al Comité"}
@@ -418,10 +440,7 @@ function OrgsView({ room, baseUrl, committeeKey, onOpenOwnRoom }: { room: Projec
           ) : (
             <div className="nx-qr-hero">
               <div style={{ flex: 1 }}>
-                <h3>El código del Comité lo tiene quien abrió esta sala</h3>
-                <p className="nx-meta" style={{ marginTop: 6 }}>
-                  Para mostrarlo aquí, abre una sala propia de este mismo caso: tendrás el código del Comité y los controles.
-                </p>
+                <h3>Código del Comité: abre tu sala</h3>
               </div>
               <button
                 type="button"
@@ -484,9 +503,9 @@ function ActaView({
   return (
     <div className="gd-analytics">
       <div className="gd-analytics-grid">
-        <Panel title="Decisiones con su razón" subtitle="Cada firma queda escrita y no se puede cambiar.">
+        <Panel title="Decisiones con su razón">
           {room.decisions.length === 0 ? (
-            <p className="gd-empty">Todavía nadie ha firmado. Cuando alguien apruebe o vete, su razón aparecerá aquí.</p>
+            <p className="gd-empty">Nadie ha firmado todavía.</p>
           ) : (
             <div className="nx-rank">
               {room.decisions.map((decision) => (
@@ -512,10 +531,10 @@ function ActaView({
           </div>
         </Panel>
         <div className="gd-command-side" style={{ gridColumn: "auto" }}>
-          <Panel title="Dónde corre el modelo" subtitle="Informado por el servidor">
+          <Panel title="Dónde corre el modelo">
             <p className="gd-approval-content" style={{ marginBottom: 10 }}>
               <State state={local ? "calm" : "sign"} icon={local ? ShieldCheck : TriangleAlert}>
-                {local ? "Modelo local: ningún dato sale de la red" : "Modelo en la nube"}
+                {local ? "Local: nada sale de la red" : "En la nube"}
               </State>
             </p>
             <div className="gd-streams">
@@ -524,7 +543,7 @@ function ActaView({
                 <strong>{telemetry.modelName}</strong>
               </div>
               <div>
-                <span>A la nube, desde el arranque</span>
+                <span>Enviado a la nube</span>
                 <strong>{local && telemetry.bytesSentToCloud === 0 ? "nada" : `${telemetry.bytesSentToCloud} B`}</strong>
               </div>
             </div>
@@ -536,7 +555,7 @@ function ActaView({
         <summary>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
             <ScrollText aria-hidden="true" /> Ver registro
-            <span className="nx-meta">({room.auditLog.length} eventos, para el jurado)</span>
+            <span className="nx-meta">{room.auditLog.length} eventos</span>
           </span>
           <ChevronDown aria-hidden="true" className="nx-chevron" />
         </summary>
@@ -559,7 +578,7 @@ function HostPanel({ room, credentials, onNotify }: { room: ProjectedRoomState; 
     setMessage(result.ok ? ok : (result.error ?? "No se pudo."));
   }
   return (
-    <Panel title="Controles del presentador" subtitle={room.autopilot?.lastStep ? `Último paso del ensayo: ${room.autopilot.lastStep}` : "Solo los ve quien abrió la sala"}>
+    <Panel title="Controles del presentador" subtitle={room.autopilot?.lastStep ? `Ensayo: ${room.autopilot.lastStep}` : undefined}>
       <div className="gd-balance-actions" style={{ margin: 0 }}>
         {onNotify && (
           <button type="button" className="gd-primary" onClick={onNotify}>
@@ -580,7 +599,7 @@ function HostPanel({ room, credentials, onNotify }: { room: ProjectedRoomState; 
           className="gd-secondary"
           disabled={busy !== null}
           onClick={() => {
-            if (window.confirm("¿Reiniciar la sala? Todos vuelven a empezar y deberán entrar de nuevo.")) void run("reset", "", "DELETE", undefined, "Sala reiniciada.");
+            if (window.confirm("¿Reiniciar la sala? Todos deberán entrar de nuevo.")) void run("reset", "", "DELETE", undefined, "Sala reiniciada.");
           }}
         >
           <RotateCcw aria-hidden="true" /> Reiniciar la sala
@@ -632,7 +651,7 @@ function AskDialog({ room, close }: { room: ProjectedRoomState; close: () => voi
         ))}
       </div>
       <p className="nx-meta" style={{ marginTop: 12 }}>
-        Respondido con los datos que ve esta pantalla. Sin modelo y sin datos reservados.
+        Sin modelo. Sin datos reservados.
       </p>
     </Dialog>
   );

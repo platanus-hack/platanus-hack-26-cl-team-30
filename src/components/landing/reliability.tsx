@@ -4,7 +4,8 @@ import { useRef, useState } from "react";
 import { Bot, UserCheck } from "lucide-react";
 import type { ReliabilityTable } from "./data";
 import { EXPO, MOTION_OK, gsap, useGSAP } from "./gsap";
-import { Heading, Stagger } from "./motion";
+import { Heading } from "./motion";
+import { Why } from "./why";
 
 const pct = (value: number) => `${Math.round(value * 100)}%`;
 
@@ -66,14 +67,9 @@ export function Reliability({ table }: { table: ReliabilityTable }) {
       <div className="wrap grid gap-10 lg:grid-cols-[1fr_1.15fr] lg:gap-20">
         <div>
           <Heading id="por-que-titulo" className="max-w-[15ch]">
-            Un agente solo se equivoca <span className="serif text-brand">un poco en cada paso.</span>
+            Un agente solo <span className="serif text-brand">acumula errores.</span>
           </Heading>
-          <Stagger className="mt-8 max-w-[34rem] space-y-5 text-muted-foreground">
-            <p className="lede text-foreground">
-              Acertar {p}% de las veces suena bien. Pero una decisión importante son muchos pasos seguidos, y los errores se multiplican.
-            </p>
-            <p>Por eso aquí no decide un bot. Los agentes proponen, cada uno con los permisos de su rol, y una persona frena lo que cruza el límite.</p>
-          </Stagger>
+          <p className="lede mt-8 max-w-[34rem]">Por eso los agentes proponen y una persona firma.</p>
           <div className="mt-10 grid max-w-[34rem] gap-6 sm:grid-cols-2">
             <label className="block">
               <span className="flex justify-between font-medium">
@@ -90,11 +86,17 @@ export function Reliability({ table }: { table: ReliabilityTable }) {
           </div>
         </div>
         <div className="space-y-10 self-center">
-          <Chain steps={n} perStep={p / 100} total={autonomous} tone="bleed" label="Agente solo, sin freno" icon={Bot} />
-          <Chain steps={n} perStep={hybridStep} total={hybrid} tone="calm" label="Agentes con una persona que firma" icon={UserCheck} />
-          <p className="small text-muted-foreground">
-            Modelo ilustrativo, calculado por el mismo código de la sala. Supone que la persona que firma detecta {pct(table.h)} de los errores.
-          </p>
+          <Chain steps={n} perStep={p / 100} total={autonomous} tone="bleed" label="Agente solo" icon={Bot} />
+          <Chain steps={n} perStep={hybridStep} total={hybrid} tone="calm" label="Con una persona que firma" icon={UserCheck} />
+          <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
+            <p className="small flex min-h-11 items-center font-semibold text-muted-foreground">Modelo ilustrativo</p>
+            <Why>
+              <p>
+                Acertar {p}% por paso suena bien, pero en {n} pasos seguidos los errores se multiplican. Lo calcula el mismo código de la sala y supone
+                que quien firma detecta {pct(table.h)} de los errores.
+              </p>
+            </Why>
+          </div>
         </div>
       </div>
     </section>

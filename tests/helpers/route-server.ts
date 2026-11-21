@@ -26,6 +26,7 @@ const ROUTES: { pattern: RegExp; file: string }[] = [
   { pattern: /^\/api\/rooms\/([^/]+)$/, file: "rooms/[roomId]/route.ts" },
   { pattern: /^\/api\/rooms\/([^/]+)\/events$/, file: "rooms/[roomId]/events/route.ts" },
   { pattern: /^\/api\/rooms\/([^/]+)\/action$/, file: "rooms/[roomId]/action/route.ts" },
+  { pattern: /^\/api\/rooms\/([^/]+)\/seat$/, file: "rooms/[roomId]/seat/route.ts" },
   { pattern: /^\/api\/rooms\/([^/]+)\/mutate$/, file: "rooms/[roomId]/mutate/route.ts" },
   { pattern: /^\/api\/rooms\/([^/]+)\/acta$/, file: "rooms/[roomId]/acta/route.ts" },
   { pattern: /^\/api\/rooms\/([^/]+)\/autopilot$/, file: "rooms/[roomId]/autopilot/route.ts" },

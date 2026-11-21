@@ -137,6 +137,21 @@ export const CommitteeVetoActionSchema = z.object({
   reason,
 });
 
+/**
+ * Sorteo de silla: lo que acepta POST /api/rooms/:id/seat. No es una acción de
+ * un rol (todavía no hay rol): el servidor elige al azar una silla libre y
+ * entrega su token, igual que JOIN_ROLE.
+ * - committeeKey: la clave del QR del Comité. Solo con ella el puesto del Comité
+ *   entra al sorteo; sin ella se sortea entre los demás roles.
+ * - current: la silla que ya tiene quien pide «sortear otro rol». Con su token
+ *   vigente se le asigna una silla distinta y la anterior queda libre.
+ */
+export const RandomSeatRequestSchema = z.object({
+  committeeKey: z.string().max(64).optional(),
+  current: z.object({ orgId: id, roleId: id, token: z.string().max(128) }).optional(),
+});
+export type RandomSeatRequest = z.infer<typeof RandomSeatRequestSchema>;
+
 export const ActionSchema = z.discriminatedUnion("type", [
   JoinRoleActionSchema,
   LeaveRoleActionSchema,
@@ -178,7 +193,7 @@ export const ACTION_TYPES = ActionSchema.options.map((option) => option.shape.ty
  *   403 RBAC_DENIED (el rol no tiene permiso; queda en la bitácora) ·
  *       COMMITTEE_KEY_REQUIRED (Comité sin la clave del QR) · HOST_ONLY (control de anfitrión sin su token)
  *   404 ROOM_NOT_FOUND · ROLE_NOT_FOUND · FIELD_NOT_FOUND · CANDIDATE_NOT_FOUND
- *   409 ROLE_TAKEN · WRONG_MODE · RULE_NOT_SEALED · GATE_NOT_BLOCKED ·
+ *   409 ROLE_TAKEN · NO_FREE_SEAT (sorteo de silla sin sillas libres) · WRONG_MODE · RULE_NOT_SEALED · GATE_NOT_BLOCKED ·
  *       DECISION_SEALED · ALLOCATION_NOT_READY · FIXED_ROOM (las salas de demo no se mutan) ·
  *       BUSY (ya hay una llamada al modelo en curso para ese rol o esa sala)
  *   429 RATE_LIMITED (demasiadas solicitudes del mismo cliente; ver Retry-After)
@@ -191,6 +206,7 @@ export type ActionErrorCode =
   | "INVALID_TOKEN"
   | "ROOM_NOT_FOUND"
   | "ROLE_TAKEN"
+  | "NO_FREE_SEAT" // 409: el sorteo de silla no encontró ninguna libre
   | "FIXED_ROOM"
   | "ROOM_IN_USE" // 409: mutar una sala que ya tiene personas conectadas
   | "BUSY" // 409: ya hay una llamada al modelo en curso para este rol o esta sala, o un ensayo automático corriendo
@@ -210,6 +226,8 @@ export type ActionOk = {
   token?: string;
   /** JOIN_ROLE: true si fue una reconexión con el token vigente. */
   reconnected?: boolean;
+  /** Sorteo de silla (POST /api/rooms/:id/seat): la silla que tocó. El token viene en `token`. */
+  seat?: { orgId: string; roleId: string };
   /** TEST_RBAC_BREACH: valor leído, cuando el rol sí tenía permiso. */
   value?: string | number;
   /** RUN_ROLE_AGENT: propuesta del agente, solo para quien la pidió. */

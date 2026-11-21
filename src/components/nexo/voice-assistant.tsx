@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AudioLines, LoaderCircle, Mic, PhoneOff } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useIntegrations } from "./integrations";
 
 type Phase = "idle" | "asking" | "connecting" | "listening" | "speaking" | "ended" | "error";
@@ -105,37 +104,40 @@ export function VoiceAssistant({ roomId }: { roomId: string }) {
   }
 
   return (
-    <section className="panel p-5" aria-labelledby="voz-titulo">
-      <h2 id="voz-titulo" className="flex items-center gap-2 text-lg font-semibold">
-        <AudioLines className="size-5 text-brand" aria-hidden /> Decidir hablando
+    <section className="st-card" aria-labelledby="voz-titulo">
+      <h2 id="voz-titulo" className="st-h2">
+        <span>
+          <AudioLines aria-hidden style={{ display: "inline", width: 18, height: 18, marginInlineEnd: 6, verticalAlign: "-3px" }} />
+          Decidir hablando
+        </span>
       </h2>
-      <p className="small mt-1 text-muted-foreground">
-        Un asistente de voz te explica el caso y registra tu decisión con tu razón. Te pediremos permiso para usar el micrófono.
-      </p>
       {live ? (
-        <div className="mt-4 space-y-3">
-          <p className={cn("flex items-center gap-2 font-semibold", phase === "speaking" ? "text-brand" : "text-calm")} role="status">
-            {phase === "connecting" ? <LoaderCircle className="size-5 animate-spin" aria-hidden /> : <span className="breathe size-3 rounded-full bg-current" aria-hidden />}
+        <>
+          <p className="st-support" role="status">
             {PHASE_TEXT[phase]}
           </p>
-          <button type="button" className="btn btn-veto btn-lg w-full sm:w-auto" onClick={hangUp}>
-            <PhoneOff className="size-5" aria-hidden />
+          <button type="button" className="st-btn" data-kind="veto" data-size="small" style={{ marginBlockStart: 12 }} onClick={hangUp}>
+            <PhoneOff aria-hidden />
             Colgar
           </button>
-        </div>
+        </>
       ) : (
-        <div className="mt-4 space-y-3">
-          <button type="button" className="btn btn-primary btn-lg w-full sm:w-auto" disabled={phase === "asking"} onClick={start}>
-            {phase === "asking" ? <LoaderCircle className="size-5 animate-spin" aria-hidden /> : <Mic className="size-5" aria-hidden />}
-            {phase === "asking" ? "Esperando permiso…" : "Hablar con el asistente de voz"}
+        <>
+          <button type="button" className="st-btn" data-kind="line" data-size="small" style={{ marginBlockStart: 12 }} disabled={phase === "asking"} onClick={start}>
+            {phase === "asking" ? <LoaderCircle className="animate-spin" aria-hidden /> : <Mic aria-hidden />}
+            {phase === "asking" ? "Esperando permiso…" : "Hablar con el asistente"}
           </button>
-          {phase === "ended" && <p className="small text-muted-foreground">{PHASE_TEXT.ended}</p>}
+          {phase === "ended" && <p className="st-support">{PHASE_TEXT.ended}</p>}
           {error && (
-            <p role="alert" className="small rounded-xl bg-bleed-soft px-3 py-2 text-bleed">
+            <p role="alert" className="st-alert" style={{ marginBlockStart: 8 }}>
               {error}
             </p>
           )}
-        </div>
+          <details className="st-why">
+            <summary>¿Cómo funciona?</summary>
+            <p>Un asistente de voz te explica el caso y registra la decisión que tú dictes, con tu razón. Te pedirá permiso para usar el micrófono.</p>
+          </details>
+        </>
       )}
     </section>
   );

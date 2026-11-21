@@ -59,11 +59,9 @@ export function Interview() {
       <div className="wrap grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20">
         <div className="lg:sticky lg:top-[calc(var(--nav-h)+2.5rem)] lg:self-start">
           <Heading id="entrevista-titulo" className="max-w-[14ch]">
-            Le preguntamos a quien <span className="serif text-brand">dirige una clínica.</span>
+            Cinco preguntas <span className="serif text-brand">a quien decide.</span>
           </Heading>
-          <p className="lede mt-8 max-w-[32rem] text-muted-foreground">
-            Pensamos en la gente que hoy decide por teléfono a quién le toca la cama. Estas son las preguntas que les hacemos.
-          </p>
+          <p className="lede mt-8 max-w-[32rem] text-muted-foreground">Hoy esa cama se decide por teléfono.</p>
           {interview?.name ? (
             <div className="mt-10 flex items-center gap-4">
               <span className="grid size-14 shrink-0 place-items-center rounded-full bg-brand-soft text-lg font-semibold text-brand-ink">
@@ -77,10 +75,10 @@ export function Interview() {
           ) : (
             <p className="mt-10 max-w-[30rem] text-muted-foreground">
               {load.status === "loading"
-                ? "Buscando la última entrevista publicada…"
+                ? "Buscando la entrevista…"
                 : load.status === "unavailable"
-                  ? "Las entrevistas no están disponibles en este momento. Las preguntas siguen aquí."
-                  : "Todavía no publicamos ninguna entrevista. Si trabajas en una clínica, la primera puede ser la tuya."}
+                  ? "Entrevistas no disponibles por ahora."
+                  : "Aún sin entrevistas publicadas. La primera puede ser tuya."}
             </p>
           )}
           <button type="button" className="btn btn-primary btn-lg mt-8" onClick={askToAnswer}>

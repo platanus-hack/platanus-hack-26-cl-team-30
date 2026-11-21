@@ -30,7 +30,7 @@ import { OrgGenomeSchema, type AutopilotView, type OrgGenome, type ProjectedRoom
 import { CROSS_ORG_SCENARIOS, DEFAULT_CROSS_ORG_SCENARIO, type CrossOrgScenarioId } from "../genome/scenarios";
 import { getInitialCrossOrgRoom, getInitialSingleOrgRoom, getSeedGenome, initialTelemetry, type SeedGenomeId } from "../genome/seeds";
 import { getTelemetry } from "../llm";
-import { ActionSchema, type ActionError, type ActionErrorCode, type ActionOk } from "./actions";
+import { ActionSchema, RandomSeatRequestSchema, type ActionError, type ActionErrorCode, type ActionOk } from "./actions";
 
 // --- Almacén ----------------------------------------------------------------
 
@@ -493,6 +493,76 @@ function join(roomId: string, record: RoomRecord, actor: engine.ActorRef, token:
   const fresh = newToken();
   record.tokens.set(key, fresh);
   return settle(roomId, record, engine.markRoleJoined(record.state, actor, now), { token: fresh, reconnected: false });
+}
+
+// --- Sorteo de silla ---------------------------------------------------------
+
+/**
+ * Sillas que entran al sorteo. El puesto del Comité (el árbitro entre
+ * organizaciones, o el rol que entra por QR en una sola organización) solo
+ * participa si quien pide presentó la clave de su QR: el sorteo no es un atajo
+ * para tomarlo. Los directivos internos de cada organización en una sala entre
+ * organizaciones no se sortean: no tienen turno en ese recorrido.
+ */
+function drawableSeats(state: RoomState, withCommittee: boolean): engine.ActorRef[] {
+  const seats: engine.ActorRef[] = [];
+  for (const genome of state.orgGenomes) {
+    for (const role of genome.roles) {
+      const actor = { orgId: genome.orgId, roleId: role.id };
+      if (isCommitteeSeat(state, actor) ? withCommittee : !role.isQrOptional) seats.push(actor);
+    }
+  }
+  const arbiter = state.scarcity?.arbiter;
+  if (arbiter && withCommittee && !seats.some((seat) => seat.orgId === arbiter.orgId && seat.roleId === arbiter.roleId)) {
+    seats.push({ orgId: arbiter.orgId, roleId: arbiter.roleId });
+  }
+  return seats;
+}
+
+/** Una silla está libre si nadie tiene su token, o si quien lo tenía lleva un rato sin conexión (igual que en JOIN_ROLE). */
+function isSeatFree(record: RoomRecord, seat: engine.ActorRef, now: number): boolean {
+  if (!record.tokens.has(tokenKey(seat))) return true;
+  const player = record.state.connectedPlayers.find((entry) => entry.orgId === seat.orgId && entry.roleId === seat.roleId);
+  return !player || now - player.heartbeatMs >= engine.PRESENCE_TTL_MS;
+}
+
+/**
+ * Sorteo de silla (POST /api/rooms/:id/seat): asigna al recién llegado una silla
+ * libre al azar y le entrega su token, como JOIN_ROLE. Una silla, una persona:
+ * nunca entrega una ocupada (sin sillas libres: 409 NO_FREE_SEAT). Con `current`
+ * y su token vigente es «sortear otro rol»: toca una silla distinta y la
+ * anterior queda libre. Lo que ve después cada quien lo sigue filtrando el motor
+ * por organización y rol. `random` se inyecta en las pruebas.
+ */
+export function joinRandomSeat(roomId: string, rawBody: unknown, now: number = Date.now(), random: () => number = Math.random): ActionResponse {
+  const record = lookup(roomId);
+  if (!record) return reject(404, "ROOM_NOT_FOUND", "La sala no existe");
+  touch(record);
+
+  const parsed = RandomSeatRequestSchema.safeParse(rawBody ?? {});
+  if (!parsed.success) return reject(400, "BAD_REQUEST", "Sorteo inválido: se espera { committeeKey?, current?: { orgId, roleId, token } }");
+  const { committeeKey, current } = parsed.data;
+  const holding = current && engine.isKnownActor(record.state, current) && tokenMatches(record, current, current.token) ? { orgId: current.orgId, roleId: current.roleId } : null;
+
+  const pool = drawableSeats(record.state, sameSecret(committeeKey, record.committeeKey)).filter(
+    (seat) => isSeatFree(record, seat, now) && !(holding && holding.orgId === seat.orgId && holding.roleId === seat.roleId),
+  );
+  if (pool.length === 0) return reject(409, "NO_FREE_SEAT", holding ? "No queda otra silla libre en esta sala" : "No quedan sillas libres en esta sala");
+
+  const seat = pool[Math.min(pool.length - 1, Math.max(0, Math.floor(random() * pool.length)))];
+  const joined = engine.markRoleJoined(record.state, seat, now, { assigned: "random" });
+  if (!joined.ok) return settle(roomId, record, joined);
+  const fresh = newToken();
+  record.tokens.set(tokenKey(seat), fresh);
+  let next = joined.state;
+  if (holding) {
+    record.tokens.delete(tokenKey(holding));
+    const left = engine.markRoleLeft(next, holding, now, { rerolled: true });
+    if (left.ok) next = left.state;
+  }
+  record.state = next;
+  emit(roomId);
+  return { status: 200, body: { ok: true, token: fresh, reconnected: false, seat } };
 }
 
 /**

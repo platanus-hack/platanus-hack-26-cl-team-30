@@ -91,25 +91,21 @@ export function Hero() {
       <div className="wrap grid items-center gap-10 py-12 lg:min-h-[calc(100svh-var(--nav-h))] lg:grid-cols-[1.05fr_1fr] lg:gap-16 lg:py-20">
         <div>
           <h1 id="hook" data-hook className="h-hero max-w-[15ch]">
-            Varias organizaciones, algo que escasea. <span className="serif text-brand">Nadie muestra sus datos.</span>
+            Algo escasea. <span className="serif text-brand">Nadie muestra sus datos.</span>
           </h1>
           <p data-follow className="lede mt-7 max-w-[34rem] text-muted-foreground">
-            Nexo es el lugar donde deciden juntas a quién le toca. Cada una ve solo lo suyo, una regla conocida ordena los casos y quien firma deja su
-            razón por escrito.
+            Deciden juntas a quién le toca, con regla conocida y firma.
           </p>
           <div data-follow className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <Link href="/stage/demo-cross" className="btn btn-primary btn-lg">
               <MonitorPlay className="size-5" aria-hidden />
-              Ver el ejemplo de los hospitales
+              Ver el ejemplo
             </Link>
             <a href="#probar" className="btn btn-line btn-lg">
               <Sparkles className="size-5" aria-hidden />
-              Probar con otra organización
+              Probar mi caso
             </a>
           </div>
-          <p data-follow className="small mt-8 max-w-[34rem] text-muted-foreground">
-            El ejemplo es una demostración simulada de coordinación entre organizaciones. No constituye diagnóstico ni usa datos reales de pacientes.
-          </p>
         </div>
         <div data-drawing>
           <OverlapDrawing />

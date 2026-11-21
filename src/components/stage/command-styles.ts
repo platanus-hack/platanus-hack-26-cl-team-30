@@ -714,6 +714,7 @@ export const commandStyles = `
 .nx-resource { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 28px; padding: clamp(16px, 1.8vw, 26px) clamp(18px, 2.2vw, 32px); }
 .nx-resource-name { display: flex; align-items: baseline; gap: clamp(12px, 1.2vw, 20px); min-inline-size: 0; flex: 1 1 360px;
   font-size: clamp(28px, 3.6vw, 60px); font-weight: 830; letter-spacing: -.04em; line-height: 1.02; text-transform: uppercase; }
+.nx-resource { position: relative; }
 .nx-resource-qty { font-size: 1.5em; line-height: .9; color: var(--nx-current); }
 .gd-app:not([data-theme="dark"]) .nx-resource-qty { color: var(--gd-teal); }
 .nx-resource-facts { display: flex; flex-wrap: wrap; gap: 12px 26px; }
@@ -725,25 +726,30 @@ export const commandStyles = `
 .nx-elapsed[data-state="calm"] strong, .nx-elapsed[data-state="calm"] svg { color: var(--gd-calm); }
 
 .nx-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: clamp(12px, 1.4vw, 20px); }
-.nx-card { display: flex; flex-direction: column; gap: 8px; padding: clamp(16px, 1.6vw, 24px); }
+.nx-card { position: relative; display: flex; flex-direction: column; gap: 6px; padding: clamp(16px, 1.6vw, 24px); }
+.nx-card-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.nx-card-row .nx-why[open] { flex-basis: 100%; }
 .nx-card header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .nx-card-org { font-size: clamp(15px, 1.2vw, 19px); font-weight: 750; color: var(--gd-muted); }
 .nx-card-title { font-size: clamp(24px, 2.4vw, 40px); font-weight: 830; letter-spacing: -.035em; line-height: 1.05; }
-.nx-card-score { display: flex; align-items: baseline; gap: 10px; font-size: clamp(54px, 6vw, 104px); font-weight: 840; letter-spacing: -.06em; line-height: .95; font-variant-numeric: tabular-nums; margin-block: 4px; }
+.nx-card-score { display: flex; align-items: baseline; gap: 10px; font-size: clamp(52px, 5.4vw, 96px); font-weight: 840; letter-spacing: -.06em; line-height: .95; font-variant-numeric: tabular-nums; margin-block: 4px; }
 .nx-card-score small { font-size: 15px; letter-spacing: 0; font-weight: 700; color: var(--gd-muted); }
 .nx-card .nx-state { align-self: flex-start; font-size: 15px; padding: 6px 12px; }
 .nx-card-note { font-size: 14px; color: var(--gd-muted); }
 .nx-card.is-proposed { border-color: var(--nx-current); box-shadow: inset 0 0 0 2px var(--nx-current), 0 14px 34px rgb(var(--gd-dark-shadow) / 20%); }
 .nx-card.is-winner { border-color: var(--gd-calm); box-shadow: inset 0 0 0 2px var(--gd-calm), 0 14px 34px rgb(var(--gd-dark-shadow) / 20%); }
 .nx-card.is-winner .nx-card-score { color: var(--gd-calm); }
-.nx-star { display: grid; place-items: center; inline-size: 48px; block-size: 48px; border-radius: 50%; background: var(--nx-current); color: var(--nx-current-ink); flex: none; }
+.nx-star { position: absolute; inset: clamp(14px, 1.4vw, 20px) clamp(14px, 1.4vw, 20px) auto auto; display: grid; place-items: center; inline-size: 48px; block-size: 48px; border-radius: 50%; background: var(--nx-current); color: var(--nx-current-ink); }
+.nx-card.is-winner .nx-star { background: var(--gd-calm); color: var(--gd-surface); }
 .nx-star svg { width: 26px; height: 26px; fill: currentColor; }
-.nx-locked { display: grid; gap: 6px; padding: 0; margin: 6px 0 0; }
-.nx-locked li { list-style: none; display: flex; align-items: center; gap: 8px; border-radius: 10px; padding: 8px 10px; font-size: 14px; font-weight: 700; color: var(--gd-muted);
-  background: repeating-linear-gradient(-52deg, color-mix(in srgb, var(--gd-teal) 16%, transparent) 0 1.5px, transparent 1.5px 7px), var(--gd-inner); }
+.nx-locked { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 6px 0 0; }
+.nx-locked li { list-style: none; display: flex; align-items: center; gap: 8px; border-radius: 10px; padding: 8px 10px; font-size: 14px; font-weight: 750; color: var(--gd-muted); background: var(--gd-inner); white-space: nowrap; }
 .nx-locked svg { width: 16px; height: 16px; flex: none; }
+/* Dato tachado: franjas diagonales en vez del valor, que nunca llega a esta pantalla. */
+.nx-locked i { flex: none; inline-size: 54px; block-size: 14px; border-radius: 4px;
+  background: repeating-linear-gradient(-52deg, color-mix(in srgb, var(--gd-ink) 62%, transparent) 0 3px, transparent 3px 7px); }
 
-.nx-missing { display: grid; gap: 12px; padding: clamp(18px, 2vw, 30px) clamp(18px, 2.4vw, 36px); }
+.nx-missing { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px 28px; padding: clamp(16px, 1.6vw, 26px) clamp(18px, 2.4vw, 36px); }
 .nx-missing-text { font-size: clamp(26px, 3vw, 50px); font-weight: 820; letter-spacing: -.035em; line-height: 1.12; text-wrap: balance; }
 .nx-missing-text b { color: var(--gd-sign); font-weight: 860; }
 .nx-missing[data-lead="Listo"] .nx-missing-text b { color: var(--gd-calm); }
@@ -772,5 +778,71 @@ export const commandStyles = `
   .nx-log summary .nx-meta { display: none; }
   .gd-app .gd-dock-bottom { inline-size: auto; }
   .gd-app .gd-dock-bottom a { flex-shrink: 1; }
+}
+
+/* ── Ronda 8: galaxia, paso «Unirse», pulso y «¿Por qué?» ─────────────────── */
+.gd-app .gd-stage { position: relative; }
+.gd-app .gd-stage-scroll { position: relative; z-index: 1; }
+/* La galaxia vive detrás del contenido: protagonista al unirse, fondo sutil después. */
+.nx-galaxy { position: absolute; inset: 0; z-index: 0; inline-size: 100%; block-size: 100%; border-radius: inherit; pointer-events: none; transition: opacity .9s ease; }
+.nx-galaxy[data-variant="backdrop"] { opacity: .5; }
+.gd-app:not([data-theme="dark"]) .nx-galaxy[data-variant="backdrop"] { opacity: .42; }
+
+.nx-join-grid { display: grid; grid-template-columns: minmax(250px, .85fr) minmax(0, 1.6fr) auto; align-items: center; gap: clamp(16px, 2vw, 32px); min-block-size: clamp(440px, 58svh, 640px); }
+.nx-join-number { font-size: clamp(84px, 10.5vw, 176px); font-weight: 840; letter-spacing: -.065em; line-height: .88; font-variant-numeric: tabular-nums; color: var(--gd-muted); }
+.nx-join-number span { color: var(--gd-ink); transition: color .5s ease; }
+.nx-join-number[data-full="true"] span { color: var(--gd-calm); }
+.nx-join-number small { display: block; margin-block-start: 10px; font-size: clamp(18px, 1.7vw, 28px); font-weight: 780; letter-spacing: -.01em; line-height: 1.1; color: var(--gd-muted); }
+.nx-seats { display: grid; gap: 8px; justify-items: start; padding: 0; margin: clamp(18px, 2vw, 30px) 0 0; }
+.nx-seats li { list-style: none; display: flex; align-items: center; gap: 10px; border-radius: 999px; padding: 8px 14px 8px 11px; border: 1px solid var(--gd-rim);
+  background: var(--gd-card); color: var(--gd-muted); font-size: clamp(14px, 1.15vw, 18px); font-weight: 760; line-height: 1.15; transition: color .4s ease, border-color .4s ease; }
+.nx-seats li i { flex: none; inline-size: 14px; block-size: 14px; border-radius: 50%; border: 2px solid var(--nx-seat); transition: background .4s ease, box-shadow .4s ease; }
+.nx-seats li svg { flex: none; width: 16px; height: 16px; opacity: .55; }
+.nx-seats li[data-on="true"] { color: var(--gd-ink); border-color: color-mix(in srgb, var(--nx-seat) 70%, transparent); }
+.nx-seats li[data-on="true"] i { background: var(--nx-seat); box-shadow: 0 0 12px color-mix(in srgb, var(--nx-seat) 70%, transparent); }
+.nx-seats li[data-on="true"] svg { color: var(--gd-calm); opacity: 1; stroke-width: 3; }
+.nx-join-qr { display: grid; justify-items: center; gap: 12px; padding: clamp(14px, 1.4vw, 22px); }
+.nx-join-code { inline-size: clamp(210px, 21vw, 300px) !important; block-size: auto !important; aspect-ratio: 1; border-radius: 16px !important; border: 0 !important; }
+.nx-join-url { max-inline-size: clamp(210px, 21vw, 300px); text-align: center; overflow-wrap: anywhere; font-family: var(--font-mono), ui-monospace, monospace; font-size: 13px; font-weight: 700; color: var(--gd-muted); }
+.nx-join-qr .nx-warn { margin: 0; max-inline-size: clamp(210px, 21vw, 300px); }
+
+/* Los avisos van arriba a la derecha: abajo tapaban la frase «Falta: …». */
+@media (min-width: 761px) {
+  .gd-app > div[aria-live="polite"] { top: 108px; bottom: auto; flex-direction: column; }
+}
+
+/* Pulso: rojo y vivo mientras se espera; verde y plano cuando se decidió. */
+.nx-ecg { position: absolute; inset: auto clamp(18px, 2.2vw, 32px) 4px; display: block; block-size: 24px; color: var(--gd-block); }
+.nx-resource { padding-block-end: clamp(30px, 2.6vw, 38px); }
+.nx-ecg svg { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; overflow: visible; }
+.nx-ecg path { fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.nx-ecg[data-state="calm"] { color: var(--gd-calm); }
+.nx-ecg[data-state="block"] .nx-ecg-trace { opacity: .38; }
+.nx-ecg-beam {
+  -webkit-mask: linear-gradient(90deg, transparent 38%, #000 49.5%, #000 50%, transparent 50.4%) 100% 0 / 300% 100% no-repeat;
+  mask: linear-gradient(90deg, transparent 38%, #000 49.5%, #000 50%, transparent 50.4%) 100% 0 / 300% 100% no-repeat;
+  animation: nx-ecg 2.8s linear infinite;
+}
+@keyframes nx-ecg { from { -webkit-mask-position: 85% 0; mask-position: 85% 0; } to { -webkit-mask-position: 5% 0; mask-position: 5% 0; } }
+
+/* Las explicaciones no van a la vista: quedan detrás de «¿Por qué?». */
+.nx-why summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; min-block-size: 34px; padding: 0 13px; border-radius: 999px;
+  border: 1px solid var(--gd-line); background: var(--gd-inner); font-size: 13px; font-weight: 800; }
+.nx-why summary::-webkit-details-marker { display: none; }
+.nx-why[open] summary { background: var(--gd-raised); }
+.nx-why p { margin-block-start: 8px; max-inline-size: 62ch; font-size: 14px; line-height: 1.45; color: var(--gd-muted); }
+
+@media (max-width: 760px) {
+  .nx-join-grid { grid-template-columns: minmax(0, 1fr); min-block-size: 0; }
+  .nx-join-space { order: -1; block-size: 300px; }
+  .nx-join-qr { justify-self: center; }
+  .gd-stage[data-join="true"] .nx-galaxy { inset: 150px 0 auto; block-size: 320px; }
+  .nx-ecg { block-size: 20px; }
+  .nx-missing { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Sin barrido: el pulso queda dibujado entero y quieto. */
+  .nx-ecg-beam { animation: none; -webkit-mask: none; mask: none; }
+  .nx-galaxy { transition: none; }
 }
 `;

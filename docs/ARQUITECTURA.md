@@ -68,18 +68,21 @@ En que una sola sala se vea distinta para cada participante, a la vez y en vivo,
 | Motor determinista | Todas las reglas. Funciones puras: reciben el estado y el reloj, devuelven un estado nuevo o un rechazo | `src/lib/engine/deterministic.ts` | TypeScript, sin dependencias |
 | Guion del ensayo automático | El guion de la demo como datos: cada paso llama a la misma función del motor que usaría una persona. Sin modelo | `src/lib/engine/autopilot.ts` | TypeScript |
 | Contrato de acciones | Forma de las 11 acciones (`ActionSchema`) y códigos de error | `src/lib/store/actions.ts` | Zod |
-| Almacén de salas | Estado en memoria, token por rol, token de anfitrión y clave del Comité por sala, cuatro salas fijas, reinicio, revocación, ensayo automático, aviso de cambios y topes de memoria. No decide reglas: valida, comprueba identidad y delega en el motor | `src/lib/store/rooms.ts`, `src/lib/store/http.ts` (lectura acotada del body) | `Map` y `EventEmitter` de Node |
+| Almacén de salas | Estado en memoria, token por rol, token de anfitrión y clave del Comité por sala, cuatro salas fijas, sorteo de silla (`joinRandomSeat`), reinicio, revocación, ensayo automático, aviso de cambios y topes de memoria. No decide reglas: valida, comprueba identidad y delega en el motor | `src/lib/store/rooms.ts`, `src/lib/store/http.ts` (lectura acotada del body) | `Map` y `EventEmitter` de Node |
 | Límite de peticiones | Ventana fija por cliente y tipo de petición, más un tope global para lo que llama al modelo. Lee la IP reenviada solo con `TRUST_PROXY=1` | `src/lib/store/rate-limit.ts` | En memoria |
 | Controles de anfitrión | Exige el token de anfitrión (`x-host-token`) o la clave de administración (`x-admin-key`) | `src/lib/store/host.ts` | |
 | Rutas de la API | Entrada HTTP. Cada ruta aplica su límite de peticiones y llama al almacén | `src/app/api/` | Route Handlers de Next.js |
 | Supabase | Guarda las solicitudes de acceso y lee la entrevista publicada. Solo servidor (`import "server-only"`), clave `service_role`. Si falta la configuración o la tabla, degrada sin romper | `src/lib/supabase/` | API REST de Supabase con `fetch` |
-| Canales del Comité | WhatsApp (Kapso) y voz (ElevenLabs): el Comité árbitro decide fuera de la web con las mismas acciones | `src/integrations/` | SDK de Kapso; API de ElevenLabs con `fetch` |
+| Canales del Comité | WhatsApp (Kapso) y voz (ElevenLabs): el Comité árbitro decide fuera de la web con las mismas acciones | `src/integrations/` | SDK de Kapso; API de ElevenLabs con `fetch` en el servidor y SDK `@elevenlabs/client` en el navegador (conversación de voz del Comité) |
 | Capa de modelos | Única puerta a un modelo de lenguaje: dos proveedores, cola, tope de tokens, JSON validado y telemetría | `src/lib/llm.ts` | SDK de Anthropic; `fetch` para el protocolo compatible con OpenAI |
 | Agentes | Agente de rol y agente de mutación. Cada uno en su archivo, con su instrucción y su formato de salida | `src/agents/` | Llaman a `chatJson` de la capa de modelos |
 | Cliente de sala | Único lugar de la interfaz que habla con `/api/rooms`: abre el SSE, guarda la identidad y envía acciones | `src/lib/client/use-room.ts` | React, `EventSource`, `sessionStorage` |
-| Pantallas | Portada (`/`, con los ejemplos de otros rubros, formulario de acceso y entrevista), estación de un rol (`/room/[roomId]`) y pantalla general para proyectar (`/stage/[roomId]`) | `src/app/`, `src/components/landing/` | Next.js 16 (App Router), React 19, Tailwind 4 |
-| Órganos | Siete piezas de interfaz que dibujan el estado proyectado. No calculan ni ocultan nada | `src/components/organs/` | React |
-| Piezas de sala | Códigos QR, selector de rol, bitácora, formulario de mutación y aviso de datos simulados | `src/components/nexo/` | React, `qrcode` |
+| Pantallas | Portada (`/`, con los ejemplos de otros rubros, formulario de acceso y entrevista), silla de un rol en el celular (`/room/[roomId]`), pantalla general para proyectar (`/stage/[roomId]`) y `/centro`, la demo del panel de vidrio de 21st.dev con sus datos de ejemplo en inglés, sin conexión a las salas: sirve solo como referencia visual | `src/app/`, `src/components/landing/` | Next.js 16 (App Router), React 19, Tailwind 4 |
+| Pregúntale al caso | En la pantalla grande, respuestas a preguntas frecuentes sobre la sala (por qué ganó, qué es el desempate, qué no se ve) armadas con el estado proyectado y búsqueda por palabras clave. No llama a ningún modelo | `src/components/stage/ask.ts` | TypeScript |
+| Silla del celular | Lo que ve cada rol en su teléfono: al entrar, la tarjeta «Te tocó» (rol, organización, misión y dos chips: qué ve y cuántos datos no); después una tarjeta por turno con un solo botón en la zona del pulgar y tres pestañas (Tu turno, Secretos, Sala). El Comité ve un duelo de dos tarjetas y chips de razón que rellenan un texto editable. Los datos reservados se dibujan como franjas diagonales y el pulso de arriba late en rojo mientras se espera y queda verde y plano al sellar. Qué turno toca lo calcula `seatTurn` (`src/components/nexo/guide.ts`) desde el estado proyectado; las acciones y los permisos son los de siempre | `src/app/room/[roomId]/room-client.tsx`, `src/components/seat/` | React, CSS propio con la paleta oficial |
+| Pantalla grande | Centro de mando que se proyecta. En el paso «Unirse» muestra la galaxia (un canvas 2D sin dependencias: un nodo y una órbita por asiento conectado, contador «N/M conectados» y el código para entrar); después, la «Historia de la decisión» con la galaxia de fondo, que se vuelve verde al sellar. Los asientos salen del estado que llega por el SSE (`stageSeats`), nunca de un simulador. No calcula ni oculta nada | `src/components/stage/` (`command-center.tsx`, `galaxy.tsx`, `seats.ts`, `join-view.tsx`, `story.ts`, `story-view.tsx`, `ecg.tsx`) | React, canvas 2D |
+| Órganos | Piezas de interfaz que quedan de la primera versión: el grafo vivo, el choque de autoridad, el medidor p^n y la telemetría del modelo. En el celular van plegadas en la pestaña «Sala». No calculan ni ocultan nada | `src/components/organs/` | React |
+| Piezas de sala | Guía de turnos (`guide.ts`), códigos QR, avisos de eventos, aviso al Comité, asistente de voz del Comité y aviso de datos simulados | `src/components/nexo/` | React, `qrcode` |
 | Deploy | Un servicio Node siempre encendido | `render.yaml` | Render |
 | Preparación del Spark | Instala Ollama, lo expone a la red y descarga modelos | `scripts/spark-setup.sh` | Bash |
 | Pruebas | Motor, permisos, almacén, seguridad, ensayo, canales del Comité, agentes y API por HTTP (`npm test`); recorrido completo (`scripts/e2e.mjs`), carga de tiempo real (`scripts/load-test.mjs`) y llamadas simultáneas al modelo (`scripts/stress-llm.mjs`) | `tests/`, `src/agents/__tests__/`, `scripts/` | Vitest, Node |
@@ -93,6 +96,7 @@ Todas las rutas de salas tienen límite de peticiones por cliente (ver "Topes" m
 | --- | --- | --- |
 | `POST /api/rooms` | Crea una sala. Body `{ mode: "single_org", seed? }`, `{ mode: "single_org", description }` (sala nueva ya mutada desde una frase; el modelo tiene 15 s y si no, semilla más parecida) o `{ mode: "cross_org", scenario? }` (`hospitales`, `construccion`, `logistica`). Responde `{ roomId, hostToken, committeeKey, mode, scenario?, source?, latencyMs?, orgName? }`. Las dos claves se entregan solo aquí | `src/app/api/rooms/route.ts` |
 | `GET /api/rooms/:id/events?orgId=&roleId=&token=` | SSE. Cada mensaje es un `ProjectedRoomState` ya filtrado, con el estado del ensayo automático. Sin token válido entrega la vista general (`stage`) | `src/app/api/rooms/[roomId]/events/route.ts` |
+| `POST /api/rooms/:id/seat` | Sorteo de silla, para entrar con un solo código QR sin elegir rol. Body `{ committeeKey?, current?: { orgId, roleId, token } }`. Asigna al azar una silla libre y responde `{ ok, seat: { orgId, roleId }, token }`. El Comité solo entra al sorteo con la clave de su QR; con `current` y su token vigente es «sortear otro rol» (toca otra y libera la anterior). Sin sillas libres: 409 `NO_FREE_SEAT`. El enlace del QR único es `/room/<id>` (con `?key=<committeeKey>` si el Comité también se sortea) | `src/app/api/rooms/[roomId]/seat/route.ts` |
 | `POST /api/rooms/:id/action` | Única puerta para que una persona cambie una sala. Body `{ type, orgId, roleId, token, ...datos }`. `JOIN_ROLE` al puesto del Comité exige además `committeeKey`. Responde `{ ok: true, ... }` o `{ error, code }` con 400, 401, 403, 404, 409 o 429 | `src/app/api/rooms/[roomId]/action/route.ts` |
 | `DELETE /api/rooms/:id` | **Anfitrión.** Reinicia la sala: vuelve al caso inicial, detiene el ensayo y revoca los tokens de los puestos. Conserva id, token de anfitrión y clave del Comité | `src/app/api/rooms/[roomId]/route.ts` |
 | `POST /api/rooms/:id/autopilot` | **Anfitrión.** Body `{ action?: "start" \| "stop", stepMs?, withCommittee? }`. Ensayo sin gente: bots en los puestos libres recorren el guion paso a paso | `src/app/api/rooms/[roomId]/autopilot/route.ts` |
@@ -128,19 +132,20 @@ Definidas en `ActionSchema` (`src/lib/store/actions.ts`). El almacén (`applyAct
 | `COMMITTEE_VETO` | Comité árbitro (veta al ganador propuesto) o Comité de una organización (veta su compuerta), con razón | `recordCommitteeDecision` |
 | `RUN_ROLE_AGENT` | Un rol de una organización. Llama al modelo | `runRoleAgentTurn` y luego `applyAgentProposal` |
 
-### Los siete órganos de interfaz
+### Piezas de la silla del celular
 
-| # | Órgano | Archivo en `src/components/organs/` | Qué muestra |
-| --- | --- | --- | --- |
-| 1 | Grafo vivo | `living-graph-organ.tsx` | Roles con su agente, quién está conectado, choque, compuerta y, entre organizaciones, el recurso al centro con el Comité |
-| 2 | Caso | `dynamic-case-card-organ.tsx` | Valor propuesto contra el umbral, estado de la compuerta y formulario de decisión |
-| 3 | Niebla | `fog-of-war-panel-organ.tsx` | Campos visibles y campos ocultos; botón para pedir un dato oculto y ver el 403 |
-| 4 | Choque de autoridad | `allocation-conflict-organ.tsx` | Deslizadores de cada rol, aviso de choque y sello de la regla |
-| 5 | Agente del rol | `role-agent-panel-organ.tsx` | Propuesta del agente y telemetría del modelo |
-| 6 | Contador | `shared-stakes-counter-organ.tsx` | Tiempo de espera y casos pendientes, con el reloj del servidor |
-| 7 | Tablero de asignación | `allocation-board-organ.tsx` | Orden de candidatos, fórmula, desempate, veto o sello del Comité y descarga del acta |
+| Pieza | Archivo en `src/components/seat/` | Qué muestra |
+| --- | --- | --- |
+| Armazón | `seat-shell.tsx` | Quién soy, el reloj de espera, el pulso ECG (rojo al esperar, verde plano al sellar), la zona del pulgar y las tres pestañas |
+| Revelación | `reveal-card.tsx` | «Te tocó <rol>», organización, misión y dos chips; botón «Entrar a mi silla» y, si llegó por sorteo, «Sortear otro rol» |
+| Elegir silla | `seat-picker.tsx` | Lista de sillas libres u ocupadas cuando el enlace no trae rol y no se sorteó |
+| Tu turno | `turn-view.tsx` | Una tarjeta por turno: acordar el límite, firmar, presentar el caso, el duelo del Comité, esperar o resuelto |
+| Razón | `reason-field.tsx` | Chips de un toque que rellenan la razón editable (obligatoria) |
+| Secretos | `secrets-view.tsx` | Lo que ve el rol y lo oculto como franjas; «Ver» pide el dato y, si el servidor lo niega, muestra «Este dato nunca llegó a tu celular» |
+| Sala | `room-view.tsx` | Paso actual, quién está conectado, el agente del rol, la voz del Comité y, plegados, la regla y el grafo |
+| Cálculos de vista | `screen.ts` | Por qué espera, qué datos llegaron, sillas de la sala. Solo lee el estado proyectado |
 
-`reliability-meter.tsx` dibuja el medidor p^n dentro de los órganos 1 y 4 y en la pantalla general.
+De `src/components/organs/` quedan `living-graph-organ.tsx` (grafo vivo), `allocation-conflict-organ.tsx` (choque de autoridad y sello de la regla), `reliability-meter.tsx` (medidor p^n) y `telemetry-readout.tsx` (dónde corre el modelo y cuántos bytes salieron). El resto de los órganos de la primera versión se borró al rehacer el celular.
 
 ## Modelo de datos
 
@@ -156,16 +161,16 @@ Definidas en `ActionSchema` (`src/lib/store/actions.ts`). El almacén (`applyAct
 Ejemplo: una persona del público escanea el QR del Comité y veta la asignación de la cama. Todas las pantallas cambian.
 
 0. **La sala.** Quien presenta crea la sala con `POST /api/rooms` (`{ mode: "cross_org", scenario: "hospitales" }`) y recibe `hostToken` y `committeeKey`. `useRoom` (`src/lib/client/use-room.ts`) los guarda en `localStorage` para la pantalla grande.
-1. **El QR.** `src/components/nexo/join-codes.tsx` dibuja el código con `roleJoinUrl` (`src/components/nexo/public-url.ts`): `/room/<id>?orgId=comite_red&roleId=role_c&key=<committeeKey>`. Sin la clave en el enlace, nadie puede tomar ese puesto.
+1. **El QR.** La pantalla grande (`src/components/stage/command-center.tsx`) dibuja el código con `roleJoinUrl` (`src/components/nexo/public-url.ts`): `/room/<id>?orgId=comite_red&roleId=role_c&key=<committeeKey>`. Sin la clave en el enlace, nadie puede tomar ese puesto.
 2. **Entrar.** `src/app/room/[roomId]/room-client.tsx` lee `orgId`, `roleId` y `key` del enlace y llama a `join` de `useRoom`, que envía `POST /api/rooms/<id>/action` con `{ type: "JOIN_ROLE", orgId, roleId, committeeKey }`.
 3. **Identidad.** La ruta aplica el límite de peticiones (`rateLimited`) y llama a `applyAction` (`src/lib/store/rooms.ts`). La función `join` comprueba la clave del Comité en tiempo constante (403 `COMMITTEE_KEY_REQUIRED` y un `AUTH_FAILED` en la bitácora si falta), genera un token aleatorio (`randomBytes(24)`), lo guarda y llama a `markRoleJoined` del motor, que agrega el evento `QR_JOINED`. El token vuelve en la respuesta y el navegador lo guarda en `sessionStorage`.
 4. **Conexión en vivo.** `useRoom` abre un `EventSource` a `/api/rooms/<id>/events?orgId=comite_red&roleId=role_c&token=...`. La ruta (`events/route.ts`) llama a `resolveViewer` (compara el token en tiempo constante) y a `projectRoom`, que usa `projectStateForOrgAndRole` del motor. El Comité recibe la sala sin el costo de ningún hospital.
-5. **La decisión.** El Comité escribe su razón en `src/components/organs/decision-form.tsx`, dentro de `allocation-board-organ.tsx`, y presiona vetar. `room-client.tsx` llama a `act("COMMITTEE_VETO", { reason })`.
+5. **La decisión.** El Comité toca un chip de razón o la escribe en `src/components/seat/reason-field.tsx`, dentro del duelo de `src/components/seat/turn-view.tsx`, y presiona «Vetar». La vista llama a `act("COMMITTEE_VETO", { reason })`.
 6. **Validación.** En `applyAction`: `ActionSchema.safeParse` revisa la forma (400 si falla), `isKnownActor` revisa que el rol exista (404) y `tokenMatches` revisa el token (401).
 7. **La regla.** `recordCommitteeDecision` (`src/lib/engine/deterministic.ts`) comprueba que quien actúa es el árbitro (403 si no), que hay razón (400 `REASON_REQUIRED`) y que hay una asignación propuesta (409). Agrega la decisión a `decisions`, vuelve a ordenar sin el caso vetado (`resolveRoomAllocation`) y escribe los eventos `HITL_VETOED` y `ALLOCATION_PROPOSED`. `commit` sube la versión.
 8. **Aviso.** `settle` guarda el estado nuevo y llama a `emit(roomId)`.
 9. **Difusión.** Cada conexión SSE abierta está suscrita (`subscribe`). Su función `send` vuelve a resolver quién mira, proyecta la sala para ese viewer y escribe un mensaje `data:`. Cada conexión recibe su propia versión filtrada.
-10. **Las otras pantallas.** En cada navegador, `useRoom` recibe el mensaje y React vuelve a dibujar: el tablero muestra al nuevo ganador y la razón del veto, y `src/components/nexo/audit-console.tsx` muestra el evento.
+10. **Las otras pantallas.** En cada navegador, `useRoom` recibe el mensaje y React vuelve a dibujar: el duelo del Comité muestra al nuevo recomendado y la pantalla grande cambia su «Historia de la decisión».
 11. **El acta.** `GET /api/rooms/<id>/acta?format=md` llama a `getActa`, que usa `buildAuditActa` y `renderActaMarkdown` del motor.
 
 Si el Comité decide por WhatsApp o por voz, cambian solo los pasos 1 a 5: el canal toma el puesto con la misma clave y envía la misma acción (ver "Canales externos del Comité").
@@ -204,7 +209,7 @@ Detalles que importan:
 - **JSON validado** (`chatJson`): extrae el objeto, lo valida y, si falla, reintenta una vez mostrándole el error al modelo.
 - **Llamadas rápidas** (`thinking: false`): en Claude baja `effort` a `low`. En local mezcla en la petición lo que diga `LLM_NO_THINK_BODY`; el nombre del parámetro depende del servidor y no está verificado.
 - **Respaldo de Claude:** el parámetro `fallbacks` hace que la API reintente en otro modelo si el primero declina.
-- **Telemetría veraz** (`getTelemetry`): `provider` es `local` solo si el host es de la máquina o de una red privada (`isLocalHost`). `bytesSentToCloud` cuenta el cuerpo de cada petición enviada a un host de nube; queda en 0 únicamente cuando todo se habló con un host local. Viaja en cada mensaje SSE y la muestran el órgano 5 y la pantalla general.
+- **Telemetría veraz** (`getTelemetry`): `provider` es `local` solo si el host es de la máquina o de una red privada (`isLocalHost`). `bytesSentToCloud` cuenta el cuerpo de cada petición enviada a un host de nube; queda en 0 únicamente cuando todo se habló con un host local. Viaja en cada mensaje SSE y la muestran la pestaña «Sala» del celular (`src/components/organs/telemetry-readout.tsx`, dentro de `src/components/seat/room-view.tsx`) y la pantalla general.
 
 En el deploy público los datos del caso que el rol puede ver sí salen hacia Anthropic. "Ningún dato sale de la red" vale solo en modo local.
 
@@ -225,7 +230,7 @@ No hay autenticación externa. Los códigos QR se generan en el navegador con la
 
 El Comité árbitro de una sala entre organizaciones puede decidir sin abrir la web. Los dos canales están en `src/integrations/` y no tienen reglas propias: `committee-channel.ts` toma el puesto del Comité con `JOIN_ROLE` y la clave del Comité de la sala (la misma del QR), y aplica la decisión con `ALLOCATION_SEAL` (aprobar) o `COMMITTEE_VETO` (vetar), con razón obligatoria. Permisos, bitácora y acta funcionan igual; la razón queda con el canal anotado ("vía WhatsApp", "vía llamada de voz"). El resumen que recibe el Comité lo arma `buildCommitteeBrief` solo con `projectRoom` para el rol del Comité, así que un canal externo nunca recibe un dato reservado. Si una persona ya tiene el puesto desde la web, el canal no lo toma (409).
 
-- **WhatsApp con Kapso** (`kapso.ts`). El anfitrión pide `POST /api/rooms/:id/committee` con `channels: ["whatsapp"]`. Kapso envía al número del Comité (`NEXO_COMMITTEE_PHONE`) el caso con dos botones. La respuesta llega a `POST /api/integrations/kapso/webhook`, que verifica la firma HMAC del cuerpo crudo (`verifyKapsoWebhookSignature`, secreto `KAPSO_WEBHOOK_SECRET`) antes de leerlo. El botón deja la decisión pendiente; el siguiente mensaje de texto del mismo número es la razón, y recién entonces se registra. Solo se aceptan mensajes del número asociado a la sesión.
+- **WhatsApp con Kapso** (`kapso.ts`). El anfitrión pide `POST /api/rooms/:id/committee` con `channels: ["whatsapp"]`. Kapso envía al número del Comité (`NEXO_COMMITTEE_PHONE`) el caso con dos botones; si está `KAPSO_TEMPLATE_NAME`, lo envía como plantilla aprobada de WhatsApp (idioma `KAPSO_TEMPLATE_LANG`, por defecto `es`), que es lo que permite escribirle a un número que no ha conversado antes. La respuesta llega a `POST /api/integrations/kapso/webhook`, que verifica la firma HMAC del cuerpo crudo (`verifyKapsoWebhookSignature`, secreto `KAPSO_WEBHOOK_SECRET`) antes de leerlo. El botón deja la decisión pendiente; el siguiente mensaje de texto del mismo número es la razón, y recién entonces se registra. Solo se aceptan mensajes del número asociado a la sesión.
 - **Voz con ElevenLabs** (`elevenlabs.ts`). Un agente de ElevenLabs conversa en español con quien preside el Comité: por llamada saliente (`channels: ["call"]`, vía el número de Twilio vinculado en ElevenLabs, `ELEVENLABS_PHONE_NUMBER_ID`) o desde el navegador (`POST /api/rooms/:id/committee/voice` con la clave del Comité, que devuelve una URL firmada). El agente tiene dos herramientas webhook hacia `POST /api/integrations/voice/tool`, protegidas por un secreto compartido en el encabezado `x-nexo-secret` (`NEXO_CHANNEL_SECRET`): `consultar_caso` devuelve el resumen y `registrar_decision` aplica la decisión con la razón dicha por la persona. La instrucción del agente le pide repetir la decisión y la razón y esperar confirmación antes de registrarla; eso depende del modelo de ElevenLabs, mientras que la razón obligatoria la exige el motor. Si `ELEVENLABS_AGENT_ID` falta, el agente se crea la primera vez.
 - **Sesiones.** Cada canal guarda su sesión (token del puesto, número, decisión pendiente) en memoria del proceso, con vencimiento de 30 minutos.
 - **Qué canales hay.** `GET /api/integrations/status` lo dice, para que la interfaz muestre solo los que funcionan.
@@ -353,6 +358,8 @@ Nada de esto existe hoy.
 | `tests/supabase.test.ts` | El formulario de acceso y la entrevista degradan sin Supabase o sin tabla (503 o `null`, nunca un error), validan el formulario, no revelan correos repetidos y la clave `service_role` solo viaja al servidor de Supabase |
 | `tests/integrations.test.ts` | Los canales del Comité toman el puesto con su clave y el resumen no trae datos reservados; 409 si una persona ya lo tiene; razón obligatoria; botones y mensajes de WhatsApp; firma HMAC del webhook; herramientas de voz sin secreto no responden |
 | `src/agents/__tests__/agents.test.ts` | Telemetría local o nube, cola y topes de tokens; la mutación nunca lanza y siempre entrega un genoma válido; el agente de rol solo le muestra al modelo lo que su rol ve |
+| `tests/seat.test.ts` | Sorteo de silla (`POST /api/rooms/:id/seat`): nunca entrega una silla ocupada (409 `NO_FREE_SEAT` al llenarse), el Comité solo entra con la clave de su QR, la silla sorteada recibe solo lo que ve ese rol (403 al pedir un dato ajeno) y «sortear otro rol» libera la anterior e invalida su token |
+| `tests/stage.test.ts` | Los asientos de la pantalla grande salen del estado proyectado (dos por organización y el Comité), un asiento solo aparece conectado si esa persona entró, el paso «Unirse» dura mientras falta alguien que trabaja el caso, y los candados dicen una o dos palabras |
 | `tests/http.test.ts` | Sirve las rutas reales por HTTP sin Next (`tests/helpers/route-server.ts`) y corre contra ellas `scripts/e2e.mjs` y `scripts/load-test.mjs` |
 
 
@@ -379,7 +386,7 @@ Variables del modelo (`.env.example` trae las tres opciones):
 | `NEXO_MAX_ROOMS`, `NEXO_ADMIN_KEY` | Opcionales: tope de salas y clave de administración (controles de anfitrión de cualquier sala y de las salas fijas en producción) |
 | `TRUST_PROXY`, `NEXO_RATE_LIMITS` | `TRUST_PROXY=1` detrás de un proxy, para limitar por IP del cliente. `NEXO_RATE_LIMITS=off` apaga los límites (solo pruebas de carga locales) |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Opcionales: formulario de acceso y entrevistas. La clave `service_role` es solo de servidor |
-| `KAPSO_API_KEY`, `KAPSO_PHONE_NUMBER_ID`, `KAPSO_WEBHOOK_SECRET` | Opcionales: Comité por WhatsApp |
+| `KAPSO_API_KEY`, `KAPSO_PHONE_NUMBER_ID`, `KAPSO_WEBHOOK_SECRET`, `KAPSO_TEMPLATE_NAME`, `KAPSO_TEMPLATE_LANG` | Opcionales: Comité por WhatsApp (las dos últimas, para enviar con plantilla aprobada) |
 | `ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID`, `ELEVENLABS_PHONE_NUMBER_ID` | Opcionales: Comité por voz (el número es el de Twilio vinculado en ElevenLabs) |
 | `NEXO_COMMITTEE_PHONE`, `NEXO_PUBLIC_BASE_URL`, `NEXO_CHANNEL_SECRET` | Opcionales: número del Comité, URL pública para las herramientas de voz y secreto compartido de esas herramientas |
 

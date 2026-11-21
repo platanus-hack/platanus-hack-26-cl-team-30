@@ -45,7 +45,46 @@ Desde entonces el servidor agregó un tope de 200 conexiones por sala (`MAX_CONN
 | Turnos de agente | Los tres declararon un campo oculto que necesitaban (`attemptedFieldRead`) y los tres quedaron como `RBAC_DENIED` en la bitácora. Es lo esperado: la instrucción del agente le pide nombrar un dato que no puede ver, y el servidor registra el intento sin entregar el valor |
 | Latencia de los turnos de agente | No registrada |
 
+## Cuadros por segundo de la pantalla grande con la galaxia
+
+- **Qué:** cuadros por segundo de `/stage` durante 4 segundos, contados con `requestAnimationFrame` desde Playwright, con una sala `cross_org` manejada por HTTP (entradas reales por `JOIN_ROLE` y SSE). Se compara contra la vista «Ranking», que no dibuja la galaxia.
+- **Dónde:** un notebook Apple M4 (macOS), Chromium 1243 de Playwright con ventana y GPU (ANGLE Metal), 1440×900 a escala 2, contra `next dev` en la misma máquina.
+- **Cuándo:** 21 de noviembre de 2026.
+- **Qué no mide:** un notebook sin GPU dedicada o más antiguo, ni el proyector de la sede. No se midió en otro equipo.
+
+| Vista | Cuadros por segundo | Peor cuadro |
+| --- | --- | --- |
+| «Unirse», galaxia protagonista, 2 de 5 conectados | 60 | 18 ms |
+| Historia, galaxia de fondo, 4 de 5 conectados | 60 | 18 ms |
+| Historia sellada, galaxia verde | 60 | 18 ms |
+| «Ranking», sin galaxia (línea base) | 60 | 18 ms |
+
+Sin GPU (Chromium sin ventana, con render por software) la misma página dio entre 39 y 42 cuadros por segundo con la galaxia; la línea base sin galaxia en ese modo no quedó medida, así que esa cifra no dice cuánto cuesta la galaxia. Con `prefers-reduced-motion` la galaxia no anima: dibujó 0 cuadros en 2 segundos sin cambios y 1 cuadro por cada entrada.
+
+## Texto en la silla del celular, antes y después de la ronda 8
+
+Palabras visibles en cada pantalla principal (`document.body.innerText`, contando solo palabras con letras o números) y cuánto hay que desplazarse. Medido con Playwright en 390 × 844, modo claro, sala `cross_org` del escenario hospitales recorrida de punta a punta, en un notebook contra `npm run dev`, el 21 de noviembre. Antes: commit `e7833b7`; después: la silla de `src/components/seat/`. El modo oscuro da las mismas cifras.
+
+| Pantalla | Antes (palabras) | Después (palabras) | Desplazamiento después |
+| --- | --- | --- | --- |
+| Entrada sin rol (elegir silla) | 180 | 54 | 0 px |
+| Revelación «Te tocó» | no existía | 50 | 0 px |
+| Urgencias: acordar el límite | 122 | 49 | 0 px |
+| Comité esperando | 109 | 37 | 0 px |
+| Gestión: firmar | 145 | 47 | 0 px |
+| Urgencias: presentar el caso | 113 | 53 | 0 px |
+| Urgencias esperando | 106 | 36 | 0 px |
+| Comité decide (duelo) | 184 | 66 | 0 px |
+| Comité: resuelto | 109 | 61 | 0 px |
+| Urgencias: resuelto | 111 | 62 | 0 px |
+| Pestaña Secretos (Urgencias) | no existía | 106 | 52 px |
+| Pestaña Sala (Urgencias) | no existía | 99 | 163 px |
+
+Las palabras incluyen la barra superior, las pestañas y el aviso de demostración.
+
 ## Lo que no está medido
+
+- Cuadros por segundo de la pantalla grande en un equipo distinto del notebook M4 (por ejemplo, el que se conecte al proyector).
 
 - Latencia del modelo local en el DGX Spark.
 - Latencia de los turnos de agente con Claude.

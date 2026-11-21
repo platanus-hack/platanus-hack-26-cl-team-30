@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import Image from "next/image";
-import { SPONSORS, STORY, TEAM } from "./content";
+import { ORIGIN, SPONSORS, TEAM } from "./content";
 import { Heading, Marquee, Stagger } from "./motion";
 
 const PHOTO_DIR = "equipo";
@@ -30,12 +30,16 @@ export function Origin() {
       <div className="wrap">
         <p className="small font-semibold text-white/80">Platanus Hack 26: Santiago ft. Buk · track Multiplayer</p>
         <Heading id="equipo-titulo" className="mt-6 max-w-[17ch]">
-          Tres amigos, 36 horas y <span className="serif text-[#99f6e4]">una pregunta que no soltamos.</span>
+          Una pregunta <span className="serif text-[#cfeae3]">que no soltamos.</span>
         </Heading>
-        <Stagger className="mt-8 max-w-[40rem] space-y-5 text-white/85">
-          {STORY.map((paragraph, i) => (
-            <p key={i} className={i === 0 ? "lede text-white" : ""}>
-              {paragraph}
+        <p className="lede mt-8 max-w-[40rem] text-white">{ORIGIN.question}</p>
+        <Stagger className="mt-10 flex flex-wrap gap-x-14 gap-y-6">
+          {ORIGIN.stats.map((stat) => (
+            <p key={stat.label}>
+              <span className="serif tabular block text-[#cfeae3]" style={{ fontSize: "clamp(3.5rem, 2.5rem + 4vw, 6rem)", lineHeight: 0.9 }}>
+                {stat.value}
+              </span>
+              <span className="mt-2 block font-medium text-white/85">{stat.label}</span>
             </p>
           ))}
         </Stagger>
@@ -70,8 +74,8 @@ export function Origin() {
 
       <div className="mt-12 bg-white text-foreground md:mt-16">
         <div className="wrap flex flex-wrap items-baseline justify-between gap-x-8 gap-y-1 pt-6">
-          <p className="small font-semibold">Patrocinadores de la hackathon</p>
-          <p className="small text-muted-foreground">Son de Platanus Hack 26, no de este proyecto.</p>
+          <p className="small font-semibold">Patrocinadores de Platanus Hack 26</p>
+          <p className="small text-muted-foreground">No son de este proyecto.</p>
         </div>
         <Marquee label="Patrocinadores de Platanus Hack 26" seconds={40} reverse className="py-8">
           {SPONSORS.map((sponsor) => (

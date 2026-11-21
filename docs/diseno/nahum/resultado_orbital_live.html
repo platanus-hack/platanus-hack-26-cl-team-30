@@ -1,0 +1,1791 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>[NOMBRE_APP] — Del Punto a la Galaxia · Multiplayer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@88..112,500..800&family=Newsreader:ital,opsz,wght@1,6..72,400..500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #f0f9ff;
+      --muted: #8ab4c7;
+      --surface: rgba(4, 17, 27, 0.78);
+      --border: rgba(125, 211, 252, 0.22);
+
+      /* Colores estrictamente asociados al tipo de rol */
+      --c-emerald: #10b981;
+      --c-amber: #f59e0b;
+      --c-violet: #a855f7;
+      --c-cyan: #38bdf8;
+      --c-bleed: #f43f5e;
+
+      --font-sans: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      --font-serif: 'Newsreader', Georgia, serif;
+      --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    ::selection { background: rgba(56, 189, 248, 0.3); color: #fff; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #020910;
+      color: var(--ink);
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+
+    #orbitalCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      z-index: 1;
+    }
+
+    /* Layout estricto en 3 bandas: Top seguro | Centro 100% libre para la red/galaxia | Bottom compacto */
+    .hud {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: clamp(16px, 2.2vh, 28px) clamp(22px, 3.2vw, 48px) clamp(14px, 2vh, 24px);
+    }
+
+    /* ================= BANDA SUPERIOR ================= */
+    .top-bar {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-block {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: auto;
+    }
+
+    .live-dot {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: var(--c-cyan);
+      box-shadow: 0 0 18px var(--c-cyan);
+      animation: pulseDot 1.3s ease-in-out infinite;
+      transition: background 320ms ease, box-shadow 320ms ease;
+      flex-shrink: 0;
+    }
+
+    .live-dot.bleed { background: var(--c-bleed); box-shadow: 0 0 20px var(--c-bleed); }
+    .live-dot.calm { background: var(--c-emerald); box-shadow: 0 0 22px var(--c-emerald); animation: none; }
+    .live-dot.galaxy { background: #ffffff; box-shadow: 0 0 24px #38bdf8, 0 0 40px #a855f7; animation: none; }
+
+    .brand-title {
+      font-size: clamp(20px, 2vw, 30px);
+      font-weight: 800;
+      font-stretch: 108%;
+      letter-spacing: -0.02em;
+    }
+
+    .center-title { text-align: center; }
+
+    .stage-headline {
+      font-size: clamp(24px, 2.9vw, 46px);
+      font-weight: 800;
+      font-stretch: 92%;
+      letter-spacing: -0.025em;
+      line-height: 1.02;
+      color: #ffffff;
+      text-shadow: 0 4px 28px rgba(0, 0, 0, 0.72);
+      transition: color 300ms ease, letter-spacing 400ms var(--ease-out);
+      white-space: nowrap;
+    }
+
+    .stage-headline.bleed { color: #fda4af; text-shadow: 0 0 30px rgba(244, 63, 94, 0.55); }
+    .stage-headline.violet { color: #e9d5ff; text-shadow: 0 0 30px rgba(168, 85, 247, 0.55); }
+    .stage-headline.calm { color: #a7f3d0; text-shadow: 0 0 34px rgba(16, 185, 129, 0.58); }
+    .stage-headline.galaxy {
+      color: #ffffff;
+      letter-spacing: 0.1em;
+      text-shadow: 0 0 26px rgba(56, 189, 248, 0.7), 0 0 54px rgba(168, 85, 247, 0.45);
+    }
+
+    .stage-subline {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: clamp(14px, 1.35vw, 20px);
+      color: #bae6fd;
+      margin-top: 4px;
+      text-shadow: 0 2px 16px rgba(0, 0, 0, 0.85);
+    }
+
+    .hero-counters {
+      display: flex;
+      align-items: baseline;
+      justify-content: flex-end;
+      gap: clamp(16px, 2.2vw, 32px);
+    }
+
+    .counter-unit {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      line-height: 1;
+    }
+
+    .counter-num {
+      font-family: var(--font-mono);
+      font-size: clamp(26px, 2.9vw, 44px);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.03em;
+      color: #ffffff;
+      transition: color 320ms ease;
+    }
+
+    .counter-num.calm { color: #6ee7b7; }
+    .counter-num.galaxy { color: #7dd3fc; }
+
+    .counter-lbl {
+      font-size: clamp(10px, 0.85vw, 12px);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    /* ================= ZONA CENTRAL: 100% LIBRE ================= */
+    .canvas-zone {
+      position: relative;
+      pointer-events: none;
+    }
+
+    /* QR retráctil en esquina inferior-derecha */
+    .qr-dock {
+      position: absolute;
+      right: 0;
+      bottom: 12px;
+      pointer-events: auto;
+      background: rgba(5, 20, 31, 0.88);
+      border: 1.5px solid rgba(168, 85, 247, 0.58);
+      border-radius: 18px;
+      padding: 14px;
+      width: 222px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 9px;
+      text-align: center;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 20px 54px -16px rgba(0, 0, 0, 0.72);
+      transition: transform 300ms var(--ease-out), width 260ms var(--ease-out), padding 260ms var(--ease-out), opacity 240ms ease;
+    }
+
+    .qr-dock.collapsed {
+      width: auto;
+      padding: 9px 16px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    .qr-mini {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      color: #f3e8ff;
+    }
+
+    .qr-dock.collapsed .qr-full { display: none; }
+    .qr-dock:not(.collapsed) .qr-mini { display: none; }
+
+    .qr-cta {
+      font-size: 14.5px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #f3e8ff;
+    }
+
+    .qr-box {
+      width: 180px;
+      height: 180px;
+      background: #ffffff;
+      border-radius: 11px;
+      padding: 7px;
+    }
+
+    .qr-box svg { width: 100%; height: 100%; display: block; }
+
+    /* ================= BANDA INFERIOR ================= */
+    .bottom-area {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .impact-strip {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      min-height: 36px;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 360ms var(--ease-out), transform 360ms var(--ease-out);
+      pointer-events: none;
+    }
+
+    .impact-strip.visible { opacity: 1; transform: translateY(0); }
+
+    .impact-pill {
+      padding: 7px 16px;
+      border-radius: 999px;
+      font-size: clamp(12.5px, 1.1vw, 15.5px);
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      background: rgba(5, 34, 32, 0.86);
+      border: 1px solid rgba(52, 211, 153, 0.55);
+      color: #ecfdf5;
+      font-variant-numeric: tabular-nums;
+      backdrop-filter: blur(8px);
+    }
+
+    .impact-pill.solar {
+      background: rgba(8, 28, 48, 0.88);
+      border-color: rgba(125, 211, 252, 0.55);
+      color: #e0f2fe;
+    }
+
+    .impact-pill.galaxy {
+      background: rgba(24, 16, 48, 0.88);
+      border-color: rgba(192, 132, 252, 0.62);
+      color: #f5f3ff;
+    }
+
+    .role-legend {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .role-tile {
+      position: relative;
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      backdrop-filter: blur(8px);
+      transition: border-color 260ms ease, background 260ms ease, transform 200ms var(--ease-out);
+    }
+
+    .role-tile::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 3px;
+      background: var(--rc);
+      opacity: 0.22;
+      transition: opacity 260ms ease, height 260ms ease;
+    }
+
+    .role-tile.active {
+      border-color: var(--rc);
+      background: rgba(8, 29, 44, 0.9);
+    }
+
+    .role-tile.active::after { opacity: 1; height: 4px; }
+    .role-tile.pulse { transform: scale(1.03); }
+
+    .role-dot-lg {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: rgba(148, 210, 232, 0.22);
+      flex-shrink: 0;
+      transition: background 240ms ease, box-shadow 240ms ease;
+    }
+
+    .role-tile.active .role-dot-lg {
+      background: var(--rc);
+      box-shadow: 0 0 14px var(--rc);
+    }
+
+    .role-label-big {
+      font-size: clamp(12.5px, 1.15vw, 17px);
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .role-num {
+      font-family: var(--font-mono);
+      font-size: clamp(13px, 1.15vw, 17px);
+      font-weight: 800;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .role-tile.active .role-num { color: #ffffff; }
+
+    /* Controles discretos (ocultables con H para modo cine puro) */
+    .stage-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      pointer-events: auto;
+      opacity: 0.72;
+      transition: opacity 200ms ease;
+    }
+
+    .stage-controls:hover { opacity: 1; }
+    .stage-controls.hidden { opacity: 0; pointer-events: none; }
+
+    .ctrl-strip { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .k-btn {
+      padding: 5px 10px;
+      border-radius: 7px;
+      border: 1px solid rgba(148, 210, 232, 0.22);
+      background: rgba(4, 18, 28, 0.86);
+      color: #d8eff9;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 120ms var(--ease-out), border-color 150ms ease;
+    }
+
+    .k-btn:active { transform: scale(0.96); }
+    .k-btn.go { background: var(--c-cyan); border-color: var(--c-cyan); color: #03131d; }
+    .k-btn.solar { border-color: rgba(56, 189, 248, 0.6); color: #bae6fd; }
+    .k-btn.galaxy { background: linear-gradient(90deg, #38bdf8, #a855f7, #10b981); border-color: transparent; color: #03111a; }
+    .k-btn.auto { background: var(--c-emerald); border-color: var(--c-emerald); color: #031c15; }
+    .k-btn.red { border-color: rgba(244, 63, 94, 0.6); color: #fda4af; }
+    .k-btn.vio { border-color: rgba(168, 85, 247, 0.6); color: #e9d5ff; }
+
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.32); opacity: 0.7; }
+    }
+
+    /* Modal Config / SSE (Tecla C) */
+    .modal-bg {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 10, 16, 0.76);
+      backdrop-filter: blur(6px);
+      z-index: 90;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-bg.open { display: flex; }
+
+    .modal-card {
+      width: min(500px, 100%);
+      background: #061c29;
+      border: 1px solid rgba(148, 210, 232, 0.35);
+      border-radius: 16px;
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      user-select: text;
+    }
+
+    .modal-card h3 { font-size: 19px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; }
+    .f-group { display: flex; flex-direction: column; gap: 5px; }
+    .f-group label { font-size: 11.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .f-input {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(148, 210, 232, 0.3);
+      background: #03111a;
+      color: var(--ink);
+      font-family: var(--font-sans);
+      font-size: 14px;
+    }
+
+    @media (max-width: 960px) {
+      .top-bar { grid-template-columns: 1fr auto; }
+      .center-title { grid-column: 1 / -1; order: 3; }
+      .stage-headline { white-space: normal; }
+      .role-legend { grid-template-columns: repeat(2, 1fr); }
+      .qr-dock { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .live-dot { animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="orbitalCanvas"></canvas>
+
+  <div class="hud">
+    <!-- BANDA 1: TOP BAR LIMPIA (CERO SUPERPOSICIÓN) -->
+    <header class="top-bar">
+      <div class="brand-block">
+        <span class="live-dot" id="topDot"></span>
+        <span class="brand-title" id="brandLabel">[NOMBRE_APP]</span>
+      </div>
+
+      <div class="center-title">
+        <h1 class="stage-headline" id="stageHeadline">POLO SUR · SIN RED</h1>
+        <p class="stage-subline" id="stageSubline">Un punto esperando la primera decisión humana.</p>
+      </div>
+
+      <div class="hero-counters">
+        <div class="counter-unit">
+          <span class="counter-num" id="nodesCount">0/10</span>
+          <span class="counter-lbl" id="nodesLbl">Nodos</span>
+        </div>
+        <div class="counter-unit">
+          <span class="counter-num" id="netPct">0%</span>
+          <span class="counter-lbl" id="pctLbl">Tejido</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- BANDA 2: ESCENARIO 100% LIBRE PARA RED / SISTEMA SOLAR / GALAXIA -->
+    <div class="canvas-zone">
+      <div class="qr-dock" id="qrDock" title="Clic o tecla Q para expandir/contraer">
+        <div class="qr-cta qr-full">Escanea y entra</div>
+        <div class="qr-box qr-full" id="qrMount"></div>
+        <div class="qr-mini">
+          <span style="width:9px;height:9px;border-radius:50%;background:var(--c-violet);"></span>
+          <span>QR (Q)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- BANDA 3: PÍLDORAS DE ÉXITO + 5 ROLES POR COLOR + CONTROLES -->
+    <footer class="bottom-area">
+      <div class="impact-strip" id="impactStrip">
+        <span class="impact-pill" id="imp1">10/10 ROLES EN VIVO</span>
+        <span class="impact-pill" id="imp2">0 SECRETOS FILTRADOS</span>
+        <span class="impact-pill" id="imp3">12% → 89% CONFIABILIDAD</span>
+      </div>
+
+      <div class="role-legend" id="roleLegend"></div>
+
+      <div class="stage-controls" id="stageControls">
+        <div class="ctrl-strip">
+          <button class="k-btn go" id="btnNext" type="button">[Espacio] Siguiente</button>
+          <button class="k-btn" id="btnJoin" type="button">[J] +1 Agente</button>
+          <button class="k-btn red" id="btnBreach" type="button">[B] 403</button>
+          <button class="k-btn vio" id="btnVeto" type="button">[V] Veto</button>
+          <button class="k-btn solar" id="btnSolar" type="button">[S] Sist. Solar</button>
+          <button class="k-btn solar" id="btnCluster" type="button">[M] Múltiples</button>
+          <button class="k-btn galaxy" id="btnGalaxy" type="button">[G] Galaxia</button>
+          <button class="k-btn auto" id="btnAuto" type="button">[A] Auto-Demo</button>
+          <button class="k-btn" id="btnQr" type="button">[Q] QR</button>
+          <button class="k-btn" id="btnCfg" type="button">[C] Config / Nombre</button>
+          <button class="k-btn" id="btnReset" type="button">[R] 0%</button>
+          <button class="k-btn" id="btnHide" type="button">[H] Cine</button>
+          <button class="k-btn" id="btnFull" type="button">[F] Full</button>
+        </div>
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--muted);" id="sseTag">TRACK MULTIPLAYER</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- MODAL CONFIG / NOMBRE PROYECTO MADRE / SSE (Tecla C) -->
+  <div class="modal-bg" id="cfgModal">
+    <div class="modal-card">
+      <h3>
+        <span>Proyecto Madre &amp; SSE en Vivo</span>
+        <button class="k-btn" id="closeCfg" type="button">✕</button>
+      </h3>
+      <div class="f-group">
+        <label for="inBrand">Nombre de tu Proyecto Madre (aparece en la Galaxia)</label>
+        <input class="f-input" id="inBrand" type="text" value="[NOMBRE_APP]" />
+      </div>
+      <div class="f-group">
+        <label for="inBaseUrl">URL base del QR</label>
+        <input class="f-input" id="inBaseUrl" type="url" value="https://team-30-platanus-hack.onrender.com" />
+      </div>
+      <div class="f-group">
+        <label for="inSseUrl">URL SSE opcional (same-origin o con CORS)</label>
+        <input class="f-input" id="inSseUrl" type="url" placeholder="http://localhost:3000/api/rooms/demo-cross/events" />
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px;">
+        <button class="k-btn" id="btnNoSse" type="button">Solo Simulador</button>
+        <button class="k-btn go" id="btnSaveCfg" type="button">Aplicar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+       1. GENERADOR QR ISO/IEC 18004 PURO (100% OFFLINE · BIT-EXACTO)
+       ========================================================================= */
+    const MiniQR = (() => {
+      const GF_EXP = new Uint8Array(512), GF_LOG = new Uint8Array(256);
+      for (let i = 0, x = 1; i < 255; i++) { GF_EXP[i] = x; GF_LOG[x] = i; x <<= 1; if (x & 0x100) x ^= 0x11d; }
+      for (let i = 255; i < 512; i++) GF_EXP[i] = GF_EXP[i - 255];
+      const gfMul = (a, b) => (a === 0 || b === 0 ? 0 : GF_EXP[GF_LOG[a] + GF_LOG[b]]);
+      const rsGen = (deg) => {
+        let p = [1];
+        for (let i = 0; i < deg; i++) {
+          const n = new Array(p.length + 1).fill(0);
+          for (let j = 0; j < p.length; j++) { n[j] ^= p[j]; n[j + 1] ^= gfMul(p[j], GF_EXP[i]); }
+          p = n;
+        }
+        return p;
+      };
+      const rsRem = (data, len) => {
+        const g = rsGen(len), r = new Uint8Array(len);
+        for (const b of data) {
+          const f = b ^ r[0];
+          for (let i = 0; i < len - 1; i++) r[i] = r[i + 1];
+          r[len - 1] = 0;
+          if (f) for (let i = 0; i < len; i++) r[i] ^= gfMul(g[i + 1], f);
+        }
+        return r;
+      };
+      const V = [
+        null,
+        [16, 10, [[1, 16]], [], 0],
+        [28, 16, [[1, 28]], [6, 18], 0],
+        [44, 26, [[1, 44]], [6, 22], 0],
+        [64, 18, [[2, 32]], [6, 26], 0],
+        [86, 24, [[2, 43]], [6, 30], 0],
+        [108, 16, [[4, 27]], [6, 34], 0],
+        [124, 18, [[4, 31]], [6, 22, 38], 0x07c94],
+        [154, 22, [[2, 38], [2, 39]], [6, 24, 42], 0x085bc],
+        [182, 22, [[3, 36], [2, 37]], [6, 26, 46], 0x09a99],
+        [216, 26, [[4, 43], [1, 44]], [6, 28, 50], 0x0a4d3],
+      ];
+      const fmtBits = (m) => {
+        let r = (m & 7) << 10;
+        for (let i = 4; i >= 0; i--) if (r & (1 << (i + 10))) r ^= 0x537 << i;
+        return (((m & 7) << 10) | r) ^ 0x5412;
+      };
+      function encodeBytes(text) {
+        const bytes = Array.from(new TextEncoder().encode(text));
+        let ver = 1;
+        for (; ver <= 10; ver++) if (4 + (ver <= 9 ? 8 : 16) + bytes.length * 8 <= V[ver][0] * 8) break;
+        if (ver > 10) throw new Error("URL too long");
+        const [totalData, ecLen, groups, align, vBits] = V[ver];
+        const bits = [], push = (val, len) => { for (let i = len - 1; i >= 0; i--) bits.push((val >>> i) & 1); };
+        push(0b0100, 4); push(bytes.length, ver <= 9 ? 8 : 16);
+        for (const b of bytes) push(b, 8);
+        push(0, Math.min(4, totalData * 8 - bits.length));
+        while (bits.length % 8) bits.push(0);
+        const cw = [];
+        for (let i = 0; i < bits.length; i += 8) { let v = 0; for (let j = 0; j < 8; j++) v = (v << 1) | bits[i + j]; cw.push(v); }
+        for (let t = 0; cw.length < totalData; t++) cw.push(t % 2 === 0 ? 0xec : 0x11);
+        const dBlks = [], eBlks = [];
+        let off = 0;
+        for (const [cnt, sz] of groups) for (let i = 0; i < cnt; i++) { const b = cw.slice(off, off + sz); off += sz; dBlks.push(b); eBlks.push(rsRem(b, ecLen)); }
+        const inter = [], maxD = Math.max(...dBlks.map((b) => b.length));
+        for (let i = 0; i < maxD; i++) for (const b of dBlks) if (i < b.length) inter.push(b[i]);
+        for (let i = 0; i < ecLen; i++) for (const e of eBlks) inter.push(e[i]);
+        const size = ver * 4 + 17;
+        const grid = Array.from({ length: size }, () => new Int8Array(size));
+        const func = Array.from({ length: size }, () => new Uint8Array(size));
+        const sf = (r, c, d) => { if (r >= 0 && c >= 0 && r < size && c < size) { grid[r][c] = d ? 1 : 0; func[r][c] = 1; } };
+        const finder = (tr, tc) => {
+          for (let dr = -1; dr <= 7; dr++) for (let dc = -1; dc <= 7; dc++) {
+            const inO = dr >= 0 && dr <= 6 && dc >= 0 && dc <= 6;
+            sf(tr + dr, tc + dc, inO && (dr === 0 || dr === 6 || dc === 0 || dc === 6 || (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4)));
+          }
+        };
+        finder(0, 0); finder(0, size - 7); finder(size - 7, 0);
+        for (let i = 8; i < size - 8; i++) { sf(6, i, i % 2 === 0); sf(i, 6, i % 2 === 0); }
+        for (let ai = 0; ai < align.length; ai++) for (let aj = 0; aj < align.length; aj++) {
+          const last = align.length - 1;
+          if ((ai === 0 && aj === 0) || (ai === 0 && aj === last) || (ai === last && aj === 0)) continue;
+          for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) sf(align[ai] + dr, align[aj] + dc, Math.max(Math.abs(dr), Math.abs(dc)) !== 1);
+        }
+        sf(size - 8, 8, true);
+        for (let i = 0; i <= 8; i++) if (i !== 6) { sf(8, i, false); sf(i, 8, false); }
+        for (let i = 0; i < 8; i++) sf(8, size - 1 - i, false);
+        for (let i = 0; i < 7; i++) sf(size - 1 - i, 8, false);
+        if (ver >= 7) for (let i = 0; i < 18; i++) {
+          const bit = ((vBits >>> i) & 1) === 1, a = Math.floor(i / 3), b = size - 11 + (i % 3);
+          sf(a, b, bit); sf(b, a, bit);
+        }
+        const all = [];
+        for (const c of inter) for (let i = 7; i >= 0; i--) all.push((c >>> i) & 1);
+        let bi = 0, up = true;
+        for (let col = size - 1; col >= 1; col -= 2) {
+          if (col === 6) col--;
+          for (let st = 0; st < size; st++) {
+            const r = up ? size - 1 - st : st;
+            for (let dx = 0; dx < 2; dx++) { const c = col - dx; if (!func[r][c]) grid[r][c] = bi < all.length ? all[bi++] : 0; }
+          }
+          up = !up;
+        }
+        const masks = [
+          (r, c) => (r + c) % 2 === 0, (r, c) => r % 2 === 0, (r, c) => c % 3 === 0, (r, c) => (r + c) % 3 === 0,
+          (r, c) => (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0, (r, c) => ((r * c) % 2) + ((r * c) % 3) === 0,
+          (r, c) => (((r * c) % 2) + ((r * c) % 3)) % 2 === 0, (r, c) => (((r + c) % 2) + ((r * c) % 3)) % 2 === 0,
+        ];
+        const c1 = [[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
+        const c2 = [[size-1,8],[size-2,8],[size-3,8],[size-4,8],[size-5,8],[size-6,8],[size-7,8],[8,size-8],[8,size-7],[8,size-6],[8,size-5],[8,size-4],[8,size-3],[8,size-2],[8,size-1]];
+        const score = (mat) => {
+          let p = 0, dark = 0;
+          for (let r = 0; r < size; r++) {
+            let rr = 1, rc = 1;
+            for (let c = 0; c < size; c++) {
+              if (mat[r][c]) dark++;
+              if (c > 0) { if (mat[r][c] === mat[r][c - 1]) rr++; else { if (rr >= 5) p += rr - 2; rr = 1; } }
+              if (c > 0) { if (mat[c][r] === mat[c - 1][r]) rc++; else { if (rc >= 5) p += rc - 2; rc = 1; } }
+            }
+            if (rr >= 5) p += rr - 2; if (rc >= 5) p += rc - 2;
+          }
+          for (let r = 0; r < size - 1; r++) for (let c = 0; c < size - 1; c++) {
+            const v = mat[r][c]; if (v === mat[r][c+1] && v === mat[r+1][c] && v === mat[r+1][c+1]) p += 3;
+          }
+          const p1 = [1,0,1,1,1,0,1,0,0,0,0], p2 = [0,0,0,0,1,0,1,1,1,0,1];
+          for (let r = 0; r < size; r++) for (let c = 0; c <= size - 11; c++) {
+            let a=1,b=1,d=1,e=1;
+            for (let k=0;k<11;k++) { if(mat[r][c+k]!==p1[k])a=0; if(mat[r][c+k]!==p2[k])b=0; if(mat[c+k][r]!==p1[k])d=0; if(mat[c+k][r]!==p2[k])e=0; }
+            if (a||b) p += 40; if (d||e) p += 40;
+          }
+          return p + Math.floor(Math.abs(dark * 20 - size * size * 10) / (size * size)) * 10;
+        };
+        let best = null, bestS = Infinity;
+        for (let m = 0; m < 8; m++) {
+          const mat = grid.map((row, r) => row.map((v, c) => (func[r][c] ? v : masks[m](r, c) ? v ^ 1 : v)));
+          const f = fmtBits(m);
+          for (let i = 0; i < 15; i++) { const b = (f >>> (14 - i)) & 1; mat[c1[i][0]][c1[i][1]] = b; mat[c2[i][0]][c2[i][1]] = b; }
+          const sc = score(mat);
+          if (sc < bestS) { bestS = sc; best = mat; }
+        }
+        return { size, modules: best };
+      }
+      function toSvg(text, dark = "#020910") {
+        const { size, modules } = encodeBytes(text);
+        const q = 2, vb = size + q * 2;
+        let d = "";
+        for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) if (modules[r][c]) d += `M${c + q},${r + q}h1v1h-1z`;
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${vb} ${vb}" shape-rendering="crispEdges"><rect width="${vb}" height="${vb}" fill="#ffffff"/><path d="${d}" fill="${dark}"/></svg>`;
+      }
+      return { encodeBytes, toSvg };
+    })();
+
+    /* =========================================================================
+       2. TOPOLOGÍA MULTI-ESCALA: PUNTO -> PLANETA -> SISTEMA SOLAR -> CÚMULO -> GALAXIA
+       ========================================================================= */
+    const SEATS = [
+      { id: "andes_a", name: "Urgencias", color: "#10b981" },
+      { id: "andes_b", name: "Gestión", color: "#f59e0b" },
+      { id: "rural_a", name: "Turno", color: "#34d399" },
+      { id: "rural_b", name: "Convenios", color: "#fbbf24" },
+      { id: "comite",  name: "Comité Ético", color: "#a855f7" },
+    ];
+
+    const NODES = [
+      { seat: "andes_a", color: "#10b981", lat: -0.66, lon: -1.10 },
+      { seat: "rural_a", color: "#34d399", lat: -0.62, lon:  1.18 },
+      { seat: "andes_b", color: "#f59e0b", lat: -0.24, lon: -2.25 },
+      { seat: "rural_b", color: "#fbbf24", lat: -0.18, lon:  2.30 },
+      { seat: "andes_a", color: "#10b981", lat:  0.14, lon: -0.58 },
+      { seat: "rural_a", color: "#34d399", lat:  0.18, lon:  0.62 },
+      { seat: "andes_b", color: "#f59e0b", lat:  0.48, lon: -1.65 },
+      { seat: "rural_b", color: "#fbbf24", lat:  0.52, lon:  1.60 },
+      { seat: "comite",  color: "#a855f7", lat:  0.78, lon: -0.45 },
+      { seat: "comite",  color: "#a855f7", lat:  0.86, lon:  0.75 },
+    ].map((n, idx) => {
+      const cLa = Math.cos(n.lat);
+      return { ...n, idx, p: { x: cLa * Math.sin(n.lon), y: Math.sin(n.lat), z: cLa * Math.cos(n.lon) }, active: false, pulse: 0 };
+    });
+
+    const SOUTH_POLE = { x: 0, y: -1, z: 0 };
+
+    const OMNI_LINKS_BLUEPRINT = [
+      { from: -1, to: 0, color: "#10b981" }, { from: -1, to: 1, color: "#34d399" },
+      { from: 0, to: 1, color: "#38bdf8" },  { from: 0, to: 2, color: "#f59e0b" },
+      { from: -1, to: 2, color: "#f59e0b" }, { from: 1, to: 3, color: "#fbbf24" },
+      { from: -1, to: 3, color: "#fbbf24" }, { from: 2, to: 3, color: "#38bdf8" },
+      { from: 0, to: 4, color: "#10b981" },  { from: 2, to: 4, color: "#f59e0b" },
+      { from: 1, to: 5, color: "#34d399" },  { from: 3, to: 5, color: "#fbbf24" },
+      { from: 4, to: 5, color: "#38bdf8" },  { from: 0, to: 5, color: "#38bdf8" },
+      { from: 1, to: 4, color: "#38bdf8" },  { from: 4, to: 6, color: "#f59e0b" },
+      { from: 2, to: 6, color: "#f59e0b" },  { from: 5, to: 7, color: "#fbbf24" },
+      { from: 3, to: 7, color: "#fbbf24" },  { from: 6, to: 7, color: "#38bdf8" },
+      { from: 4, to: 7, color: "#10b981" },  { from: 5, to: 6, color: "#34d399" },
+      { from: 6, to: 8, color: "#a855f7" },  { from: 4, to: 8, color: "#a855f7" },
+      { from: 7, to: 9, color: "#a855f7" },  { from: 5, to: 9, color: "#a855f7" },
+      { from: 8, to: 9, color: "#c084fc" },  { from: 6, to: 9, color: "#38bdf8" },
+      { from: 7, to: 8, color: "#38bdf8" },
+    ];
+
+    const ACTIVE_EDGES = [];
+
+    // Escala 2 (Estadio 6): Planetas orbitando nuestro primer Sistema Solar
+    const SOLAR_PLANETS = [
+      { label: "SALUD",     color: "#10b981", ring: "#34d399", rx: 1.55, ry: 0.52, a: 0.4, spd: 0.28, sz: 0.30, tilt: 0.4 },
+      { label: "B2B TECH",  color: "#f59e0b", ring: "#fbbf24", rx: 2.15, ry: 0.72, a: 2.2, spd: 0.22, sz: 0.34, tilt: -0.5 },
+      { label: "LOGÍSTICA", color: "#38bdf8", ring: "#7dd3fc", rx: 2.75, ry: 0.92, a: 4.1, spd: 0.17, sz: 0.27, tilt: 0.7 },
+      { label: "FINANZAS",  color: "#a855f7", ring: "#c084fc", rx: 3.35, ry: 1.12, a: 5.4, spd: 0.13, sz: 0.32, tilt: -0.35 },
+      { label: "TU ORG",    color: "#f43f5e", ring: "#fda4af", rx: 3.92, ry: 1.32, a: 1.3, spd: 0.10, sz: 0.25, tilt: 0.55 },
+    ];
+
+    // Escala 3 (Estadio 7): 7 Sistemas Solares hermanos formando una constelación inter-organizacional
+    const CLUSTER_SYSTEMS = [
+      { label: "RED SALUD",       ox: -0.31, oy: -0.14, core: "#10b981", planets: ["#34d399", "#38bdf8", "#a855f7"], scale: 0.90, ph: 0.2 },
+      { label: "CADENA B2B",      ox:  0.30, oy: -0.13, core: "#f59e0b", planets: ["#fbbf24", "#10b981", "#38bdf8"], scale: 0.92, ph: 1.4 },
+      { label: "ENERGÍA",         ox: -0.35, oy:  0.10, core: "#38bdf8", planets: ["#7dd3fc", "#f59e0b"],           scale: 0.80, ph: 2.6 },
+      { label: "FINANZAS",        ox:  0.34, oy:  0.11, core: "#a855f7", planets: ["#c084fc", "#38bdf8", "#f43f5e"], scale: 0.86, ph: 3.7 },
+      { label: "ESTADO / CIUDAD", ox:  0.02, oy: -0.19, core: "#2dd4bf", planets: ["#10b981", "#a855f7"],           scale: 0.74, ph: 4.9 },
+      { label: "COMERCIO",        ox: -0.15, oy:  0.15, core: "#fbbf24", planets: ["#f59e0b", "#34d399"],           scale: 0.76, ph: 5.5 },
+      { label: "BIOTECH",         ox:  0.16, oy:  0.15, core: "#f43f5e", planets: ["#fda4af", "#a855f7", "#38bdf8"], scale: 0.74, ph: 0.9 },
+    ];
+
+    // Escala 4 (Estadio 8): Galaxia espiral 3D de 4 brazos en los colores de los roles (960 estrellas + 20 súper-sistemas)
+    const ARM_COLORS = ["#10b981", "#f59e0b", "#38bdf8", "#a855f7"];
+    const GALAXY_STARS = (() => {
+      const list = [];
+      const N = 960;
+      for (let i = 0; i < N; i++) {
+        const arm = i % 4;
+        // Distribución determinista (sin Math.random descontrolado) concentrada hacia el centro
+        const u = ((i * 0.6180339887) % 1);
+        const r = Math.pow(u, 0.78); // 0..1
+        const armOffset = (arm * Math.PI) / 2;
+        const twist = r * 4.25;
+        const spread = (Math.sin(i * 12.9898) * 0.5) * (0.28 + r * 0.42);
+        const angle = armOffset + twist + spread;
+        const thickness = Math.cos(i * 78.233) * (0.06 * (1 - r * 0.6));
+        const brightHub = i % 44 === 0 && r > 0.14 && r < 0.92;
+        list.push({
+          arm, r, angle, thickness,
+          color: r < 0.14 ? "#ffffff" : ARM_COLORS[arm],
+          size: brightHub ? 3.2 : 0.8 + ((i * 17) % 10) * 0.15,
+          brightHub,
+          tw: (i * 0.73) % (Math.PI * 2),
+        });
+      }
+      return list;
+    })();
+
+    let cfg = loadCfg();
+    let app = {
+      stage: 0, // 0..8 (6=Sistema Solar, 7=Varios Sistemas Solares, 8=Galaxia [NOMBRE_APP]!)
+      targetWeave: 0.0,
+      weave: 0.0,
+      connectedCount: 0,
+      seatCounts: { andes_a: 0, andes_b: 0, rural_a: 0, rural_b: 0, comite: 0 },
+      rulesSealed: false,
+      converged: false,
+      sealed: false,
+      // Mezclas suaves de cámara multi-escala
+      solarBlend: 0,
+      clusterBlend: 0,
+      galaxyBlend: 0,
+      breachFlash: 0,
+      vetoFlash: 0,
+      climaxWave: 0,
+      climaxWave2: 0,
+      climaxBloom: 0,
+      springPos: 0,
+      springVel: 0,
+      rotBoost: 0,
+      qrCollapsed: false,
+      controlsHidden: false,
+      dripTimer: null,
+      autoTimer: null,
+      sse: null,
+    };
+
+    function loadCfg() {
+      try {
+        const s = JSON.parse(localStorage.getItem("orbital_v4_cfg") || "{}");
+        return {
+          brand: s.brand || "[NOMBRE_APP]",
+          baseUrl: s.baseUrl || "https://team-30-platanus-hack.onrender.com",
+          sseUrl: s.sseUrl || "",
+        };
+      } catch {
+        return { brand: "[NOMBRE_APP]", baseUrl: "https://team-30-platanus-hack.onrender.com", sseUrl: "" };
+      }
+    }
+    const saveCfg = () => { try { localStorage.setItem("orbital_v4_cfg", JSON.stringify(cfg)); } catch {} };
+
+    function getStageMeta(stage) {
+      const b = cfg.brand || "[NOMBRE_APP]";
+      const map = [
+        { h: "POLO SUR · SIN RED", s: "Un punto esperando la primera decisión humana.", tone: "" },
+        { h: "AGENTES CONECTANDO", s: "Cada rol teje su color en todas direcciones.", tone: "" },
+        { h: "403 · SECRETO PROTEGIDO", s: "La red colabora sin exponer datos privados.", tone: "bleed" },
+        { h: "REGLAS SELLADAS", s: "Límites humanos estabilizando cada órbita.", tone: "" },
+        { h: "CONVERGENCIA ACTIVA", s: "Humanos y agentes sincronizados en 360°.", tone: "violet" },
+        { h: "SISTEMA MULTIPLAYER ACTIVO", s: "Ninguna persona sola pudo tejer esta red.", tone: "calm" },
+        { h: "DE UN PLANETA A UN SISTEMA SOLAR", s: "El mismo esqueleto muta para cada organización.", tone: "calm" },
+        { h: "REDES DE SISTEMAS SOLARES", s: "Cadenas enteras de organizaciones conectadas en vivo.", tone: "violet" },
+        { h: `GALAXIA · ${b.toUpperCase()}`, s: "Un ecosistema multiplayer infinito para cualquier decisión colectiva.", tone: "galaxy" },
+      ];
+      return map[stage] || map[0];
+    }
+
+    /* =========================================================================
+       3. MOTOR 3D CANVAS 2D (4 ESCALAS CONTINUAS A 60FPS)
+       ========================================================================= */
+    const canvas = document.getElementById("orbitalCanvas");
+    const ctx = canvas.getContext("2d");
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    let W = window.innerWidth, H = window.innerHeight, dpr = 1;
+    function resize() {
+      W = window.innerWidth; H = window.innerHeight;
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.floor(W * dpr); canvas.height = Math.floor(H * dpr);
+      canvas.style.width = W + "px"; canvas.style.height = H + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resize();
+    window.addEventListener("resize", resize);
+
+    const STARS = Array.from({ length: 200 }, (_, i) => ({
+      x: ((i * 67.31 + 11) % 100) / 100,
+      y: ((i * 39.17 + 7) % 100) / 100,
+      r: 0.5 + ((i * 13) % 10) * 0.14,
+      ph: (i * 1.19) % (Math.PI * 2),
+    }));
+
+    function isLand(lat, lon) {
+      const d = (la, lo, rla, rlo) => {
+        const a = (lat - la) / rla, b = Math.atan2(Math.sin(lon - lo), Math.cos(lon - lo)) / rlo;
+        return a * a + b * b < 1;
+      };
+      return (
+        d(0.55, -1.7, 0.46, 0.52) || d(-0.36, -1.1, 0.54, 0.34) ||
+        d(0.74, 0.36, 0.32, 0.54) || d(0.02, 0.4, 0.5, 0.42) ||
+        d(0.6, 1.66, 0.46, 0.72) || d(-0.46, 2.3, 0.28, 0.36)
+      );
+    }
+
+    const SURFACE = (() => {
+      const N = 540, pts = [], golden = Math.PI * (3 - Math.sqrt(5));
+      for (let i = 0; i < N; i++) {
+        const y = -1 + (2 * i) / (N - 1);
+        const rad = Math.sqrt(Math.max(0, 1 - y * y));
+        const lon = golden * i, lat = Math.asin(y);
+        const normLon = ((lon % (Math.PI * 2)) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+        let roleColor = "#38bdf8";
+        if (y > 0.55) roleColor = "#a855f7";
+        else if (normLon < 0 && y < 0) roleColor = "#10b981";
+        else if (normLon >= 0 && y < 0) roleColor = "#34d399";
+        else if (normLon < 0 && y >= 0) roleColor = "#f59e0b";
+        else roleColor = "#fbbf24";
+        pts.push({ x: Math.cos(lon) * rad, y, z: Math.sin(lon) * rad, southDist: (y + 1) * 0.5, land: isLand(lat, normLon), roleColor });
+      }
+      return pts;
+    })();
+
+    const ROLE_ORBITS = [
+      { tiltX: 0.35, tiltZ: 0.30, scale: 1.15, unlock: 0.28, speed: 0.60, color: "#10b981" },
+      { tiltX: -0.45, tiltZ: -0.35, scale: 1.19, unlock: 0.40, speed: -0.56, color: "#34d399" },
+      { tiltX: 0.76, tiltZ: -0.52, scale: 1.23, unlock: 0.55, speed: 0.52, color: "#f59e0b" },
+      { tiltX: -0.72, tiltZ: 0.56, scale: 1.25, unlock: 0.66, speed: -0.48, color: "#fbbf24" },
+      { tiltX: 0.14, tiltZ: 0.88, scale: 1.21, unlock: 0.80, speed: 0.68, color: "#a855f7" },
+      { tiltX: -0.25, tiltZ: -0.82, scale: 1.29, unlock: 0.92, speed: -0.64, color: "#38bdf8" },
+    ];
+
+    const POOL_SIZE = 340;
+    const pool = Array.from({ length: POOL_SIZE }, () => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 1, size: 2, color: "#38bdf8", active: false }));
+    let alive = 0;
+
+    function spawn(x, y, vx, vy, color, size, maxLife) {
+      if (alive >= POOL_SIZE || reducedMotion) return;
+      const p = pool[alive++];
+      p.x = x; p.y = y; p.vx = vx; p.vy = vy; p.color = color; p.size = size; p.life = 0; p.maxLife = maxLife; p.active = true;
+    }
+
+    function radialBurst(cx, cy, color, count = 24, speed = 220) {
+      for (let i = 0; i < count; i++) {
+        const a = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.25;
+        const sp = speed * (0.35 + Math.random() * 0.85);
+        spawn(cx, cy, Math.cos(a) * sp, Math.sin(a) * sp, color, 1.7 + Math.random() * 2.4, 0.55 + Math.random() * 0.7);
+      }
+    }
+
+    function triggerNetworkReaction(impactX, impactY, color) {
+      app.springVel += 0.26;
+      app.rotBoost = Math.min(0.9, app.rotBoost + 0.32);
+      radialBurst(impactX, impactY, color, 14, 130);
+    }
+
+    const out = { x: 0, y: 0, z: 0, s: 1 };
+    function project3D(px, py, pz, rY, rX, cx, cy, R) {
+      const cy1 = Math.cos(rY), sy1 = Math.sin(rY);
+      const x1 = px * cy1 - pz * sy1, z1 = px * sy1 + pz * cy1;
+      const cx1 = Math.cos(rX), sx1 = Math.sin(rX);
+      const y2 = py * cx1 - z1 * sx1, z2 = py * sx1 + z1 * cx1;
+      const s = 3.2 / (3.2 - z2 * 0.55);
+      out.x = cx + x1 * R * s;
+      out.y = cy - y2 * R * s;
+      out.z = z2;
+      out.s = s;
+    }
+
+    function drawGeodesic(cx, cy, R, pA, pB, color, grow, width, dashed, t, lift = 1.08, sparkU = -1) {
+      if (grow <= 0.01) return;
+      const steps = 28;
+      const limit = Math.max(1, Math.floor(steps * Math.min(1, grow)));
+      ctx.beginPath();
+      let tipX = 0, tipY = 0, spX = 0, spY = 0;
+      const sparkStep = sparkU >= 0 ? Math.floor(sparkU * steps) : -1;
+      for (let i = 0; i <= limit; i++) {
+        const u = i / steps;
+        const mx = pA.x * (1 - u) + pB.x * u, my = pA.y * (1 - u) + pB.y * u, mz = pA.z * (1 - u) + pB.z * u;
+        const len = Math.hypot(mx, my, mz) || 1;
+        const arch = 1 + Math.sin(u * Math.PI) * (lift - 1);
+        project3D((mx / len) * arch, (my / len) * arch, (mz / len) * arch, rotY, 0.2, cx, cy, R);
+        if (i === 0) ctx.moveTo(out.x, out.y);
+        else ctx.lineTo(out.x, out.y);
+        tipX = out.x; tipY = out.y;
+        if (i === sparkStep) { spX = out.x; spY = out.y; }
+      }
+      ctx.save();
+      if (dashed) { ctx.setLineDash([7, 6]); ctx.lineDashOffset = -t * 38; }
+      ctx.strokeStyle = color; ctx.lineWidth = width; ctx.shadowColor = color; ctx.shadowBlur = 11;
+      ctx.stroke();
+      ctx.restore();
+      if (grow < 0.99) {
+        ctx.beginPath(); ctx.arc(tipX, tipY, 4.0, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff"; ctx.shadowColor = color; ctx.shadowBlur = 14; ctx.fill(); ctx.shadowBlur = 0;
+      } else if (sparkStep >= 0 && sparkStep <= limit) {
+        ctx.beginPath(); ctx.arc(spX, spY, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff"; ctx.shadowColor = color; ctx.shadowBlur = 9; ctx.fill(); ctx.shadowBlur = 0;
+      }
+    }
+
+    function drawRoleOrbit(cx, cy, R, orb, t, alpha, sealed) {
+      const segs = 80;
+      const cX = Math.cos(orb.tiltX), sX = Math.sin(orb.tiltX), cZ = Math.cos(orb.tiltZ), sZ = Math.sin(orb.tiltZ);
+      ctx.beginPath();
+      for (let i = 0; i <= segs; i++) {
+        const a = (i / segs) * Math.PI * 2;
+        const ux = Math.cos(a), uz = Math.sin(a);
+        const y1 = -uz * sX, z1 = uz * cX;
+        const x2 = ux * cZ - y1 * sZ, y2 = ux * sZ + y1 * cZ;
+        project3D(x2 * orb.scale, y2 * orb.scale, z1 * orb.scale, rotY * 0.7, 0.2, cx, cy, R);
+        if (i === 0) ctx.moveTo(out.x, out.y);
+        else ctx.lineTo(out.x, out.y);
+      }
+      ctx.save();
+      ctx.globalAlpha = (sealed ? 0.55 : 0.42) * alpha;
+      ctx.strokeStyle = orb.color; ctx.lineWidth = sealed ? 1.6 : 1.25;
+      ctx.stroke();
+      ctx.restore();
+
+      const pa = (t * orb.speed) % (Math.PI * 2);
+      const ux = Math.cos(pa), uz = Math.sin(pa);
+      const y1 = -uz * sX, z1 = uz * cX;
+      const x2 = ux * cZ - y1 * sZ, y2 = ux * sZ + y1 * cZ;
+      project3D(x2 * orb.scale, y2 * orb.scale, z1 * orb.scale, rotY * 0.7, 0.2, cx, cy, R);
+      if (out.z > -0.78 && R > 18) {
+        ctx.beginPath(); ctx.arc(out.x, out.y, Math.max(1.8, (sealed ? 4.0 : 3.0) * Math.min(1, R / 120)), 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff"; ctx.shadowColor = orb.color; ctx.shadowBlur = 14; ctx.fill(); ctx.shadowBlur = 0;
+      }
+    }
+
+    // ESCALA 2 (Estadio 6): Primer Sistema Solar alrededor de nuestra red
+    function drawSolarSystem(cx, cy, baseR, t, alpha) {
+      if (alpha <= 0.02) return;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      const showLabels = alpha > 0.45 && app.clusterBlend < 0.45;
+
+      for (let i = 0; i < SOLAR_PLANETS.length; i++) {
+        const pl = SOLAR_PLANETS[i];
+        const rx = baseR * pl.rx * (0.68 + 0.32 * alpha);
+        const ry = baseR * pl.ry * (0.68 + 0.32 * alpha);
+
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, -0.09, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(125, 211, 252, 0.20)";
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
+
+        const ang = pl.a + t * pl.spd * (reducedMotion ? 0 : 1);
+        const ex = Math.cos(ang) * rx, ey = Math.sin(ang) * ry;
+        const cosT = Math.cos(-0.09), sinT = Math.sin(-0.09);
+        const px = cx + ex * cosT - ey * sinT;
+        const py = cy + ex * sinT + ey * cosT;
+        const pr = Math.max(2.2, baseR * pl.sz * (0.88 + 0.14 * Math.sin(ang)));
+
+        // Puente energético sutil
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.quadraticCurveTo((cx + px) * 0.5, (cy + py) * 0.5 - 20 * alpha, px, py);
+        ctx.strokeStyle = pl.color;
+        ctx.globalAlpha = 0.22 * alpha;
+        ctx.lineWidth = 1.1;
+        ctx.setLineDash([4, 6]);
+        ctx.lineDashOffset = -t * 28;
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = alpha;
+
+        const ph = ctx.createRadialGradient(px, py, pr * 0.2, px, py, pr * 2.1);
+        ph.addColorStop(0, pl.color + "66"); ph.addColorStop(1, "rgba(2,9,16,0)");
+        ctx.fillStyle = ph; ctx.beginPath(); ctx.arc(px, py, pr * 2.1, 0, Math.PI * 2); ctx.fill();
+
+        const pg = ctx.createRadialGradient(px - pr * 0.3, py - pr * 0.3, pr * 0.1, px, py, pr);
+        pg.addColorStop(0, "#ffffff"); pg.addColorStop(0.38, pl.color); pg.addColorStop(1, "#041624");
+        ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI * 2); ctx.fillStyle = pg; ctx.fill();
+
+        if (pr > 5) {
+          ctx.beginPath();
+          ctx.ellipse(px, py, pr * 1.65, pr * 0.55, pl.tilt + t * 0.25, 0, Math.PI * 2);
+          ctx.strokeStyle = pl.ring; ctx.lineWidth = 1.25; ctx.stroke();
+        }
+
+        if (showLabels) {
+          ctx.font = "800 12px Archivo, sans-serif";
+          ctx.fillStyle = "#e0f2fe";
+          ctx.textAlign = "center";
+          ctx.fillText(pl.label, px, py + pr + 18);
+        }
+      }
+      ctx.restore();
+    }
+
+    // ESCALA 3 (Estadio 7): Cúmulo de Múltiples Sistemas Solares conectados
+    function drawMultiSolarCluster(cx, cy, t, blend) {
+      if (blend <= 0.02) return;
+      ctx.save();
+      const spreadScale = 1 - app.galaxyBlend * 0.52;
+      const alpha = blend * (1 - app.galaxyBlend * 0.72);
+      if (alpha <= 0.02) { ctx.restore(); return; }
+      ctx.globalAlpha = alpha;
+
+      const coords = CLUSTER_SYSTEMS.map((sys) => ({
+        sys,
+        x: cx + sys.ox * W * spreadScale,
+        y: cy + sys.oy * H * spreadScale,
+      }));
+
+      // Arcos luminosos inter-sistemas conectando todos los sistemas solares entre sí
+      for (let i = 0; i < coords.length; i++) {
+        const a = coords[i];
+        const b = coords[(i + 1) % coords.length];
+        // Conexión al sistema central
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(a.x, a.y);
+        ctx.strokeStyle = a.sys.core;
+        ctx.globalAlpha = 0.24 * alpha;
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([5, 7]);
+        ctx.lineDashOffset = -t * 22;
+        ctx.stroke();
+
+        // Conexión entre sistemas vecinos
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.strokeStyle = "rgba(125, 211, 252, 0.22)";
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      ctx.globalAlpha = alpha;
+
+      // Render de cada sistema solar hermano con sus propias órbitas y mini-planetas
+      for (let i = 0; i < coords.length; i++) {
+        const { sys, x, y } = coords[i];
+        const sr = Math.min(W, H) * 0.017 * sys.scale * (1 - app.galaxyBlend * 0.45);
+
+        // Halo solar
+        const sh = ctx.createRadialGradient(x, y, sr * 0.2, x, y, sr * 3.2);
+        sh.addColorStop(0, sys.core + "aa");
+        sh.addColorStop(1, "rgba(2,9,16,0)");
+        ctx.fillStyle = sh; ctx.beginPath(); ctx.arc(x, y, sr * 3.2, 0, Math.PI * 2); ctx.fill();
+
+        // Sol central del sistema
+        ctx.beginPath(); ctx.arc(x, y, sr, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff"; ctx.shadowColor = sys.core; ctx.shadowBlur = 16; ctx.fill(); ctx.shadowBlur = 0;
+
+        // 2-3 órbitas con planetas girando
+        for (let p = 0; p < sys.planets.length; p++) {
+          const rx = sr * (2.2 + p * 1.45);
+          const ry = rx * 0.42;
+          ctx.beginPath();
+          ctx.ellipse(x, y, rx, ry, -0.15 + i * 0.12, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(186, 230, 253, 0.24)";
+          ctx.lineWidth = 0.9;
+          ctx.stroke();
+
+          const pa = sys.ph + p * 2.1 + t * (0.45 - p * 0.1) * (reducedMotion ? 0 : 1);
+          const ox = Math.cos(pa) * rx, oy = Math.sin(pa) * ry;
+          const rot = -0.15 + i * 0.12;
+          const px = x + ox * Math.cos(rot) - oy * Math.sin(rot);
+          const py = y + ox * Math.sin(rot) + oy * Math.cos(rot);
+          ctx.beginPath(); ctx.arc(px, py, Math.max(2.2, sr * 0.34), 0, Math.PI * 2);
+          ctx.fillStyle = sys.planets[p]; ctx.fill();
+        }
+
+        if (app.galaxyBlend < 0.35) {
+          ctx.font = "800 11.5px Archivo, sans-serif";
+          ctx.fillStyle = "#d8eff9";
+          ctx.textAlign = "center";
+          ctx.fillText(sys.label, x, y + sr * (2.6 + sys.planets.length * 0.65) + 12);
+        }
+      }
+      ctx.restore();
+    }
+
+    // ESCALA 4 (Estadio 8): LA GALAXIA [NOMBRE_APP] (4 brazos espirales en los colores de los roles)
+    function drawGalaxy(cx, cy, t, blend) {
+      if (blend <= 0.02) return;
+      ctx.save();
+
+      const maxRx = Math.min(W * 0.37, H * 0.48);
+      const tilt = 0.46; // Perspectiva cinematográfica inclinada para no tocar header ni footer
+      const rotG = reducedMotion ? 0 : t * 0.095;
+
+      // 1. Nebulosa galáctica multicolor respirando en el núcleo
+      const neb = ctx.createRadialGradient(cx, cy, 4, cx, cy, maxRx * 1.05);
+      neb.addColorStop(0, `rgba(255, 255, 255, ${(0.52 * blend).toFixed(2)})`);
+      neb.addColorStop(0.16, `rgba(56, 189, 248, ${(0.34 * blend).toFixed(2)})`);
+      neb.addColorStop(0.42, `rgba(168, 85, 247, ${(0.20 * blend).toFixed(2)})`);
+      neb.addColorStop(0.72, `rgba(16, 185, 129, ${(0.10 * blend).toFixed(2)})`);
+      neb.addColorStop(1, "rgba(2, 9, 16, 0)");
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(1, tilt * 1.15);
+      ctx.fillStyle = neb;
+      ctx.beginPath();
+      ctx.arc(0, 0, maxRx * 1.05, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // 2. Filamentos espirales suaves conectando los 4 brazos
+      for (let arm = 0; arm < 4; arm++) {
+        ctx.beginPath();
+        for (let k = 0; k <= 54; k++) {
+          const u = k / 54;
+          const r = u * maxRx * (0.4 + 0.6 * blend);
+          const a = (arm * Math.PI) / 2 + u * 4.25 + rotG;
+          const sx = cx + Math.cos(a) * r;
+          const sy = cy + Math.sin(a) * r * tilt;
+          if (k === 0) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        }
+        ctx.strokeStyle = ARM_COLORS[arm];
+        ctx.globalAlpha = 0.24 * blend;
+        ctx.lineWidth = 2.0;
+        ctx.stroke();
+      }
+
+      // 3. 960 estrellas y súper-sistemas solares girando en la espiral 3D
+      for (let i = 0; i < GALAXY_STARS.length; i++) {
+        const st = GALAXY_STARS[i];
+        const r = st.r * maxRx * (0.35 + 0.65 * blend);
+        const a = st.angle + rotG;
+        const gx = cx + Math.cos(a) * r;
+        const gy = cy + Math.sin(a) * r * tilt + st.thickness * maxRx * 0.45;
+        const twinkle = 0.62 + 0.38 * Math.sin(t * 2.1 + st.tw);
+
+        ctx.globalAlpha = blend * twinkle * (1 - st.r * 0.22);
+        ctx.fillStyle = st.color;
+
+        if (st.brightHub) {
+          // Mini sistema solar brillante incrustado en el brazo espiral
+          ctx.beginPath();
+          ctx.arc(gx, gy, st.size, 0, Math.PI * 2);
+          ctx.shadowColor = st.color;
+          ctx.shadowBlur = 12;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.beginPath();
+          ctx.ellipse(gx, gy, st.size * 2.4, st.size * 0.9, a * 0.3, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(255,255,255,0.35)";
+          ctx.lineWidth = 0.7;
+          ctx.stroke();
+        } else {
+          ctx.fillRect(gx, gy, st.size, st.size);
+        }
+      }
+
+      // 4. Núcleo galáctico incandescente
+      ctx.globalAlpha = blend;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 12 + Math.sin(t * 2.5) * 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.shadowColor = "#7dd3fc";
+      ctx.shadowBlur = 32;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.restore();
+    }
+
+    let rotY = 0.2;
+    let prevT = performance.now();
+
+    function renderFrame(now) {
+      const dt = Math.min((now - prevT) / 1000, 0.08);
+      prevT = now;
+      const t = now / 1000;
+
+      // Interpolaciones suaves de las 4 escalas cósmicas
+      app.weave += (app.targetWeave - app.weave) * Math.min(1, dt * 3.0);
+      app.climaxBloom += ((app.sealed ? 1 : 0) - app.climaxBloom) * Math.min(1, dt * 2.1);
+
+      const targetSolar = app.stage >= 6 ? 1 : 0;
+      const targetCluster = app.stage >= 7 ? 1 : 0;
+      const targetGalaxy = app.stage >= 8 ? 1 : 0;
+      app.solarBlend += (targetSolar - app.solarBlend) * Math.min(1, dt * 1.85);
+      app.clusterBlend += (targetCluster - app.clusterBlend) * Math.min(1, dt * 1.65);
+      app.galaxyBlend += (targetGalaxy - app.galaxyBlend) * Math.min(1, dt * 1.45);
+
+      const stiffness = 68, damping = 8.5;
+      app.springVel += (-stiffness * app.springPos - damping * app.springVel) * dt;
+      app.springPos += app.springVel * dt;
+      app.rotBoost *= Math.pow(0.18, dt);
+
+      if (app.breachFlash > 0) app.breachFlash = Math.max(0, app.breachFlash - dt * 1.1);
+      if (app.vetoFlash > 0) app.vetoFlash = Math.max(0, app.vetoFlash - dt * 0.9);
+      if (app.climaxWave > 0) { app.climaxWave += dt * 1.1; if (app.climaxWave > 1.55) app.climaxWave = 0; }
+      if (app.climaxWave2 > 0) { app.climaxWave2 += dt * 0.85; if (app.climaxWave2 > 1.55) app.climaxWave2 = 0; }
+
+      if (!reducedMotion) {
+        rotY += dt * ((app.weave < 0.04 ? 0.07 : app.sealed ? 0.16 : 0.21) + app.rotBoost);
+      }
+
+      const cx = W * 0.5;
+      const cy = H * 0.49;
+      const fullR = Math.min(W * 0.21, H * 0.27);
+
+      // Zoom continuo suave: 1.0 (planeta) -> 0.36 (sistema solar) -> 0.15 (cúmulo) -> 0.05 (galaxia)
+      const camFactor =
+        1.0 * (1 - app.solarBlend) +
+        0.36 * app.solarBlend * (1 - app.clusterBlend) +
+        0.15 * app.clusterBlend * (1 - app.galaxyBlend) +
+        0.045 * app.galaxyBlend;
+      const R = fullR * camFactor * (1 + app.springPos * 0.09);
+
+      // 1. Fondo nocturno espacial-petróleo (se vuelve más profundo y cósmico en la Galaxia)
+      const bg = ctx.createRadialGradient(cx, cy, R * 0.1, cx, cy, Math.max(W, H) * 0.76);
+      if (app.galaxyBlend > 0.1) {
+        bg.addColorStop(0, `rgba(14, 34, 58, 1)`);
+        bg.addColorStop(0.45, "#04111d");
+        bg.addColorStop(1, "#01050a");
+      } else if (app.climaxBloom > 0.02) {
+        bg.addColorStop(0, `rgba(${Math.round(10 + 12 * app.climaxBloom)}, ${Math.round(40 + 52 * app.climaxBloom)}, ${Math.round(62 + 34 * app.climaxBloom)}, 1)`);
+        bg.addColorStop(0.5, "#041623");
+        bg.addColorStop(1, "#02070d");
+      } else {
+        bg.addColorStop(0, "#082030");
+        bg.addColorStop(0.5, "#04111b");
+        bg.addColorStop(1, "#02070c");
+      }
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+
+      // 2. Estrellas profundas
+      for (let i = 0; i < STARS.length; i++) {
+        const st = STARS[i];
+        const a = 0.14 + 0.32 * (0.5 + 0.5 * Math.sin(t * 1.15 + st.ph));
+        ctx.fillStyle = `rgba(186, 230, 253, ${a.toFixed(2)})`;
+        ctx.fillRect(st.x * W, st.y * H, st.r * 1.5, st.r * 1.5);
+      }
+
+      // 3. Capas de Zoom-Out Cósmico (Galaxia -> Cúmulo de Sistemas -> Sistema Solar)
+      drawGalaxy(cx, cy, t, app.galaxyBlend);
+      drawMultiSolarCluster(cx, cy, t, app.clusterBlend);
+      drawSolarSystem(cx, cy, R, t, app.solarBlend * (1 - app.galaxyBlend * 0.85));
+
+      // 4. Planeta / Red Local (se integra al núcleo galáctico cuando galaxyBlend -> 1)
+      const localAlpha = 1 - app.galaxyBlend * 0.85;
+      if (localAlpha > 0.04) {
+        ctx.save();
+        ctx.globalAlpha = localAlpha;
+
+        if (app.weave > 0.32) {
+          const bodyAlpha = Math.min(1, (app.weave - 0.32) / 0.68);
+          const haloR = R * (1.28 + app.climaxBloom * 0.36);
+          const halo = ctx.createRadialGradient(cx, cy, R * 0.42, cx, cy, haloR);
+          halo.addColorStop(0, app.sealed ? `rgba(16, 185, 129, ${(0.42 * bodyAlpha).toFixed(2)})` : `rgba(56, 189, 248, ${(0.18 * bodyAlpha).toFixed(2)})`);
+          halo.addColorStop(0.62, app.sealed ? `rgba(56, 189, 248, ${(0.22 * bodyAlpha).toFixed(2)})` : `rgba(168, 85, 247, ${(0.08 * bodyAlpha).toFixed(2)})`);
+          halo.addColorStop(1, "rgba(2, 9, 16, 0)");
+          ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(cx, cy, haloR, 0, Math.PI * 2); ctx.fill();
+
+          const sg = ctx.createRadialGradient(cx - R * 0.28, cy - R * 0.28, R * 0.08, cx, cy, R);
+          sg.addColorStop(0, `rgba(45, 212, 191, ${(0.1 * bodyAlpha + 0.4 * app.climaxBloom).toFixed(2)})`);
+          sg.addColorStop(0.65, `rgba(12, 74, 110, ${(0.2 * bodyAlpha + 0.44 * app.climaxBloom).toFixed(2)})`);
+          sg.addColorStop(1, `rgba(3, 18, 30, ${(0.32 * bodyAlpha + 0.45 * app.climaxBloom).toFixed(2)})`);
+          ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fillStyle = sg; ctx.fill();
+          ctx.strokeStyle = app.sealed ? `rgba(167, 243, 208, ${(0.76 * app.climaxBloom).toFixed(2)})` : `rgba(125, 211, 252, ${(0.24 * bodyAlpha).toFixed(2)})`;
+          ctx.lineWidth = app.sealed ? 1.8 : 1.0; ctx.stroke();
+        }
+
+        // Puntos de superficie creciendo desde Polo Sur
+        if (app.weave > 0.06 && R > 24) {
+          for (let i = 0; i < SURFACE.length; i++) {
+            const pt = SURFACE[i];
+            if (pt.southDist > app.weave) continue;
+            project3D(pt.x, pt.y, pt.z, rotY, 0.2, cx, cy, R);
+            if (out.z < -0.15) continue;
+            const depth = Math.max(0.15, (out.z + 0.3) / 1.3);
+            const nearEdge = Math.abs(pt.southDist - app.weave) < 0.045 && !app.sealed;
+            if (nearEdge) {
+              ctx.fillStyle = `rgba(255, 255, 255, ${(0.88 * depth).toFixed(2)})`;
+              ctx.beginPath(); ctx.arc(out.x, out.y, 2.2 * camFactor + 0.4, 0, Math.PI * 2); ctx.fill();
+            } else if (pt.land) {
+              ctx.save(); ctx.globalAlpha = (app.sealed ? 0.9 : 0.7) * depth * localAlpha;
+              ctx.fillStyle = app.sealed ? "#7dd3fc" : pt.roleColor;
+              ctx.beginPath(); ctx.arc(out.x, out.y, (app.sealed ? 2.1 : 1.7) * out.s * (0.4 + 0.6 * camFactor), 0, Math.PI * 2); ctx.fill();
+              ctx.restore();
+            }
+          }
+        }
+
+        // Punto de origen en el POLO SUR
+        project3D(0, -1, 0, rotY, 0.2, cx, cy, R);
+        const sx = out.x, sy = out.y;
+
+        if (app.weave < 0.12) {
+          for (let k = 0; k < 3; k++) {
+            const ph = (t * 0.55 + k * 0.33) % 1;
+            ctx.beginPath(); ctx.arc(sx, sy, 10 + ph * 64, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(125, 211, 252, ${(0.56 * (1 - ph)).toFixed(2)})`;
+            ctx.lineWidth = 1.6; ctx.stroke();
+          }
+        }
+
+        // Aristas omnidireccionales
+        if (R > 18) {
+          for (let i = 0; i < ACTIVE_EDGES.length; i++) {
+            const e = ACTIVE_EDGES[i];
+            if (e.grow < 1) {
+              e.grow = Math.min(1, e.grow + dt * 1.85);
+              if (e.grow >= 1 && !e.landed) {
+                e.landed = true;
+                if (e.toIdx >= 0) {
+                  const targetNode = NODES[e.toIdx];
+                  targetNode.pulse = 1.0;
+                  project3D(targetNode.p.x, targetNode.p.y, targetNode.p.z, rotY, 0.2, cx, cy, R);
+                  triggerNetworkReaction(out.x, out.y, e.color);
+                }
+              }
+            } else if (!reducedMotion) {
+              e.sparkT = (e.sparkT + dt * e.speed) % 1;
+            }
+            drawGeodesic(cx, cy, R, e.pA, e.pB, e.color, e.grow, Math.max(0.9, (app.sealed ? 1.9 : 2.1) * camFactor), false, t, 1.09, e.landed ? e.sparkT : -1);
+          }
+        }
+
+        // Rebote 403
+        if (app.breachFlash > 0.03) {
+          ctx.beginPath();
+          for (let i = 0; i <= 48; i++) {
+            const a = (i / 48) * Math.PI * 2;
+            project3D(0, Math.sin(a) * 1.1, Math.cos(a) * 1.1, rotY, 0.2, cx, cy, R);
+            if (i === 0) ctx.moveTo(out.x, out.y); else ctx.lineTo(out.x, out.y);
+          }
+          ctx.strokeStyle = `rgba(244, 63, 94, ${(app.breachFlash * 0.9).toFixed(2)})`;
+          ctx.lineWidth = 3.2; ctx.setLineDash([6, 6]); ctx.stroke(); ctx.setLineDash([]);
+          drawGeodesic(cx, cy, R, NODES[0].p, { x: 0, y: -0.2, z: 1 }, "#f43f5e", 1, 3.2, true, t * 2.6, 1.15);
+        }
+
+        // Órbitas de roles
+        for (let i = 0; i < ROLE_ORBITS.length; i++) {
+          const orb = ROLE_ORBITS[i];
+          if (app.weave >= orb.unlock - 0.04) {
+            const a = Math.min(1, (app.weave - orb.unlock + 0.08) / 0.14);
+            drawRoleOrbit(cx, cy, R, orb, t, a, app.sealed);
+          }
+        }
+
+        // Semilla del Polo Sur
+        ctx.beginPath();
+        ctx.arc(sx, sy, (app.weave < 0.08 ? 9.5 + Math.sin(t * 4) * 2 : 6.2) * (0.4 + 0.6 * camFactor), 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff"; ctx.shadowColor = app.sealed ? "#34d399" : "#38bdf8"; ctx.shadowBlur = 24; ctx.fill(); ctx.shadowBlur = 0;
+
+        // Nodos conectados
+        if (R > 16) {
+          for (let i = 0; i < NODES.length; i++) {
+            const n = NODES[i];
+            if (!n.active) continue;
+            if (n.pulse > 0) n.pulse = Math.max(0, n.pulse - dt * 1.7);
+            project3D(n.p.x * 1.03, n.p.y * 1.03, n.p.z * 1.03, rotY, 0.2, cx, cy, R);
+            const alpha = (out.z < 0 ? 0.35 : 1) * localAlpha;
+            const nr = (6.0 * out.s + n.pulse * 4.8) * (0.35 + 0.65 * camFactor);
+            ctx.save(); ctx.globalAlpha = alpha;
+            ctx.beginPath(); ctx.arc(out.x, out.y, nr, 0, Math.PI * 2);
+            ctx.fillStyle = n.color; ctx.shadowColor = n.color; ctx.shadowBlur = 16; ctx.fill();
+            ctx.beginPath(); ctx.arc(out.x, out.y, nr * 0.42, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff"; ctx.fill();
+            if (n.pulse > 0.02) {
+              ctx.beginPath(); ctx.arc(out.x, out.y, nr + (1 - n.pulse) * 26, 0, Math.PI * 2);
+              ctx.strokeStyle = n.color; ctx.globalAlpha = n.pulse * 0.8; ctx.lineWidth = 2; ctx.stroke();
+            }
+            ctx.restore();
+          }
+        }
+        ctx.restore();
+      }
+
+      // 5. Ondas expansivas globales
+      if (app.climaxWave > 0) {
+        const wr = fullR * (0.25 + app.climaxWave * 2.1);
+        const wa = Math.max(0, 1 - app.climaxWave / 1.55);
+        ctx.beginPath(); ctx.arc(cx, cy, wr, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(52, 211, 153, ${(wa * 0.9).toFixed(2)})`; ctx.lineWidth = 4 * wa + 1; ctx.stroke();
+      }
+      if (app.climaxWave2 > 0) {
+        const wr = fullR * (0.18 + app.climaxWave2 * 2.2);
+        const wa = Math.max(0, 1 - app.climaxWave2 / 1.55);
+        ctx.beginPath(); ctx.arc(cx, cy, wr, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(168, 85, 247, ${(wa * 0.8).toFixed(2)})`; ctx.lineWidth = 3 * wa + 1; ctx.stroke();
+      }
+      if (app.vetoFlash > 0) {
+        const vr = fullR * (0.4 + (1 - app.vetoFlash) * 1.4);
+        ctx.beginPath(); ctx.arc(cx, cy, vr, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(168, 85, 247, ${(app.vetoFlash * 0.88).toFixed(2)})`; ctx.lineWidth = 3.5; ctx.stroke();
+      }
+
+      // 6. Partículas zero-GC
+      for (let i = alive - 1; i >= 0; i--) {
+        const p = pool[i];
+        p.life += dt;
+        if (p.life >= p.maxLife) { pool[i] = pool[--alive]; pool[alive] = p; p.active = false; continue; }
+        const u = p.life / p.maxLife;
+        p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.95; p.vy *= 0.95;
+        ctx.globalAlpha = Math.max(0, 1 - u);
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (1 - u * 0.4), 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      requestAnimationFrame(renderFrame);
+    }
+    requestAnimationFrame(renderFrame);
+
+    /* =========================================================================
+       4. CONEXIÓN PROGRESIVA & ESTADIOS 0..8
+       ========================================================================= */
+    function stopDrip() { if (app.dripTimer) { clearInterval(app.dripTimer); app.dripTimer = null; } }
+
+    function connectNextNode() {
+      const next = NODES.find((n) => !n.active);
+      if (!next) return false;
+      next.active = true;
+      next.pulse = 1.0;
+      app.connectedCount++;
+      app.seatCounts[next.seat]++;
+      if (app.stage === 0) app.stage = 1;
+
+      for (const bp of OMNI_LINKS_BLUEPRINT) {
+        if (bp.to === next.idx && (bp.from === -1 || NODES[bp.from].active)) {
+          ACTIVE_EDGES.push({
+            pA: bp.from === -1 ? SOUTH_POLE : NODES[bp.from].p,
+            pB: next.p, color: bp.color, grow: 0, landed: false, toIdx: next.idx,
+            sparkT: Math.random(), speed: 0.35 + Math.random() * 0.25,
+          });
+        }
+      }
+      app.targetWeave = Math.max(app.targetWeave, 0.08 + (app.connectedCount / 10) * 0.56);
+      const tile = document.querySelector(`[data-seat="${next.seat}"]`);
+      if (tile) { tile.classList.add("pulse"); setTimeout(() => tile.classList.remove("pulse"), 240); }
+      syncUI();
+      return true;
+    }
+
+    function startProgressiveConnect(targetCount = 10, intervalMs = 340) {
+      stopDrip();
+      if (app.connectedCount < targetCount) connectNextNode();
+      app.dripTimer = setInterval(() => {
+        if (app.connectedCount >= targetCount) { stopDrip(); return; }
+        connectNextNode();
+      }, intervalMs);
+    }
+
+    function ensureAllConnected() {
+      stopDrip();
+      while (app.connectedCount < 10) connectNextNode();
+    }
+
+    function triggerBreach() {
+      if (app.connectedCount < 4) startProgressiveConnect(6, 180);
+      app.breachFlash = 1.0;
+      if (app.stage <= 2) { app.stage = 2; app.targetWeave = Math.max(app.targetWeave, 0.46); }
+      radialBurst(W * 0.5, H * 0.49, "#f43f5e", 28, 220);
+      syncUI();
+    }
+
+    function triggerVeto() {
+      if (app.stage < 4) setStage(4);
+      app.vetoFlash = 1.0; app.springVel += 0.35;
+      radialBurst(W * 0.5, H * 0.49, "#a855f7", 36, 250);
+      syncUI();
+    }
+
+    function setStage(st) {
+      stopDrip();
+      app.stage = Math.max(0, Math.min(8, st));
+
+      if (app.stage === 0) {
+        app.targetWeave = 0.0; app.connectedCount = 0;
+        app.seatCounts = { andes_a: 0, andes_b: 0, rural_a: 0, rural_b: 0, comite: 0 };
+        NODES.forEach((n) => { n.active = false; n.pulse = 0; });
+        ACTIVE_EDGES.length = 0;
+        app.rulesSealed = false; app.converged = false; app.sealed = false; app.qrCollapsed = false;
+      } else if (app.stage === 1) {
+        app.rulesSealed = false; app.converged = false; app.sealed = false;
+        startProgressiveConnect(6, 360);
+      } else if (app.stage === 2) {
+        app.rulesSealed = false; app.converged = false; app.sealed = false;
+        triggerBreach(); return;
+      } else if (app.stage === 3) {
+        startProgressiveConnect(8, 240);
+        app.rulesSealed = true; app.converged = false; app.sealed = false; app.qrCollapsed = true; app.targetWeave = 0.72; app.springVel += 0.35;
+        radialBurst(W * 0.5, H * 0.49, "#f59e0b", 26, 210);
+      } else if (app.stage === 4) {
+        startProgressiveConnect(10, 220);
+        app.rulesSealed = true; app.converged = true; app.sealed = false; app.qrCollapsed = true; app.targetWeave = 0.88; app.springVel += 0.35;
+        radialBurst(W * 0.5, H * 0.49, "#a855f7", 28, 220);
+      } else if (app.stage === 5) {
+        ensureAllConnected();
+        app.rulesSealed = true; app.converged = true; app.sealed = true; app.qrCollapsed = true;
+        app.targetWeave = 1.0; app.climaxWave = 0.01; app.springVel += 0.65;
+        setTimeout(() => { app.climaxWave2 = 0.01; }, 220);
+        radialBurst(W * 0.5, H * 0.49, "#10b981", 34, 320);
+        radialBurst(W * 0.5, H * 0.49, "#f59e0b", 24, 290);
+        radialBurst(W * 0.5, H * 0.49, "#a855f7", 24, 290);
+        radialBurst(W * 0.5, H * 0.49, "#ffffff", 30, 250);
+      } else if (app.stage === 6) {
+        ensureAllConnected();
+        app.rulesSealed = true; app.converged = true; app.sealed = true; app.qrCollapsed = true; app.targetWeave = 1.0;
+        radialBurst(W * 0.5, H * 0.49, "#38bdf8", 32, 320);
+      } else if (app.stage === 7) {
+        ensureAllConnected();
+        app.rulesSealed = true; app.converged = true; app.sealed = true; app.qrCollapsed = true; app.targetWeave = 1.0;
+        app.climaxWave2 = 0.01;
+        radialBurst(W * 0.5, H * 0.49, "#a855f7", 36, 360);
+      } else if (app.stage === 8) {
+        ensureAllConnected();
+        app.rulesSealed = true; app.converged = true; app.sealed = true; app.qrCollapsed = true; app.targetWeave = 1.0;
+        app.climaxWave = 0.01;
+        setTimeout(() => { app.climaxWave2 = 0.01; }, 260);
+        radialBurst(W * 0.5, H * 0.49, "#38bdf8", 36, 380);
+        radialBurst(W * 0.5, H * 0.49, "#a855f7", 32, 360);
+        radialBurst(W * 0.5, H * 0.49, "#10b981", 32, 340);
+      }
+      syncUI();
+    }
+
+    function clearAutoAll() {
+      if (app.autoTimer?.timers) app.autoTimer.timers.forEach(clearTimeout);
+      app.autoTimer = null;
+      document.getElementById("btnAuto").textContent = "[A] Auto-Demo";
+    }
+
+    function toggleAuto() {
+      if (app.autoTimer) { clearAutoAll(); return; }
+      setStage(0);
+      document.getElementById("btnAuto").textContent = "[A] Pausar";
+      const timeline = [
+        [900,   () => setStage(1)],
+        [3900,  () => setStage(2)],
+        [6000,  () => setStage(3)],
+        [8200,  () => setStage(4)],
+        [10500, () => setStage(5)],
+        [13500, () => setStage(6)],
+        [16700, () => setStage(7)],
+        [19900, () => { setStage(8); clearAutoAll(); }],
+      ];
+      app.autoTimer = { timers: timeline.map(([ms, fn]) => setTimeout(fn, ms)) };
+    }
+
+    function connectSSE(url) {
+      if (app.sse) { app.sse.close(); app.sse = null; }
+      const tag = document.getElementById("sseTag");
+      if (!url) { tag.textContent = "TRACK MULTIPLAYER"; return; }
+      try {
+        const es = new EventSource(url);
+        app.sse = es; tag.textContent = "SSE…";
+        es.onopen = () => { tag.textContent = "EN VIVO · SSE ✓"; };
+        es.onerror = () => { tag.textContent = "SIMULADOR (SIN CORS)"; };
+        es.onmessage = (ev) => {
+          try {
+            const room = JSON.parse(ev.data);
+            const n = (room.connectedPlayers || []).length;
+            while (app.connectedCount < Math.min(10, n)) connectNextNode();
+            if (room.orgs?.some((o) => o.authorityRule?.sealedThreshold !== null) && !app.rulesSealed) setStage(3);
+            if (room.allocation?.status === "PROPOSED" && !app.converged) setStage(4);
+            if (room.allocation?.status === "SEALED" && !app.sealed) setStage(5);
+            if ((room.auditLog || []).at(-1)?.type === "RBAC_DENIED") triggerBreach();
+          } catch {}
+        };
+      } catch { tag.textContent = "TRACK MULTIPLAYER"; }
+    }
+
+    function applyConfig() {
+      const base = (cfg.baseUrl || "https://team-30-platanus-hack.onrender.com").trim().replace(/\/+$/, "");
+      const qrUrl = `${base}/room/demo-cross?orgId=comite_red&roleId=role_c`;
+      document.title = `${cfg.brand} — Del Punto a la Galaxia`;
+      document.getElementById("brandLabel").textContent = cfg.brand;
+      document.getElementById("inBrand").value = cfg.brand;
+      document.getElementById("inBaseUrl").value = base;
+      document.getElementById("inSseUrl").value = cfg.sseUrl || "";
+      try { document.getElementById("qrMount").innerHTML = MiniQR.toSvg(qrUrl, "#020910"); } catch {}
+      syncUI();
+    }
+
+    function syncUI() {
+      const meta = getStageMeta(app.stage);
+      const pct = Math.round(app.targetWeave * 100);
+      const isGal = app.stage === 8;
+
+      const dot = document.getElementById("topDot");
+      dot.className = "live-dot" + (isGal ? " galaxy" : app.sealed ? " calm" : meta.tone === "bleed" ? " bleed" : "");
+
+      const nc = document.getElementById("nodesCount");
+      const np = document.getElementById("netPct");
+      const nl = document.getElementById("nodesLbl");
+      const pl = document.getElementById("pctLbl");
+
+      if (app.stage === 6) {
+        nc.textContent = "6"; nl.textContent = "Planetas";
+        np.textContent = "1"; pl.textContent = "Sistema";
+      } else if (app.stage === 7) {
+        nc.textContent = "8"; nl.textContent = "Sistemas";
+        np.textContent = "24+"; pl.textContent = "Orgs";
+      } else if (isGal) {
+        nc.textContent = "∞"; nl.textContent = "Orgs";
+        np.textContent = "100%"; pl.textContent = "Galaxia";
+      } else {
+        nc.textContent = `${app.connectedCount}/10`; nl.textContent = "Nodos";
+        np.textContent = `${pct}%`; pl.textContent = "Tejido";
+      }
+      np.className = "counter-num" + (isGal ? " galaxy" : app.sealed ? " calm" : "");
+      nc.className = "counter-num" + (isGal ? " galaxy" : "");
+
+      const hEl = document.getElementById("stageHeadline");
+      hEl.textContent = meta.h;
+      hEl.className = "stage-headline" + (meta.tone ? " " + meta.tone : "");
+      document.getElementById("stageSubline").textContent = meta.s;
+
+      document.getElementById("qrDock").classList.toggle("collapsed", app.qrCollapsed);
+
+      const strip = document.getElementById("impactStrip");
+      strip.classList.toggle("visible", app.stage >= 5);
+      const p1 = document.getElementById("imp1"), p2 = document.getElementById("imp2"), p3 = document.getElementById("imp3");
+      if (isGal) {
+        p1.textContent = `ECOSISTEMA ${cfg.brand.toUpperCase()}`; p1.className = "impact-pill galaxy";
+        p2.textContent = "UN ESQUELETO · TODAS LAS INDUSTRIAS"; p2.className = "impact-pill galaxy";
+        p3.textContent = "MULTIPLAYER POR DISEÑO"; p3.className = "impact-pill galaxy";
+      } else if (app.stage === 7) {
+        p1.textContent = "SISTEMAS INTERCONECTADOS"; p1.className = "impact-pill solar";
+        p2.textContent = "PRIVACIDAD ENTRE ORGANIZACIONES"; p2.className = "impact-pill solar";
+        p3.textContent = "ESCALA EXPONENCIAL"; p3.className = "impact-pill solar";
+      } else if (app.stage === 6) {
+        p1.textContent = "UN SOLO ESQUELETO"; p1.className = "impact-pill solar";
+        p2.textContent = "ADAPTABLE A CADA PLANETA"; p2.className = "impact-pill solar";
+        p3.textContent = "DE LOCAL A GLOBAL"; p3.className = "impact-pill solar";
+      } else {
+        p1.textContent = "10/10 ROLES EN VIVO"; p1.className = "impact-pill";
+        p2.textContent = "0 SECRETOS FILTRADOS"; p2.className = "impact-pill";
+        p3.textContent = "12% → 89% CONFIABILIDAD"; p3.className = "impact-pill";
+      }
+
+      document.getElementById("roleLegend").innerHTML = SEATS.map((s) => {
+        const c = app.seatCounts[s.id];
+        return `
+          <div class="role-tile ${c > 0 ? "active" : ""}" data-seat="${s.id}" style="--rc:${s.color};">
+            <div style="display:flex;align-items:center;gap:9px;min-width:0;">
+              <span class="role-dot-lg"></span>
+              <span class="role-label-big">${s.name}</span>
+            </div>
+            <span class="role-num">${c}/2</span>
+          </div>`;
+      }).join("");
+    }
+
+    // Listeners
+    document.getElementById("btnNext").onclick = () => { clearAutoAll(); setStage(app.stage < 8 ? app.stage + 1 : 0); };
+    document.getElementById("btnJoin").onclick = () => { clearAutoAll(); connectNextNode(); };
+    document.getElementById("btnBreach").onclick = () => { clearAutoAll(); triggerBreach(); };
+    document.getElementById("btnVeto").onclick = () => { clearAutoAll(); triggerVeto(); };
+    document.getElementById("btnSolar").onclick = () => { clearAutoAll(); setStage(6); };
+    document.getElementById("btnCluster").onclick = () => { clearAutoAll(); setStage(7); };
+    document.getElementById("btnGalaxy").onclick = () => { clearAutoAll(); setStage(8); };
+    document.getElementById("btnAuto").onclick = () => { if (app.autoTimer) clearAutoAll(); else toggleAuto(); };
+    document.getElementById("btnQr").onclick = () => { app.qrCollapsed = !app.qrCollapsed; syncUI(); };
+    document.getElementById("qrDock").onclick = () => { if (app.qrCollapsed) { app.qrCollapsed = false; syncUI(); } };
+    document.getElementById("btnReset").onclick = () => { clearAutoAll(); setStage(0); };
+    document.getElementById("btnHide").onclick = () => {
+      app.controlsHidden = !app.controlsHidden;
+      document.getElementById("stageControls").classList.toggle("hidden", app.controlsHidden);
+    };
+    document.getElementById("btnFull").onclick = () => {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+      else document.exitFullscreen?.().catch(() => {});
+    };
+
+    const modal = document.getElementById("cfgModal");
+    document.getElementById("btnCfg").onclick = () => modal.classList.add("open");
+    document.getElementById("closeCfg").onclick = () => modal.classList.remove("open");
+    document.getElementById("btnNoSse").onclick = () => { cfg.sseUrl = ""; saveCfg(); applyConfig(); connectSSE(""); modal.classList.remove("open"); };
+    document.getElementById("btnSaveCfg").onclick = () => {
+      cfg.brand = document.getElementById("inBrand").value.trim() || "[NOMBRE_APP]";
+      cfg.baseUrl = document.getElementById("inBaseUrl").value.trim().replace(/\/+$/, "") || "https://team-30-platanus-hack.onrender.com";
+      cfg.sseUrl = document.getElementById("inSseUrl").value.trim();
+      saveCfg(); applyConfig(); connectSSE(cfg.sseUrl); modal.classList.remove("open");
+    };
+
+    document.addEventListener("keydown", (e) => {
+      if (modal.classList.contains("open")) { if (e.key === "Escape") modal.classList.remove("open"); return; }
+      const k = e.key.toLowerCase();
+      if (e.key === " " || e.key === "ArrowRight") { e.preventDefault(); clearAutoAll(); setStage(app.stage < 8 ? app.stage + 1 : 0); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); clearAutoAll(); setStage(app.stage - 1); }
+      else if (k === "j") { clearAutoAll(); connectNextNode(); }
+      else if (k === "b") { clearAutoAll(); triggerBreach(); }
+      else if (k === "v") { clearAutoAll(); triggerVeto(); }
+      else if (k === "s") { clearAutoAll(); setStage(6); }
+      else if (k === "m") { clearAutoAll(); setStage(7); }
+      else if (k === "g") { clearAutoAll(); setStage(8); }
+      else if (k === "a") { if (app.autoTimer) clearAutoAll(); else toggleAuto(); }
+      else if (k === "q") { app.qrCollapsed = !app.qrCollapsed; syncUI(); }
+      else if (k === "r") { clearAutoAll(); setStage(0); }
+      else if (k === "c") modal.classList.add("open");
+      else if (k === "h") { app.controlsHidden = !app.controlsHidden; document.getElementById("stageControls").classList.toggle("hidden", app.controlsHidden); }
+      else if (k === "f") {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+        else document.exitFullscreen?.().catch(() => {});
+      }
+      else if (e.key >= "0" && e.key <= "8") { clearAutoAll(); setStage(Number(e.key)); }
+    });
+
+    applyConfig();
+    if (cfg.sseUrl) connectSSE(cfg.sseUrl);
+  </script>
+</body>
+</html>

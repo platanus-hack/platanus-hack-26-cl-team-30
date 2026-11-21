@@ -22,8 +22,7 @@ export function Footer() {
         <div>
           <p className="font-semibold">Sobre el ejemplo</p>
           <p className="small mt-2 max-w-[30rem] text-muted-foreground">
-            Demostración simulada de coordinación organizacional; no constituye diagnóstico ni uso real de datos de pacientes. Las cifras son del caso de
-            ejemplo y no son estadísticas.
+            Demostración simulada. No es una herramienta clínica ni usa datos reales de pacientes.
           </p>
         </div>
       </div>

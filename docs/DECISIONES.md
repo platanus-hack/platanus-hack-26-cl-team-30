@@ -11,6 +11,27 @@ Formato de cada entrada:
 
 ---
 
+## La galaxia de la pantalla grande se dibuja con los asientos reales, en canvas 2D
+
+- **Decisión:** `src/components/stage/galaxy.tsx` porta el prototipo de Nahum (`docs/diseno/nahum/resultado_orbital_live.html`) a un componente React con canvas 2D y sin dependencias. Cada asiento que el SSE marca como conectado (`stageSeats`, `src/components/stage/seats.ts`) enciende un nodo, una órbita de su color y su región de la esfera. Es un solo canvas detrás del contenido: protagonista en el paso «Unirse» y fondo tenue después.
+- **Alternativa descartada:** llevar el prototipo tal cual, con sus atajos de teclado, su simulador de entradas y las escenas de sistema solar y galaxia espiral; o usar una librería 3D.
+- **Por qué:** en la pantalla nada se mueve sin una persona. Un nodo que aparece con una tecla mostraría gente que no está. El canvas 2D alcanza para una esfera con pocos nodos y no suma peso al bundle.
+- **Costo:** se perdieron las escenas de alejamiento del prototipo (sistema solar, cúmulo y espiral), que solo existían como relato del pitch. Con `prefers-reduced-motion` la galaxia no gira: se dibuja un cuadro cada vez que cambia un asiento.
+
+## El paso «Unirse» dura hasta que entran quienes trabajan el caso
+
+- **Decisión:** `roomStarted` (`src/components/stage/story.ts`) da por iniciada la sala cuando están conectados todos los asientos que no son del Comité, o cuando la bitácora ya trae trabajo sobre el caso (una regla sellada, un caso presentado, una firma o el ensayo automático). Hasta entonces la pantalla grande muestra «Unirse», y lo mantiene 2,6 segundos más para que se vea la esfera armada.
+- **Alternativa descartada:** lo anterior: salir de «Unirse» apenas entraba la primera persona.
+- **Por qué:** con la regla anterior el contador no alcanzaba a crecer en pantalla. El Comité no cuenta porque entra más tarde, con su propio código.
+- **Costo:** si alguien se desconecta antes de que pase algo en la sala, la pantalla vuelve a «Unirse». Es una regla de presentación en el navegador; el motor no la conoce.
+
+## La pantalla grande y la portada dicen poco: lo demás va detrás de «¿Por qué?»
+
+- **Decisión:** en `/stage` y en la portada cada pantalla lleva un título de hasta 6 palabras y, como mucho, una frase de apoyo de hasta 12. Las explicaciones se pliegan detrás de «¿Por qué?» (`<details>`) o se quitaron. Los datos reservados se muestran con una o dos palabras y una barra de franjas diagonales en vez del valor. Hay un solo aviso de demostración simulada, en el pie.
+- **Alternativa descartada:** mantener los párrafos explicativos a la vista.
+- **Por qué:** el mentor lo dijo así: «bombardean con texto todo, eso no aporta». Una pantalla proyectada se lee en cinco segundos desde lejos.
+- **Costo:** quien no despliega «¿Por qué?» no lee, por ejemplo, la razón del desempate. La bitácora completa, con sus códigos, sigue en «Ver registro» y en el acta.
+
 ## Los canales externos del Comité usan las mismas acciones que la web
 
 - **Decisión:** el Comité puede decidir por WhatsApp (Kapso) o por voz (ElevenLabs), pero ambos canales toman el puesto con `JOIN_ROLE` y la clave del Comité, y deciden con `ALLOCATION_SEAL` o `COMMITTEE_VETO` con razón (`src/integrations/committee-channel.ts`). El resumen que reciben se arma con la vista del Comité (`projectRoom`).
@@ -90,7 +111,7 @@ Formato de cada entrada:
 
 ## El modelo escribe un genoma JSON validado, no la interfaz
 
-- **Decisión:** para adaptar Nexo a otra organización, el modelo escribe solo un objeto JSON con contenido (nombres de roles, datos, caso). El código fija la estructura (`normalizeGenome` en `src/agents/mutate-genome.ts`) y `OrgGenomeSchema` (`src/lib/genome/schema.ts`) decide si se usa. La interfaz son siete órganos fijos en `src/components/organs/` que dibujan cualquier genoma válido.
+- **Decisión:** para adaptar Nexo a otra organización, el modelo escribe solo un objeto JSON con contenido (nombres de roles, datos, caso). El código fija la estructura (`normalizeGenome` en `src/agents/mutate-genome.ts`) y `OrgGenomeSchema` (`src/lib/genome/schema.ts`) decide si se usa. La interfaz (la silla del celular en `src/components/seat/` y la pantalla grande en `src/components/stage/`) es código fijo que dibuja cualquier genoma válido.
 - **Alternativa descartada:** que el modelo genere HTML o JSX a la medida de cada organización.
 - **Por qué:** una interfaz generada puede romperse en vivo o saltarse los permisos. Un JSON se puede validar campo por campo antes de que toque la sala, y si no pasa se usa una semilla (`source: "fallback_seed"`). La sala nunca queda sin organización.
 - **Costo:** toda organización se expresa con la misma forma: hasta 3 roles, entre 4 y 8 campos, una regla de autoridad y un caso. Lo que no cabe en esa forma no se puede representar.
@@ -174,7 +195,7 @@ Formato de cada entrada:
 
 ## Estado de salas en memoria y eventos SSE
 
-- **Decisión:** las salas viven en memoria del servidor (`Map` en `src/lib/store/rooms.ts`) y los cambios se envían por Server-Sent Events. Las salas `demo` y `demo-cross` se recrean solas desde la semilla.
+- **Decisión:** las salas viven en memoria del servidor (`Map` en `src/lib/store/rooms.ts`) y los cambios se envían por Server-Sent Events. Las cuatro salas fijas (`demo`, `demo-cross`, `demo-construccion` y `demo-logistica`) se recrean solas desde la semilla.
 - **Alternativa descartada:** base de datos con suscripciones en tiempo real, o WebSockets.
 - **Por qué:** no requiere configurar ningún servicio externo y funciona igual en el deploy y en una red local sin internet. SSE basta porque los clientes solo necesitan recibir; las acciones van por peticiones normales. En 36 horas, una dependencia menos que puede fallar en la demo.
 - **Costo:** el estado se pierde al reiniciar y no se reparte entre varios servidores.
@@ -229,3 +250,17 @@ Formato de cada entrada:
 - **Alternativa descartada:** el corredor de pruebas que trae Node.
 - **Por qué:** entiende TypeScript y los alias sin configuración extra, y permite reemplazar los agentes por dobles para probar el almacén sin llamar a un modelo.
 - **Costo:** una dependencia de desarrollo más.
+
+## Sorteo de silla en una ruta propia, no como acción
+
+- **Decisión:** el QR único de la sala abre `/room/<id>` sin rol, y el celular pide `POST /api/rooms/:id/seat`. El servidor elige al azar una silla libre (sin la clave del QR, el Comité no entra al sorteo) y entrega su token, igual que `JOIN_ROLE`.
+- **Por qué:** una acción de `/action` exige `orgId` y `roleId` de quien actúa, y el recién llegado todavía no tiene. Agregarla como acción número 12 obligaba a volver opcional ese par en todo el contrato. En una ruta aparte, el contrato de las 11 acciones y sus pruebas quedan igual.
+- **Descartado:** sortear en el navegador y llamar a `JOIN_ROLE`. Dos personas que escanean a la vez sorteaban la misma silla y una recibía 409; en el servidor el sorteo y la reserva son un solo paso.
+- **Límite conocido:** «Sortear otro rol» solo se ofrece a quien llegó por sorteo; quien entró por el QR de un rol puede salir desde la pestaña «Sala».
+
+## La silla del celular reemplaza a los órganos apilados
+
+- **Decisión:** el teléfono muestra una tarjeta por turno, un botón abajo y tres pestañas (`src/components/seat/`). Los órganos que se apilaban (caso, niebla, contador, tablero, agente) se borraron; el grafo y el choque de autoridad quedan plegados en «Sala».
+- **Por qué:** el mentor dijo que la pantalla «bombardea con texto». La pantalla del Comité pasó de 184 a 66 palabras visibles y ningún turno necesita desplazarse en 390 × 844.
+- **Descartado:** recortar el texto de los órganos existentes. Cada uno repetía su contexto y juntos seguían sin caber en una pantalla.
+
