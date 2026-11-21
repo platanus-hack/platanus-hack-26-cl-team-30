@@ -22,15 +22,15 @@ La idea del proyecto todavía no está decidida.
 
 - Next.js (App Router, `src/`), TypeScript, Tailwind y shadcn/ui. Componentes nuevos con `npx shadcn@latest add <nombre>`.
 - Supabase para base de datos y auth. Cliente en `src/lib/supabase.ts`. Toda tabla lleva RLS.
-- Deploy en Vercel.
+- Deploy público en Render (`render.yaml`), desde un repo personal espejo.
 - Voz con ElevenLabs si la idea lo pide. La API key vive solo en el servidor.
 
 ## Regla de modelos
 
-Toda llamada a un modelo pasa por `src/lib/llm.ts`. No llamar a un proveedor directo desde otra parte del código. El módulo habla el protocolo compatible con OpenAI y se configura con `LLM_BASE_URL`, `LLM_API_KEY` y `LLM_MODEL`, así que pasar del Spark a la nube es cambiar `.env.local`.
+Toda llamada a un modelo pasa por `src/lib/llm.ts`. No llamar a un proveedor directo desde otra parte del código. `LLM_PROVIDER=anthropic` usa Claude con el SDK oficial; cualquier otro valor usa el protocolo compatible con OpenAI (Ollama). Pasar del Spark a la nube es cambiar variables de entorno.
 
 - El Spark es un NVIDIA DGX Spark de 128 GB con Ollama en el puerto 11434. Es ARM64: no instalar ni compilar cosas en él sin revisar que exista build para esa arquitectura.
-- En Vercel no se puede llegar al Spark por IP local. Para la demo desplegada se usa la nube, o un túnel hacia el Spark.
+- El deploy público no puede llegar al Spark por IP local. Para la demo desplegada se usa Claude.
 
 ## Comandos
 

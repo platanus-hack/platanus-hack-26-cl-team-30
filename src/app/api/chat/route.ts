@@ -1,4 +1,4 @@
-import { chatStream, type ChatMessage } from "@/lib/llm";
+import { chatStream, describeError, type ChatMessage } from "@/lib/llm";
 
 export async function POST(request: Request) {
   let messages: ChatMessage[];
@@ -16,7 +16,6 @@ export async function POST(request: Request) {
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Error desconocido";
-    return Response.json({ error: message }, { status: 502 });
+    return Response.json({ error: describeError(error) }, { status: 502 });
   }
 }

@@ -13,9 +13,11 @@ _Por completar: cinco líneas. Qué problema resuelve, quiénes participan a la 
 | Componente | Qué hace | Dónde vive | Tecnología |
 | --- | --- | --- | --- |
 | App web | Interfaz y rutas del servidor | `src/app/` | Next.js (App Router), TypeScript, Tailwind, shadcn/ui |
-| Capa de modelos | Única puerta de entrada a cualquier modelo de lenguaje | `src/lib/llm.ts` | Protocolo de chat compatible con OpenAI |
+| Capa de modelos | Única puerta de entrada a cualquier modelo de lenguaje. Elige proveedor por configuración | `src/lib/llm.ts` | SDK oficial de Anthropic para Claude; protocolo compatible con OpenAI para Ollama |
 | Ruta de chat | Respuesta del modelo en streaming | `src/app/api/chat/route.ts` | Route Handler con `ReadableStream` |
 | Ruta de estado | Informa si el modelo y la base están disponibles | `src/app/api/health/route.ts` | Route Handler |
+| Ruta de vida | Responde 200 si el servidor está arriba; la usa la plataforma de deploy | `src/app/api/ping/route.ts` | Route Handler |
+| Deploy | Describe el servicio público | `render.yaml` | Render, servidor Node siempre encendido |
 | Cliente de datos | Acceso a la base desde el navegador | `src/lib/supabase.ts` | Supabase |
 
 _Por completar: agentes, tiempo real, almacenamiento y cualquier componente nuevo._
@@ -36,7 +38,10 @@ Una fila por agente. Cada agente vive en su propio archivo.
 
 | Uso | Modelo | Dónde corre | Por qué ese |
 | --- | --- | --- | --- |
-| Desarrollo | Configurable por `LLM_MODEL` | Notebook, Spark o nube | La capa de modelos cambia de proveedor editando tres variables de entorno |
+| Local y sin internet | Configurable por `LLM_MODEL`, servido por Ollama | Spark o notebook | Los datos no salen de la red local |
+| Deploy público | `claude-opus-5-5` | API de Anthropic | El servidor público no puede llegar al Spark, que vive en la red local |
+
+`LLM_PROVIDER` elige entre ambos. Si Claude declina una petición, la API la reintenta en un modelo de respaldo (parámetro `fallbacks`).
 
 El Spark es un NVIDIA DGX Spark de 128 GB que sirve modelos con Ollama en el puerto 11434. `scripts/spark-setup.sh` lo deja operativo.
 
@@ -44,6 +49,9 @@ El Spark es un NVIDIA DGX Spark de 128 GB que sirve modelos con Ollama en el pue
 
 | Servicio | Para qué | Estado |
 | --- | --- | --- |
+| API de Anthropic | Modelo de lenguaje en el deploy público | Real |
+| Ollama | Modelo de lenguaje local | Real |
+| Render | Hosting del servidor público | Real |
 | _Por completar_ | | Real / Simulado |
 
 ## Colaboración en tiempo real
