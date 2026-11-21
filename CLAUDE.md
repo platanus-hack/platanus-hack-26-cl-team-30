@@ -1,6 +1,14 @@
-# Platanus Hack 26 Santiago
+# team-30 · Platanus Hack 26 Santiago
 
-Proyecto de hackathon de 36 horas (20 al 22 de noviembre de 2026). Equipo: Sebastián y Ramón programan, Naum ve negocio y usuarios. La idea se decide el viernes en la noche, cuando se revelen los tracks.
+Repo oficial del equipo 30 en Platanus Hack 26: Santiago ft. Buk. Track: **Multiplayer**. El hacking termina el domingo 22 de noviembre a las 09:30 y las presentaciones son de 11:00 a 14:00.
+
+## Equipo
+
+- **Ramón Molina** (@rm004607): producto web. Pantallas, rutas de la API y tablas de Supabase.
+- **Sebastián Vargas** (@iswebster1401): agente e infraestructura. Modelos, Spark, integraciones y deploy. Decide qué se corta cuando falta tiempo.
+- **Nahum Díaz** (@nadilopoff): negocio y pitch. Usuarios reales, finanzas y relato.
+
+La idea del proyecto todavía no está decidida.
 
 @AGENTS.md
 
@@ -29,3 +37,10 @@ Toda llamada a un modelo pasa por `src/lib/llm.ts`. No llamar a un proveedor dir
 - `npm run dev`: servidor local en http://localhost:3000
 - `npm run build` y `npm run lint`: correr antes de cada deploy
 - `GET /api/health`: dice si el modelo y Supabase están configurados
+
+## Entrega
+
+- Completar `platanus-hack-project.jsonc` (nombre, resumen, descripción y URL del deploy) y `project-description.md` antes de enviar.
+- El logo debe ser un PNG de 1000x1000 de máximo 500 KB.
+- El README debe ser corto y directo. Lo escribe una persona del equipo.
+- Vercel no puede conectarse a este repo de la organización. El deploy sale de un repo personal espejo; el README explica cómo configurar el doble `push`.
