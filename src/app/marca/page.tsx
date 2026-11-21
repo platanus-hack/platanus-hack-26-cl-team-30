@@ -1,0 +1,34 @@
+import type { Metadata } from "next";
+
+import { SculptorGlassReveal } from "@/components/brand/glass-logo-reveal";
+import { SculptorLogo } from "@/components/brand/sculptor-logo";
+
+export const metadata: Metadata = {
+  title: "Sculptor · Marca",
+};
+
+// Vista previa de las dos animaciones del logo, para la landing general de Sculptor:
+// arriba, el revelado en vidrio líquido (clic para repetir); abajo, el cubo que se
+// arma solo con SVG y CSS (pasa el mouse para repetir) y los tamaños pequeños.
+export default function MarcaPage() {
+  return (
+    <main style={{ minHeight: "100svh", background: "#0e1110", color: "#f2efe8" }}>
+      <SculptorGlassReveal style={{ height: "70svh", minHeight: 420, width: "100%" }} />
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: 48,
+          padding: "48px 24px 64px",
+        }}
+      >
+        <SculptorLogo size={140} wordmark animate />
+        <SculptorLogo size={64} />
+        <SculptorLogo size={32} />
+        <SculptorLogo size={20} />
+      </div>
+    </main>
+  );
+}
