@@ -185,6 +185,7 @@ export type ActionErrorCode =
   | "ROOM_NOT_FOUND"
   | "ROLE_TAKEN"
   | "FIXED_ROOM"
+  | "ROOM_IN_USE" // 409: mutar una sala que ya tiene personas conectadas
   | "BUSY" // 409: ya hay una llamada al modelo en curso para este rol o esta sala
   | "ROOM_LIMIT" // 503: el servidor llegó al tope de salas y ninguna se puede liberar
   | "TOO_MANY_CONNECTIONS"; // 503: tope de conexiones SSE

@@ -277,7 +277,7 @@ const hospitalRuralInput: OrgGenomeInput = {
     triggeredMetricKey: "referral_budget_pct",
     proposedValue: 84,
     stepCountN: 12,
-    stakesLabel: "1 vida en riesgo · 140 km de traslado · ventana 18:00",
+    stakesLabel: "1 vida en riesgo · derivación pendiente · ventana 18:00",
     livesAtRisk: 1,
   },
 };

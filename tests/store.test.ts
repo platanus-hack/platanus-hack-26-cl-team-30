@@ -541,9 +541,8 @@ describe("mutateRoom: el modelo escribe contenido; el esquema decide si entra", 
     expect(agents.mutateGenomeFromPrompt).not.toHaveBeenCalled();
   });
 
-  it("un genoma válido reemplaza a la organización: caso nuevo, roles libres y tokens anteriores inválidos", async () => {
+  it("un genoma válido reemplaza a la organización en una sala vacía: caso nuevo y roles libres", async () => {
     const roomId = single();
-    const seat = await join(roomId, CLINIC, "role_a");
     const version = getRoom(roomId)!.version;
     agents.mutateGenomeFromPrompt.mockResolvedValue({ genome: getSeedGenome("dist_tech"), source: "llm", latencyMs: 42 });
 
@@ -553,8 +552,18 @@ describe("mutateRoom: el modelo escribe contenido; el esquema decide si entra", 
     expect(state).toMatchObject({ connectedPlayers: [], decisions: [], decisionSealedAt: null });
     expect(state.version).toBeGreaterThan(version);
     expect(state.auditLog.some((event) => event.type === "MUTATION" && event.detail.change === "genome" && event.detail.source === "llm")).toBe(true);
-    expect(resolveViewer(roomId, seat)).toBe("stage");
     expect((await applyAction(roomId, { type: "JOIN_ROLE", orgId: "dist_tech", roleId: "role_a" })).status).toBe(200);
+  });
+
+  it("no se puede mutar una sala con personas conectadas: nadie borra la sesión de otros", async () => {
+    const roomId = single();
+    const seat = await join(roomId, CLINIC, "role_a");
+    agents.mutateGenomeFromPrompt.mockResolvedValue({ genome: getSeedGenome("dist_tech"), source: "llm", latencyMs: 42 });
+
+    expect(await mutateRoom(roomId, "Una distribuidora mayorista")).toMatchObject({ status: 409, body: { code: "ROOM_IN_USE" } });
+    expect(agents.mutateGenomeFromPrompt).not.toHaveBeenCalled();
+    expect(getRoom(roomId)!.orgGenomes.map((genome) => genome.orgId)).toEqual([CLINIC]);
+    expect(resolveViewer(roomId, seat)).not.toBe("stage");
   });
 
   it("si lo que devuelve el modelo no pasa el esquema, no entra: se usa una semilla y se dice", async () => {

@@ -173,7 +173,7 @@ No hay base de datos, autenticación externa ni otros servicios. Los códigos QR
 
 **Presencia.** Un rol aparece conectado si su conexión dio señal de vida hace menos de 45 segundos (`PRESENCE_TTL_MS`). Pasado ese tiempo sin conexión, otra persona puede tomar el rol y el token anterior deja de servir.
 
-**Dos personas a la vez.** Node ejecuta el código de a una acción por vez, y cada función del motor es síncrona: recibe un estado y devuelve otro. No hay dos escrituras simultáneas. Cada cambio sube `version`. Las únicas acciones que esperan (`RUN_ROLE_AGENT` y la mutación) llaman al modelo y aplican su resultado sobre el estado que exista al volver; si el rol cambió de manos o la sala se reinició mientras tanto, se descarta. Hay una sola llamada al modelo a la vez por rol y una sola mutación a la vez por sala; repetir el botón responde 409 `BUSY`.
+**Dos personas a la vez.** Node ejecuta el código de a una acción por vez, y cada función del motor es síncrona: recibe un estado y devuelve otro. No hay dos escrituras simultáneas. Cada cambio sube `version`. Las únicas acciones que esperan (`RUN_ROLE_AGENT` y la mutación) llaman al modelo y aplican su resultado sobre el estado que exista al volver; si el rol cambió de manos (el token vigente ya no es el que pidió el turno) o la sala se reinició mientras tanto, se descarta (`runAgent` en `src/lib/store/rooms.ts`). La mutación solo se permite en una sala sin personas conectadas; si ya hay alguien, responde 409 `ROOM_IN_USE`, para que nadie pueda reiniciar una sesión ajena. Hay una sola llamada al modelo a la vez por rol y una sola mutación a la vez por sala; repetir el botón responde 409 `BUSY`.
 
 **Decisiones definitivas.** Una compuerta decidida o una asignación sellada no se pueden cambiar: el motor responde 409 `DECISION_SEALED`.
 
@@ -214,6 +214,7 @@ Esta tabla es la respuesta honesta a "¿esto funciona de verdad?".
 | Acta | Real. JSON y Markdown, con la bitácora completa | |
 | Entrada por QR desde un teléfono | Real | |
 | Agente de rol y mutación por frase | Reales en el deploy, con Claude | Si el modelo falla se usa una respuesta fija, marcada como respaldo (`source: "fallback"` o `"fallback_seed"`) |
+| Lecturas denegadas que provoca el agente | El rechazo es real: el motor responde 403 y lo registra | **El intento lo induce el diseño.** La instrucción del agente (`buildInstruction` en `src/agents/role-agent.ts`) le pide nombrar el dato oculto que le faltaría, para demostrar en vivo que el permiso se aplica en el servidor. No es un intento espontáneo de acceso |
 | Latencia del modelo | Con Claude en el deploy, una mutación de genoma tarda unos 10 segundos (medido con `scripts/stress-llm.mjs`) | Es la medición de una corrida, no un promedio. Los turnos de agente no tienen cifra registrada |
 | Modelo local en el Spark | El código existe | **Sin verificar contra el Spark y sin medir latencia** |
 | "Ningún dato sale a la nube" | Cierto solo en modo local | **El deploy público usa Claude:** los datos sí salen, y la telemetría lo muestra |
@@ -222,6 +223,11 @@ Esta tabla es la respuesta honesta a "¿esto funciona de verdad?".
 | Validación con usuarios | | **No se validó** el flujo con personas del área de salud |
 
 ## Límites conocidos
+
+- **Textos públicos del caso.** El título, resumen y `stakesLabel` de cada organización viajan a todas las organizaciones. `tests/genome.test.ts` verifica que en las semillas no repitan ningún valor de un campo no público. Un genoma generado por el modelo pasa por `findLeakedSecret`, que es menos estricto: valores cortos o parafraseados podrían pasar.
+- **Reinicio de salas.** `DELETE /api/rooms/:id` exige `x-admin-key` solo si el servidor define `NEXO_ADMIN_KEY`; el deploy no la define, así que cualquiera que conozca el id puede reiniciar una sala.
+- **Orden de llegada.** Las acciones no llevan la versión que vio quien actúa; gana la que llega primero.
+- **Fórmula de prioridad.** `computeTriageScore` resta el riesgo por demora, tal como lo especificó el plan. Clínicamente podría esperarse lo contrario; está anotado en `docs/PENDIENTES.md`.
 
 - **Estado en memoria de un solo proceso.** Se pierde si el servidor se reinicia y no se reparte entre varios servidores. Las salas `demo` y `demo-cross` se recrean solas, vacías.
 - **Render en plan gratis.** El servicio se duerme sin visitas y, al dormirse, pierde las salas.

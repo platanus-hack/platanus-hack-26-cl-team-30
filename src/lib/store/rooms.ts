@@ -421,6 +421,8 @@ async function runAgent(roomId: string, record: RoomRecord, actor: engine.ActorR
   if (!view) return reject(404, "ROOM_NOT_FOUND", "La sala no existe");
 
   // Una sola llamada al modelo a la vez por rol: repetir el botón no encola más trabajo.
+  // Token vigente al pedir el turno: si al volver el modelo es otro, el rol cambió de manos.
+  const tokenAtStart = record.tokens.get(tokenKey(actor));
   const busyKey = `agent:${tokenKey(actor)}`;
   if (record.busy.has(busyKey)) return reject(409, "BUSY", "El agente de este rol todavía está respondiendo");
   record.busy.add(busyKey);
@@ -432,7 +434,7 @@ async function runAgent(roomId: string, record: RoomRecord, actor: engine.ActorR
   }
 
   // La llamada al modelo tarda: la sala pudo reiniciarse o el rol pudo cambiar de manos.
-  if (store.rooms.get(roomId) !== record || !record.tokens.has(tokenKey(actor))) {
+  if (store.rooms.get(roomId) !== record || record.tokens.get(tokenKey(actor)) !== tokenAtStart) {
     return reject(409, "ROLE_TAKEN", "La sala o el rol cambiaron mientras el agente respondía");
   }
   const result = engine.applyAgentProposal(
@@ -470,6 +472,10 @@ export async function mutateRoom(roomId: string, description: unknown): Promise<
   if (isFixedRoom(roomId)) return { status: 409, body: { error: "Las salas de demo no se pueden mutar: crea una sala nueva", code: "FIXED_ROOM" } };
   if (record.state.mode !== "single_org") return { status: 409, body: { error: "Solo se puede mutar una sala de una sola organización", code: "WRONG_MODE" } };
   if (typeof description !== "string" || !description.trim()) return { status: 400, body: { error: "Se espera { description } con una frase que describa la organización", code: "BAD_REQUEST" } };
+
+  // Mutar reinicia el caso y libera todos los roles: solo se permite antes de que
+  // alguien entre, para que nadie pueda borrar una sesión en curso de otras personas.
+  if (record.tokens.size > 0) return { status: 409, body: { error: "La sala ya tiene personas conectadas: crea una sala nueva para mutar", code: "ROOM_IN_USE" } };
 
   // Una sola mutación a la vez por sala.
   if (record.busy.has("mutate")) return { status: 409, body: { error: "Esta sala ya se está mutando", code: "BUSY" } };

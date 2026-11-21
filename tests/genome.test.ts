@@ -415,3 +415,22 @@ describe("el esquema rechaza lo que rompería la demo", () => {
     expect(HumanDecisionSchema.safeParse({ ...decision, reason: "Mayor necesidad sin cubrir" }).success).toBe(true);
   });
 });
+
+// Los textos del caso (título, resumen, stakes) se envían a todas las organizaciones
+// y a la pantalla general. No pueden repetir el valor de ningún campo que no sea público.
+describe("los textos públicos del caso no filtran datos reservados", () => {
+  const genomes = SEED_GENOME_IDS.map((id) => getSeedGenome(id));
+  for (const genome of genomes) {
+    it(`${genome.orgId}: liveCase no contiene valores de campos no públicos`, () => {
+      const publicText = [genome.liveCase.title, genome.liveCase.summary, genome.liveCase.stakesLabel].join(" ").toLowerCase();
+      for (const field of genome.fields) {
+        if (field.classification === "public") continue;
+        const value = String(field.value).toLowerCase().trim();
+        if (value.length < 2) continue;
+        const pattern = new RegExp(`(^|[^0-9a-z])${value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^0-9a-z]|$)`);
+        expect(pattern.test(publicText), `${field.key}=${value} aparece en el texto público`).toBe(false);
+      }
+    });
+  }
+});
+
