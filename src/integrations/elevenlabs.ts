@@ -139,7 +139,9 @@ export async function ensureCommitteeAgent(): Promise<string> {
             tools: toolDefinitions(config.baseUrl, config.secret),
           },
         },
-        tts: { model_id: "eleven_flash_v2_5" },
+        // Joaquín (voz chilena) con el modelo conversacional más expresivo. Fer, la voz de las
+        // notas de voz, no se puede usar en agentes: tiene moderación en vivo activada.
+        tts: { model_id: "eleven_v3_conversational", voice_id: "HqDjrw2JtdcxsDBOK5ZW" },
       },
     }),
   });

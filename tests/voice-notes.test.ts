@@ -126,7 +126,7 @@ describe("el texto: solo lo que ve el Comité, y para cualquier escenario", () =
     for (const secret of SECRETS) expect(text).not.toContain(secret);
     // Unos 30 s: a lo más MAX_VOICE_WORDS palabras habladas, sin cortar el cierre.
     expect(spokenWords(text)).toBeLessThanOrEqual(MAX_VOICE_WORDS);
-    expect(text).toContain("Gracias.");
+    expect(text).toContain("Muchas gracias.");
   });
 
   it("en construcción habla de obras y de la grúa, no de pacientes ni camas", async () => {

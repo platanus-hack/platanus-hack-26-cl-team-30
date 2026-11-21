@@ -20,7 +20,7 @@
 // Variables de entorno:
 //   NEXO_VOICE_NOTES=1     activa las notas de voz (apagadas por defecto)
 //   ELEVENLABS_API_KEY     obligatoria para sintetizar
-//   ELEVENLABS_VOICE_ID    opcional: voz a usar (por defecto, Ignacio, voz chilena de la biblioteca)
+//   ELEVENLABS_VOICE_ID    opcional: voz a usar (por defecto, Fer, voz chilena de la biblioteca)
 //   KAPSO_*                las mismas del canal de WhatsApp (ver kapso.ts)
 
 import type { ProjectedRoomState } from "@/lib/genome/schema";
@@ -29,8 +29,8 @@ import { closeSession, getWhatsAppSessionForRoom } from "./committee-channel";
 import { sendAudioMessage, uploadAudio, whatsappStatus } from "./kapso";
 
 const TTS_API = "https://api.elevenlabs.io/v1/text-to-speech";
-/** Ignacio: voz chilena, cálida y conversacional, de la biblioteca de voces de ElevenLabs. */
-const DEFAULT_VOICE_ID = "mfeDHx0s0qg3oU90BXRF";
+/** Fer: voz chilena, natural y pausada, de la biblioteca de voces de ElevenLabs (elegida por el equipo). */
+const DEFAULT_VOICE_ID = "Tm8bVnJtlhPQUOb8KzSd";
 /**
  * Eleven v3: el modelo más expresivo. Entiende etiquetas de actuación entre corchetes
  * ([warmly], [breathes], [short pause]) que no se leen en voz alta: así respira, hace
@@ -98,13 +98,13 @@ export function caseVoiceText(view: ProjectedRoomState): string | null {
   const orgName = (orgId: string) => view.orgs.find((org) => org.orgId === orgId)?.orgName ?? orgId;
   const [first, second] = allocation.ranking;
   const parts = [
-    "[warmly] Hola, te hablo de Sculptor. [breathes]",
-    `Mira... hay un caso para el Comité: ${resourceName(view)}.`,
+    "[warmly] Buenas tardes, le habla Sculptor. [breathes]",
+    `Hay un caso que requiere la decisión del Comité: ${resourceName(view)}.`,
     `La regla propone a ${first.patientLabel}, de ${orgName(first.orgId)}, con ${score(first.score)}... [short pause]`,
     second ? `Le sigue ${second.patientLabel}, de ${orgName(second.orgId)}.` : "",
     allocation.tieBreakApplied ? "Están casi empatados: gana quien tiene más necesidad sin cubrir." : "",
     "Los costos de cada uno no se comparten. [breathes]",
-    "Toca Aprobar o Vetar... y escríbeme tu razón. [softly] Gracias.",
+    "Por favor, toque Aprobar o Vetar... y escríbanos su razón. [softly] Muchas gracias.",
   ];
   return limitWords(parts.filter(Boolean).join(" "));
 }
@@ -120,11 +120,11 @@ export function actaVoiceText(view: ProjectedRoomState): string | null {
   const reason = decision.reason.replace(/\s*\(vía [^)]*\)\s*$/, "");
   return limitWords(
     [
-      "[warmly] Listo, ya hay decisión. [short pause]",
+      "[warmly] Le informamos que ya hay una decisión. [short pause]",
       `Acta de la decisión: ${resourceName(view)} se asigna a ${winner.patientLabel}, de ${orgName}.`,
       `Firmó el ${view.scarcity.arbiter.title}. Razón: ${reason}`.replace(/\.?$/, "."),
       seconds !== null ? `[breathes] Se decidió en ${seconds} segundos.` : "",
-      "El acta completa queda en la sala... [softly] Gracias por decidir.",
+      "El acta completa queda disponible en la sala... [softly] Muchas gracias.",
     ]
       .filter(Boolean)
       .join(" "),
