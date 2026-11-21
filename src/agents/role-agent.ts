@@ -22,8 +22,11 @@
 //   - Si el modelo falla, se arma una propuesta fija a partir de la misma vista y se
 //     marca como respaldo.
 //
-// El agente propone; nunca cambia el estado. Lo que pasa con la propuesta lo decide
-// el motor cuando una persona la envía.
+// Este archivo no cambia el estado de la sala: solo devuelve la propuesta. Lo que
+// pasa con ella lo decide el motor (applyAgentProposal en
+// src/lib/engine/deterministic.ts): si quien la pidió es el proponente, el valor
+// sugerido pasa en ese momento a ser el valor propuesto del caso. Nunca firma una
+// compuerta, nunca sella una asignación y nunca cambia una regla.
 
 import { z } from "zod";
 import { AGENT_MAX_TOKENS, chatJson, type ChatMessage } from "../lib/llm";

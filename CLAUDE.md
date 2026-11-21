@@ -65,6 +65,7 @@ Los jueces revisan este repositorio con un agente de IA mientras el equipo prese
 - `docs/ARQUITECTURA.md`: componentes, flujo de un dato, agentes, modelos, integraciones y qué es real o simulado.
 - `docs/DECISIONES.md`: por qué se eligió cada cosa y qué se descartó.
 - `docs/PREGUNTAS.md`: preguntas probables del jurado con respuestas de 20 segundos.
+- `docs/MEDICIONES.md`: cifras medidas, con cómo y dónde. Una cifra que no está aquí no está medida.
 - `docs/PENDIENTES.md`: lo que sigue abierto o sin verificar.
 
 Reglas para cualquier cambio:

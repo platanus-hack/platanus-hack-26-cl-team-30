@@ -770,7 +770,7 @@ async function crossOrgJourney() {
       const signatures = new Set(states.map((state) => JSON.stringify(state.allocation.ranking)));
       check(signatures.size === 1, "No todos los participantes recibieron el mismo ranking");
       await stage.waitFor((state) => hasAudit(state, "CANDIDATE_SUBMITTED"), "evento CANDIDATE_SUBMITTED");
-      return `gana ${ranking[0].patientLabel} (${ranking[0].orgId})${allocation.tieBreakApplied ? ", por desempate de equidad" : ""}`;
+      return `gana ${ranking[0].patientLabel} (${ranking[0].orgId})${allocation.tieBreakApplied ? ", con desempate de equidad aplicado" : ""}`;
     });
 
     await step("presentar el candidato de otra organización se rechaza: 403", async () => {

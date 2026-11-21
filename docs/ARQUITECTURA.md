@@ -14,6 +14,19 @@ Nexo (nombre de trabajo) es una sala compartida donde varias personas, cada una 
 
 El caso de la demo es de salud y usa datos simulados. En `single_org`, una clínica con 3 roles decide sobre una cama UCI. En `cross_org`, 2 hospitales compiten por 1 cama de referencia sin ver el costo del otro, y un Comité que entra por código QR aprueba o veta con una razón.
 
+## El problema y por qué es multijugador
+
+Esta sección describe el problema que el equipo quiere atacar. Es una hipótesis: no se validó con usuarios reales (ver "Qué es real y qué es simulado").
+
+- **A quién ayuda.** A las personas que deciden juntas sobre un recurso escaso y caro, como una cama UCI, cuando cada una tiene datos que no puede mostrarle a la otra. Dentro de una clínica, Urgencias conoce la gravedad y Administración el costo. Entre organizaciones, cada hospital conoce el costo de su paciente y no el del otro. Hoy eso se coordina por teléfono, chat y planillas, y después nadie puede explicar por qué se decidió así.
+- **Por qué no puede decidir una sola organización.** Por dos razones. Información: cada parte tiene un dato que la otra no puede ver (el costo de cobertura), así que quien decide solo decide con la mitad de los datos o exige ver lo que no le corresponde. Neutralidad: quien arbitra entre dos hospitales no puede ser uno de ellos. Por eso el Comité árbitro tiene su propio `orgId` (`comite_red`) y no ve el costo de nadie (`canViewCoverageCost`).
+- **Qué hace que no hacen una planilla compartida ni un flujo automatizado.** Una planilla les muestra a todos lo mismo; un flujo fijo ejecuta pasos sin que nadie decida. Nexo hace tres cosas a la vez: cada participante recibe una versión distinta de los mismos datos, filtrada en el servidor (`projectStateForOrgAndRole`); el recurso se ordena con una regla visible y reproducible (`resolveAllocation`); y la decisión la toma una persona que deja su razón escrita en un acta (`recordCommitteeDecision`, `buildAuditActa`). Todo en vivo, entre varias personas a la vez.
+- **Qué muestra la demo en tres minutos.** Dos hospitales presentan a su paciente sin ver el costo del otro, el tablero ordena con la fórmula a la vista, y una persona del público entra como Comité escaneando un QR y aprueba o veta con una razón. Todas las pantallas cambian a la vez.
+
+## Dónde está la parte difícil
+
+En que una sola sala se vea distinta para cada participante, a la vez y en vivo, sin que nada reservado salga del servidor. `projectStateForOrgAndRole` (`src/lib/engine/deterministic.ts`) arma una versión por viewer con permiso doble (organización y rol); el costo de un candidato además sigue el permiso del campo `coverage_cost` (`canViewCoverageCost`), para que no se cuele por la lista de candidatos; y la pantalla general, que no tiene identidad, solo recibe campos `public`. Encima de eso, `resolveAllocation` tiene que dar el mismo orden siempre, con desempate de equidad, y las llamadas al modelo no pueden pisar cambios que ocurrieron mientras respondía (`runAgent` en `src/lib/store/rooms.ts` compara el token del rol al empezar y al volver). Las pruebas que más esfuerzo concentran son las de la proyección (`tests/engine.test.ts`).
+
 ## Dónde mirar
 
 | Si la pregunta es sobre... | Archivo |
@@ -26,7 +39,9 @@ El caso de la demo es de salud y usa datos simulados. En `single_org`, una clín
 | Tiempo real (SSE) | `src/app/api/rooms/[roomId]/events/route.ts` |
 | Llamadas a modelos, cola y telemetría | `src/lib/llm.ts` |
 | Qué le llega al modelo y qué se hace con su respuesta | `src/agents/role-agent.ts`, `src/agents/mutate-genome.ts` |
-| Qué está comprobado | `tests/`, `scripts/e2e.mjs`, `scripts/load-test.mjs` |
+| Qué está comprobado | `tests/`, `scripts/e2e.mjs`, `scripts/load-test.mjs`, `scripts/stress-llm.mjs` |
+| Las cifras medidas, con cómo y dónde | `docs/MEDICIONES.md` |
+| Qué leer primero, en orden | `docs/RECORRIDO.md` |
 
 ## Componentes
 
@@ -123,13 +138,13 @@ Hay dos agentes. Cada uno vive en su archivo, con su instrucción y su formato d
 
 | Agente | Archivo | Entrada | Salida | Modelo | Qué decide el código y no el modelo |
 | --- | --- | --- | --- | --- | --- |
-| Agente de rol | `src/agents/role-agent.ts` (`runRoleAgentTurn`) | La vista ya filtrada de un rol (`ProjectedRoomState`) y un pedido opcional de la persona | `{ proposalText, suggestedValue, attemptedFieldRead, latencyMs, source }` | El configurado en `LLM_MODEL`, vía `chatJson`. Tope de 140 tokens, razonamiento reducido, plazo de 12 s | Qué datos entran al prompt (solo los que el rol ve). Largo máximo de 80 palabras. `suggestedValue` acotado al rango de la regla. `attemptedFieldRead` solo vale si es un campo oculto de la vista. Los valores reservados se tachan del texto (`redactReserved`). Si el modelo falla, propuesta fija marcada "Respaldo sin modelo" |
+| Agente de rol | `src/agents/role-agent.ts` (`runRoleAgentTurn`) | La vista ya filtrada de un rol (`ProjectedRoomState`) y un pedido opcional de la persona | `{ proposalText, suggestedValue, attemptedFieldRead, latencyMs, source }` | El configurado en `LLM_MODEL`, vía `chatJson`. Tope de 140 tokens, razonamiento reducido, plazo de 12 s | Qué datos entran al prompt (solo los que el rol ve). La instrucción pide un máximo de 45 palabras; si el modelo se pasa, el código corta en 79 (`limitWords`, `MAX_WORDS`). `suggestedValue` acotado al rango de la regla. `attemptedFieldRead` solo vale si es un campo oculto de la vista. Los valores reservados se tachan del texto (`redactReserved`). Si el modelo falla, propuesta fija marcada "Respaldo sin modelo" |
 | Agente de mutación | `src/agents/mutate-genome.ts` (`mutateGenomeFromPrompt`) | Una frase de hasta 400 caracteres, limpiada con `sanitizeDescription` | `{ genome, source: "llm" \| "fallback_seed", latencyMs }` | El mismo, vía `chatJson`. Tope de 900 tokens, plazo de 25 s | Toda la estructura (`normalizeGenome`): ids de rol, quién propone y quién aprueba, colores, clasificación de cada campo, rangos. `OrgGenomeSchema` decide si el resultado se usa. `findLeakedSecret` rechaza textos públicos que citen un valor reservado y `findMarkup` rechaza HTML o código. Si falla dos veces, se usa la semilla más parecida (`pickClosestSeed`) |
 
 Detalles que importan:
 
 - **El agente hereda los permisos del rol.** `runAgent` (`src/lib/store/rooms.ts`) le pasa a `runRoleAgentTurn` el resultado de `projectRoom(roomId, actor)`: lo mismo que recibe el navegador de esa persona. Un valor oculto nunca llega al prompt porque nunca salió del motor.
-- **El agente propone; no decide.** `applyAgentProposal` del motor solo hace dos cosas: si quien pidió es el proponente, el valor sugerido pasa a ser el valor propuesto del caso (y la compuerta se reevalúa); y si el agente declaró un campo que no puede ver, queda un 403 en la bitácora. No existe camino para que una propuesta firme una compuerta o selle una asignación.
+- **El agente propone; no decide.** `applyAgentProposal` del motor solo hace dos cosas. Primera: si quien pidió es el proponente, el valor sugerido pasa en ese mismo momento a ser el valor propuesto del caso, sin otra confirmación, y la compuerta se reevalúa (puede quedar bloqueada o abierta). Segunda: si el agente declaró un campo que no puede ver, queda un 403 en la bitácora. No existe camino para que una propuesta firme una compuerta, selle una asignación o cambie una regla: eso exige una persona con el rol que corresponde y una razón.
 - **El texto de la propuesta no entra a la bitácora.** Vuelve solo en la respuesta HTTP a quien la pidió.
 - **El Comité árbitro no tiene agente.** `runAgent` responde 409.
 - **No hay orquestación entre agentes.** Los agentes no se llaman entre sí ni corren en bucle.
@@ -138,8 +153,10 @@ Detalles que importan:
 
 | Uso | Modelo | Dónde corre | Estado |
 | --- | --- | --- | --- |
-| Deploy público | `claude-opus-5-5` (`render.yaml`) | API de Anthropic, en la nube | En uso. `GET /api/health` del deploy responde "Claude disponible". Una mutación de genoma tarda unos 10 segundos (medido con `scripts/stress-llm.mjs`, ver abajo) |
+| Deploy público | `claude-opus-5-5` (`render.yaml`) | API de Anthropic, en la nube | En uso. `GET /api/health` del deploy responde "Claude disponible". Una mutación de genoma tarda unos 10 segundos (medido con `scripts/stress-llm.mjs`, ver `docs/MEDICIONES.md`) |
 | Local | El de `LLM_MODEL`, servido por Ollama con el protocolo compatible con OpenAI. `scripts/spark-setup.sh` descarga `gpt-oss:20b` y `qwen3:32b` | NVIDIA DGX Spark de 128 GB o un notebook | Implementado y probado contra un servidor simulado. **Sin verificar contra el Spark:** falta confirmar endpoint, id del modelo y cómo se apaga el razonamiento. **Latencia sin medir** |
+
+**Por qué Claude y por qué ese modelo.** Claude, porque el deploy corre en internet y no puede llegar al Spark, que está en la red local de la sede. El id `claude-opus-5-5` es el valor por defecto de `llmConfig` y el que fija `render.yaml`. El repo no registra una comparación con un modelo más chico o más rápido: con unos 10 segundos por mutación, esa comparación está pendiente (`docs/PENDIENTES.md`). Cambiar de modelo es cambiar `LLM_MODEL`, sin tocar código.
 
 `LLM_PROVIDER` elige el camino (`llmConfig` en `src/lib/llm.ts`): `anthropic` usa el SDK oficial; cualquier otro valor usa `fetch` contra `LLM_BASE_URL`. Qué agrega la capa:
 
@@ -196,9 +213,9 @@ No hay base de datos, autenticación externa ni otros servicios. Los códigos QR
 | Qué | Cómo | Resultado |
 | --- | --- | --- |
 | Recorrido completo con participantes independientes, cada uno con su SSE | `node scripts/e2e.mjs <url>` | 97 de 97 pasos contra el deploy público (21 de noviembre) y contra las rutas locales |
-| Carga | `node scripts/load-test.mjs`, 10 cambios | 500 conexiones SSE simultáneas: todos los cambios llegaron a todas, p95 de 52 ms. Medido en un notebook contra las rutas sin Next. **No se midió contra el deploy** |
+| Carga | `node scripts/load-test.mjs`, 10 cambios | 500 conexiones SSE simultáneas en una sala: todos los cambios llegaron a todas, p95 de 52 ms. Medido en un notebook contra las rutas sin Next; la salida completa está en `docs/MEDICIONES.md`. Se midió antes del tope actual de 200 conexiones por sala: hoy esa corrida recibiría 503 desde la conexión 201. **No se midió contra el deploy** |
 | Detector de fugas | `tests/http.test.ts` levanta un servidor que cuela un costo en el SSE | El recorrido falla, como debe |
-| Llamadas al modelo a la vez | `node scripts/stress-llm.mjs <url>`: lanza a la vez 1 mutación de genoma y 3 turnos de agente (uno por rol), y lee la cola desde la telemetría del SSE | Contra el deploy (Claude en la nube), el 21 de noviembre: la mutación tardó unos 10 segundos. Los tres turnos de agente declararon un campo oculto que necesitaban (`attemptedFieldRead`) y los tres quedaron como `RBAC_DENIED` en la bitácora. Es el comportamiento esperado: la instrucción del agente le pide nombrar un dato que no puede ver, y el servidor registra el intento sin entregar el valor. La latencia de los turnos de agente no quedó registrada en este documento |
+| Llamadas al modelo a la vez | `node scripts/stress-llm.mjs <url>`: lanza a la vez 1 mutación de genoma y 3 turnos de agente (uno por rol), y lee la cola desde la telemetría del SSE | Contra el deploy (Claude en la nube), el 21 de noviembre: la mutación tardó unos 10 segundos (ver `docs/MEDICIONES.md`). Los tres turnos de agente declararon un campo oculto que necesitaban (`attemptedFieldRead`) y los tres quedaron como `RBAC_DENIED` en la bitácora. Es el comportamiento esperado: la instrucción del agente le pide nombrar un dato que no puede ver, y el servidor registra el intento sin entregar el valor. La latencia de los turnos de agente no quedó registrada en este documento |
 
 ## Qué es real y qué es simulado
 
@@ -240,12 +257,24 @@ Esta tabla es la respuesta honesta a "¿esto funciona de verdad?".
 - **El tachado de valores reservados no detecta paráfrasis.** `redactReserved` atrapa "2400000" y "2.400.000", no "2,4 millones". Solo afecta a valores que el propio rol ya ve.
 - **Inyección de instrucciones.** La frase de la mutación y el pedido al agente se limpian (`sanitizeDescription`, `plain`: una línea, sin `<` ni `>`) y van dentro de etiquetas marcadas como datos; el genoma se rechaza si trae HTML o código (`findMarkup`). Reduce el riesgo, no lo elimina. Aun así, el modelo no decide nada: lo peor que puede hacer es redactar una propuesta mala o un genoma que el esquema rechaza.
 - **El desempate `geographic` es una aproximación:** el esquema no tiene datos geográficos y usa la necesidad sin cubrir.
+- **El plazo del agente incluye la espera en cola.** `AGENT_TIMEOUT_MS` (12 s) cuenta desde que se pide el turno. Con la cola llena (2 llamadas a la vez con Claude), un turno puede caer al respaldo sin haber llegado al modelo.
+- **Orden de llegada, sin versión.** Las acciones no llevan la versión de la sala que vio quien actúa: gana la primera que llega. Las decisiones definitivas (409 `DECISION_SEALED`) evitan que una segunda decisión pise a la primera.
+- **`committeeVeto` es declarativo.** `AllocationRuleSchema` lo exige en `true`, pero el motor no lo lee: el veto del Comité árbitro siempre está disponible.
+- **El Comité puede vetar en cadena** hasta que quede un solo candidato; al último no lo puede vetar.
 
-Con una semana más: persistir las salas en una base de datos, cuentas reales por persona, repartir los eventos entre varios servidores, medir el modelo local en el Spark y validar el flujo con personas que asignan camas de verdad.
+## Qué haríamos con una semana más
+
+Nada de esto existe hoy.
+
+- Persistir las salas en una base de datos, para que sobrevivan a un reinicio y se repartan entre varios servidores.
+- Cuentas reales por persona en vez de un token por rol.
+- Medir el modelo local en el Spark y comparar Claude con un modelo más rápido.
+- Validar el flujo y los pesos de la fórmula con personas que asignan camas de verdad, incluido el signo del riesgo por demora.
+- Límite de uso por persona en las rutas que llaman al modelo.
 
 ## Pruebas
 
-`npm test` corre 218 pruebas en unos 30 segundos, sin llamar a ningún modelo.
+`npm test` corre todas las pruebas sin llamar a ningún modelo (unos 220 casos; algunos se generan por semilla con `it.each`, así que hay más casos que bloques `it(` en el código). Las pruebas HTTP tardan unos 20 segundos porque esperan pulsos reales del contador.
 
 | Archivo | Qué garantiza |
 | --- | --- |
@@ -271,7 +300,7 @@ Variables del modelo (`.env.example` trae las tres opciones):
 | Variable | Para qué |
 | --- | --- |
 | `LLM_PROVIDER` | `anthropic` para Claude; cualquier otro valor para un servidor compatible con OpenAI |
-| `LLM_MODEL` | Id del modelo |
+| `LLM_MODEL` | Id del modelo. Si falta, el código usa `claude-opus-5-5` con Claude y `gpt-oss:20b` en local; `.env.example` propone `llama3.2:3b` para probar en un notebook |
 | `LLM_BASE_URL`, `LLM_API_KEY` | Solo en local: dónde está Ollama |
 | `ANTHROPIC_API_KEY`, `LLM_EFFORT` | Solo con Claude |
 | `LLM_MAX_CONCURRENT`, `LLM_NO_THINK_BODY`, `LLM_REASONING_HEADROOM` | Opcionales: cola y control de razonamiento |
@@ -283,7 +312,7 @@ Sin modelo configurado la sala funciona igual: las reglas no dependen de él, y 
 Comprobaciones:
 
 ```bash
-npm test                                         # 218 pruebas, sin modelo
+npm test                                         # todas las pruebas, sin modelo
 npm run lint
 node scripts/e2e.mjs http://localhost:3000       # recorrido completo por HTTP
 node scripts/e2e.mjs http://localhost:3000 --llm # incluye agente y mutación con modelo

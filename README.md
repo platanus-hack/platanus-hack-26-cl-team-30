@@ -42,6 +42,7 @@ node scripts/load-test.mjs http://localhost:3000 50
 - [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md): componentes, flujo de un dato, tiempo real, modelos y qué es real o simulado.
 - [`docs/DECISIONES.md`](docs/DECISIONES.md): por qué se eligió cada cosa.
 - [`docs/PREGUNTAS.md`](docs/PREGUNTAS.md): preguntas técnicas probables y sus respuestas.
+- [`docs/MEDICIONES.md`](docs/MEDICIONES.md): qué se midió, cómo y con qué resultado.
 
 ## Deploy
 

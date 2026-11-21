@@ -48,7 +48,7 @@ Formato de cada entrada:
 
 ## Asignación determinista con desempate de equidad
 
-- **Decisión:** el recurso escaso lo ordena una fórmula fija, `S = w_sev·gravedad + w_time·urgencia − w_delay·riesgo por demora` (`computeTriageScore`). Si los dos mejores puntajes difieren en menos que `tieEpsilon`, decide el desempate de equidad de la regla; por defecto gana quien tiene mayor necesidad sin cubrir (`resolveAllocation`). Empate total: orden alfabético del caso.
+- **Decisión:** el recurso escaso lo ordena una fórmula fija, `S = w_sev·gravedad + w_time·urgencia − w_delay·riesgo por demora` (`computeTriageScore`). Todos los candidatos cuyo puntaje queda a menos de `tieEpsilon` del mejor forman un grupo empatado, y dentro de ese grupo ordena el desempate de equidad de la regla; por defecto gana quien tiene mayor necesidad sin cubrir (`resolveAllocation`). Empate total: orden alfabético del caso. Solo compiten los candidatos presentados y no vetados (`resolveRoomAllocation`).
 - **Alternativa descartada:** pedirle al modelo que elija, o asignar por orden de llegada.
 - **Por qué:** quien pierde la cama tiene que poder leer por qué. Una fórmula con pesos visibles da siempre el mismo resultado con los mismos datos y se puede auditar. El desempate evita que una diferencia de un centésimo decida, y evita que gane quien puede pagar más.
 - **Costo:** los pesos y los puntajes de la semilla son de ejemplo y nadie del área de salud los validó. El desempate `geographic` es una aproximación porque el esquema no tiene datos geográficos. El signo negativo del riesgo por demora viene del plan original y habría que revisarlo con criterio clínico.
@@ -74,9 +74,9 @@ Formato de cada entrada:
 - **Por qué:** explica en una cifra por qué no dejamos decidir a un agente solo: 0,92 por paso se vuelve 43% en diez pasos. Medirlo de verdad exige un benchmark que no existe para este caso.
 - **Costo:** los valores de `p` (0,90 a 0,95) vienen de la semilla. No se puede presentar como evidencia del rendimiento de ningún modelo.
 
-## El agente propone; nunca cambia el estado por su cuenta
+## El agente propone y no decide
 
-- **Decisión:** el agente de rol (`src/agents/role-agent.ts`) recibe la vista ya filtrada de su rol y devuelve un texto y un valor sugerido. Solo corre cuando la persona del rol lo pide (`RUN_ROLE_AGENT`). `applyAgentProposal` del motor limita el efecto: a lo más cambia el valor propuesto del caso, si quien pidió es el proponente.
+- **Decisión:** el agente de rol (`src/agents/role-agent.ts`) recibe la vista ya filtrada de su rol y devuelve un texto y un valor sugerido. Solo corre cuando la persona del rol lo pide (`RUN_ROLE_AGENT`). `applyAgentProposal` del motor limita el efecto a una sola cosa: si quien pidió es el proponente, el valor sugerido pasa en ese mismo momento a ser el valor propuesto del caso, sin otra confirmación. Eso puede bloquear o abrir la compuerta, pero nunca la firma, nunca sella la asignación y nunca toca una regla.
 - **Alternativa descartada:** agentes que negocian entre sí y cierran la decisión.
 - **Por qué:** el track es Multiplayer, no simulación. Las personas deciden; el agente les ahorra redactar. Además, un agente que no recibe un dato no lo puede filtrar.
 - **Costo:** no hay automatización de punta a punta. Cada paso espera a una persona.
