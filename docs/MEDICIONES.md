@@ -84,6 +84,8 @@ Las palabras incluyen la barra superior, las pestañas y el aviso de demostraci�
 
 ## Toques en la sala de demo (ronda 9)
 
+> Medición de la ronda 9, ya superada: desde la ronda 12 (demo pauteada) no hay tarjeta «Te tocó» ni «Entrar a mi silla», y el Comité acepta con la razón precargada. En la ronda 12 se midieron 3 toques en total por ronda (Presentar, Presentar y Aceptar) con 3 navegadores contra `next start`, en claro y en oscuro.
+
 Recorrido de `demo-cross` con 3 celulares (Playwright, 390 × 844) y la pantalla grande (1440 × 900), contra `npm run dev` en un notebook, el 21 de noviembre, en claro y en oscuro (mismas cifras).
 
 | Persona | Toques | Cuáles |

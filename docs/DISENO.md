@@ -6,7 +6,7 @@ Guía para cualquier persona o agente (Claude, Gemini, Antigravity) que cambie c
 
 El producto se llama **Sculptor** (antes «Nexo»). En pantalla se escribe «Sculptor», y en mayúsculas espaciadas «SCULPTOR» en el encabezado de la pantalla grande. Los identificadores internos siguen diciendo `nexo` y no se cambian: variables `NEXO_*`, encabezados `x-nexo-*`, ids como `nexo:approve`, la carpeta `src/components/nexo/`, el repo y la URL del deploy.
 
-La marca (`src/components/landing/mark.tsx`) es una «S» de un solo trazo sobre un cuadrado redondeado en tinta, con un punto de arcilla. Es un SVG con los tokens de la paleta, sin imágenes externas. Con `bare` queda solo el trazo en `currentColor`, para ponerlo sobre el círculo lima de la pantalla grande. El ícono de la pestaña es `src/app/icon.svg`, con los mismos trazos.
+El logo oficial es un cubo isométrico (`src/components/brand/sculptor-logo.tsx`, vista previa en `/marca`): cara superior marfil, dos caras en eucalipto y un triángulo lima. En los encabezados (pantalla grande, celular, portada y páginas de caso) va sin animación a través de `Mark` (`src/components/landing/mark.tsx`), con un contorno muy suave para que la cara marfil no se pierda en modo claro. El ícono de la pestaña es `src/app/icon.svg` (SCULPTOR_MARK). La animación grande de vidrio líquido (`SculptorGlassReveal`) es solo para la landing general.
 
 ## A quién le hablamos
 
@@ -153,7 +153,7 @@ Reglas de texto (feedback del mentor: «bombardean con texto todo»): título de
 | Qué | Dónde |
 |---|---|
 | Portada (landing) | `src/app/page.tsx` y `src/components/landing/` |
-| Caso de uso (hoy, los hospitales) | `src/app/casos/hospitales/page.tsx` y `src/components/casos/` (texto en `content.ts`, cifras del motor en `data.ts`) |
+| Casos de uso (salud, construcción, logística) | `src/app/casos/<rubro>/page.tsx` y `src/components/casos/` (texto en `content.ts`, cifras y nombres del motor en `data.ts`; héroe cinético, rayos, marco 3D y bento adaptados de 21st.dev en `kinetic-hero.tsx`, `how-beam.tsx`, `stage-scroll.tsx`, `seen-bento.tsx` y `casos.css`; capturas reales de la pantalla grande en `public/casos/`) |
 | Pantalla grande | `src/app/stage/[roomId]/stage-client.tsx` |
 | Deck del pitch (6 láminas, flechas o espacio para avanzar; diseño v2 de Nahum con cifras del repo) | `public/pitch/index.html`, se abre en `/pitch/index.html` |
 | Teléfono de cada rol | `src/app/room/[roomId]/room-client.tsx` y `src/components/seat/` |

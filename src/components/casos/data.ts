@@ -6,8 +6,8 @@ import "server-only";
 
 import { formatScore, formatValue } from "@/components/organs/format";
 import { shortLabel } from "@/components/stage/seats";
-import { openRoom, projectStateForOrgAndRole, resolveAllocation } from "@/lib/engine/deterministic";
-import type { Viewer } from "@/lib/genome/schema";
+import { computeCrossOrgReliabilityPn, demoSeats, openRoom, projectStateForOrgAndRole, resolveAllocation } from "@/lib/engine/deterministic";
+import type { SharedScarcity, Viewer } from "@/lib/genome/schema";
 import { CROSS_ORG_SCENARIOS, type CrossOrgScenarioId } from "@/lib/genome/scenarios";
 import { getInitialCrossOrgRoom } from "@/lib/genome/seeds";
 
@@ -22,6 +22,15 @@ export type CaseView = {
   ranking: { org: string; score: string; winner: boolean }[];
   tieBreak: boolean;
   viewers: CaseViewer[];
+  /**
+   * La regla del escenario para moverla en el navegador. Los costos van en 0: no
+   * entran en la cuenta y su valor real nunca sale del servidor.
+   */
+  scarcity: SharedScarcity;
+  /** Nombre corto de cada organización, por orgId (el mismo de la demo). */
+  orgLabels: Record<string, string>;
+  /** Modelo ilustrativo p^n del escenario: agentes solos contra una persona que firma. */
+  reliability: { autonomous: number; hybrid: number; steps: number };
 };
 
 // Reloj fijo: la página se prerenderiza y lo que ve cada rol no depende de la hora.
@@ -32,9 +41,11 @@ const ROWS_PER_ORG = 2;
 const FIRST_KEY = "coverage_cost";
 
 export function caseView(scenario: CrossOrgScenarioId, arbiterLabel: string): CaseView {
-  const state = openRoom(getInitialCrossOrgRoom(`caso-${scenario}`, { now: CLOCK, scenario }), CLOCK);
+  // Sala de demo del escenario: así los nombres son los mismos que ve la gente en la demo.
+  const state = openRoom({ ...getInitialCrossOrgRoom(`caso-${scenario}`, { now: CLOCK, scenario }), demo: true }, CLOCK);
   const scarcity = state.scarcity!;
-  const orgName = (orgId: string) => shortLabel(state.orgGenomes.find((genome) => genome.orgId === orgId)?.orgName ?? orgId);
+  const seatLabels = new Map(demoSeats(state).map((seat) => [seat.seat.orgId, seat.label]));
+  const orgName = (orgId: string) => seatLabels.get(orgId) ?? shortLabel(state.orgGenomes.find((genome) => genome.orgId === orgId)?.orgName ?? orgId);
   const resolution = resolveAllocation(scarcity);
 
   // Las tres personas de la demo: quien presenta en cada organización y el Comité.
@@ -54,7 +65,11 @@ export function caseView(scenario: CrossOrgScenarioId, arbiterLabel: string): Ca
     return { label, rows };
   });
 
+  const reliability = computeCrossOrgReliabilityPn(state);
   return {
+    scarcity: { ...scarcity, candidates: scarcity.candidates.map((candidate) => ({ ...candidate, coverageCost: 0, coverageCostVisibleToOrgs: [candidate.orgId] })) },
+    orgLabels: Object.fromEntries(scarcity.candidates.map((candidate) => [candidate.orgId, orgName(candidate.orgId)])),
+    reliability: { autonomous: reliability.autonomous, hybrid: reliability.hybrid, steps: reliability.n },
     resource: CROSS_ORG_SCENARIOS[scenario].resource,
     demoRoom: CROSS_ORG_SCENARIOS[scenario].fixedRoomId,
     ranking: resolution.ranking.map((entry) => ({ org: orgName(entry.orgId), score: formatScore(entry.score), winner: entry.caseId === resolution.winnerCaseId })),

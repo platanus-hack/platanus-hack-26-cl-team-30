@@ -448,6 +448,38 @@ describe("plan B mientras los bots todavía firman", () => {
     vi.advanceTimersByTime(10_000);
     const state = getRoom(roomId)!;
     expect(state.allocationStatus).toBe("SEALED");
-    expect(state.auditLog.filter((event) => event.detail.modo === "automático")).toHaveLength(3);
+    // Los 3 turnos del plan B (2 presentaciones y la firma del Comité); las firmas de los bots también van marcadas.
+    expect(state.auditLog.filter((event) => ["CANDIDATE_SUBMITTED", "ALLOCATION_SEALED"].includes(event.type) && event.detail.modo === "automático")).toHaveLength(3);
   });
 });
+
+describe("el acta nunca presenta una decisión automática como de una persona", () => {
+  it("las firmas de los bots y la decisión del plan B quedan marcadas y en su propia sección del acta", async () => {
+    const roomId = createRoom({ mode: "cross_org", demo: true, turnTimeoutMs: 1500 }).roomId;
+    draw(roomId);
+    vi.advanceTimersByTime(10_000);
+    const state = getRoom(roomId)!;
+    // 2 firmas de compuerta de los bots + la decisión del Comité por plan B.
+    expect(state.decisions.map((decision) => decision.automatic)).toEqual([true, true, true]);
+    const markdown = getActa(roomId)!.markdown;
+    const human = markdown.slice(markdown.indexOf("## Decisiones humanas"), markdown.indexOf("## Decisiones automáticas"));
+    expect(human).toContain("Ninguna todavía.");
+    expect(markdown).toContain("## Decisiones automáticas");
+  });
+
+  it("una decisión de una persona no lleva la marca y va en «Decisiones humanas»", async () => {
+    const roomId = demo();
+    const [clinic, rural, committee] = [draw(roomId), draw(roomId), draw(roomId)];
+    letBotsPlay();
+    await act(roomId, clinic, "SUBMIT_CANDIDATE");
+    await act(roomId, rural, "SUBMIT_CANDIDATE");
+    await act(roomId, committee, "ALLOCATION_SEAL", { reason: "Se acepta la propuesta por equidad." });
+    const allocation = getRoom(roomId)!.decisions.filter((decision) => decision.scope === "allocation");
+    expect(allocation).toHaveLength(1);
+    expect(allocation[0]!.automatic).toBeUndefined();
+    const markdown = getActa(roomId)!.markdown;
+    const human = markdown.slice(markdown.indexOf("## Decisiones humanas"), markdown.indexOf("## Decisiones automáticas"));
+    expect(human).toContain("Se acepta la propuesta por equidad.");
+  });
+});
+

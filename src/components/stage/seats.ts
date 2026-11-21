@@ -115,7 +115,7 @@ export function stageSeats(room: ProjectedRoomState): Seat[] {
   return seats;
 }
 
-const JOINER = /^(de|del|la|las|el|los|y|e|en|a|al|por|para|con|sin|su|sus)$/i;
+const JOINER = /^(de|del|la|las|el|los|y|e|en|a|al|por|para|con|sin|su|sus|si|que)$/i;
 
 /** Etiqueta para leer de lejos: una o dos palabras, cortada antes del primer conector («Costo de cobertura UCI» → «Costo»). */
 export function shortLabel(label: string): string {

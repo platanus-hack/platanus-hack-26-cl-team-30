@@ -267,6 +267,11 @@ export const HumanDecisionSchema = z.object({
   byOrgId: z.string(),
   byRoleId: z.string(),
   ts: z.number(),
+  /**
+   * true si la tomó el piloto automático (un bot del ensayo o de la demo, o el plan B
+   * por tiempo) y no una persona. Se muestra así en el acta. Si falta, la tomó una persona.
+   */
+  automatic: z.boolean().optional(),
 });
 
 /**

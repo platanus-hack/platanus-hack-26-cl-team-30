@@ -122,7 +122,7 @@ export function buildAutopilotScript(state: RoomState, options: AutopilotOptions
       {
         seat: decider,
         description: `${who(first, decider.roleId)} aprueba con una razón`,
-        run: (current, now) => recordGateDecision(current, decider, { decision: "APPROVE", reason: AUTOPILOT_REASONS.approve }, now),
+        run: (current, now) => recordGateDecision(current, decider, { decision: "APPROVE", reason: AUTOPILOT_REASONS.approve, automatic: true }, now),
       },
     ];
   }
@@ -148,13 +148,13 @@ export function buildAutopilotScript(state: RoomState, options: AutopilotOptions
       description: `${who(first, approverA.roleId)} contrapropone hasta su umbral, con una razón`,
       run: (current, now) => {
         const genome = findGenome(current, first.orgId) ?? first;
-        return recordGateDecision(current, approverA, { decision: "COUNTER_PROPOSE", counterValue: effectiveThreshold(genome.authorityRule), reason: AUTOPILOT_REASONS.counter }, now);
+        return recordGateDecision(current, approverA, { decision: "COUNTER_PROPOSE", counterValue: effectiveThreshold(genome.authorityRule), reason: AUTOPILOT_REASONS.counter, automatic: true }, now);
       },
     },
     {
       seat: approverB,
       description: `${who(second, approverB.roleId)} aprueba con una razón`,
-      run: (current, now) => recordGateDecision(current, approverB, { decision: "APPROVE", reason: AUTOPILOT_REASONS.approve }, now),
+      run: (current, now) => recordGateDecision(current, approverB, { decision: "APPROVE", reason: AUTOPILOT_REASONS.approve, automatic: true }, now),
     },
     ...[first, second].flatMap((genome): AutopilotStep[] => {
       const candidate = candidates.find((entry) => entry.orgId === genome.orgId);
@@ -168,7 +168,7 @@ export function buildAutopilotScript(state: RoomState, options: AutopilotOptions
     steps.push({
       seat: arbiter,
       description: `El ${state.scarcity.arbiter.title} firma la asignación con una razón`,
-      run: (current, now) => recordCommitteeDecision(current, arbiter, { decision: "APPROVE", reason: AUTOPILOT_REASONS.committee }, now),
+      run: (current, now) => recordCommitteeDecision(current, arbiter, { decision: "APPROVE", reason: AUTOPILOT_REASONS.committee, automatic: true }, now),
     });
   }
   return steps;
@@ -206,7 +206,7 @@ export function buildDemoBotScript(state: RoomState): AutopilotStep[] {
       seat,
       description: `${who(genome, seat.roleId)} (bot) firma`,
       run: (current, now) => {
-        const result = recordGateDecision(current, seat, { decision: "APPROVE", reason: AUTOPILOT_REASONS.demoApprove }, now);
+        const result = recordGateDecision(current, seat, { decision: "APPROVE", reason: AUTOPILOT_REASONS.demoApprove, automatic: true }, now);
         return !result.ok && result.code === "GATE_NOT_BLOCKED" ? { ok: true, state: current } : result;
       },
     };

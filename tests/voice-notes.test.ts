@@ -33,6 +33,7 @@ import { openCommitteeSession } from "../src/integrations/committee-channel";
 import { actaVoiceText, caseVoiceText, noteInbound, sendCommitteeVoiceNote, synthesizeSpeech, windowOpen, WHATSAPP_WINDOW_MS } from "../src/integrations/voice-notes";
 import { applyAction, createRoom, getHostCredentials, getRoom, projectRoom } from "../src/lib/store/rooms";
 import { POST as kapsoWebhook } from "../src/app/api/integrations/kapso/webhook/route";
+import { POST as actionRoute } from "../src/app/api/rooms/[roomId]/action/route";
 
 const PHONE = "56911112222";
 const SECRETS = ["2400000", "2.400.000", "1600000", "1.600.000"];
@@ -226,3 +227,45 @@ describe("el webhook de WhatsApp", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe("si el Comité sella desde la web", () => {
+  const flush = () => new Promise((resolve) => setTimeout(resolve, 20));
+  const sealFromWeb = async (roomId: string) => {
+    const arbiter = getRoom(roomId)!.scarcity!.arbiter;
+    // El canal de WhatsApp tenía el puesto; la persona lo toma desde la web cuando el canal deja de dar señales.
+    const seat = await applyAction(roomId, { type: "JOIN_ROLE", orgId: arbiter.orgId, roleId: arbiter.roleId, committeeKey: getHostCredentials(roomId)?.committeeKey }, Date.now() + 60_000);
+    if (seat.status !== 200 || !("token" in seat.body)) throw new Error(`JOIN_ROLE falló: ${JSON.stringify(seat)}`);
+    const body = JSON.stringify({ type: "ALLOCATION_SEAL", orgId: arbiter.orgId, roleId: arbiter.roleId, token: seat.body.token, reason: "Equidad entre organizaciones" });
+    const res = await actionRoute(new Request(`http://x/api/rooms/${roomId}/action`, { method: "POST", body, headers: { "Content-Type": "application/json" } }), { params: Promise.resolve({ roomId }) });
+    expect(res.status).toBe(200);
+    await flush();
+  };
+
+  it("también le llega el acta en audio por WhatsApp, si la conversación está abierta", async () => {
+    const roomId = await proposedRoom();
+    const opened = await openCommitteeSession(roomId, "whatsapp", PHONE);
+    if (!opened.ok) throw new Error("no abrió la sesión");
+    noteInbound(PHONE);
+    await sealFromWeb(roomId);
+    expect(getRoom(roomId)!.allocationStatus).toBe("SEALED");
+    expect(kapso.sendAudio).toHaveBeenCalledTimes(1);
+    expect(kapso.upload).toHaveBeenCalledWith(expect.objectContaining({ type: "audio/ogg" }));
+    // El texto del acta pasó por ElevenLabs y no trae costos.
+    const sent = JSON.parse(fetchMock.mock.calls[0]![1].body).text as string;
+    expect(sent).toContain("Acta de la decisión");
+    for (const secret of SECRETS) expect(sent).not.toContain(secret);
+  });
+
+  it("sin conversación abierta, o si el caso nunca se envió por WhatsApp, no se envía nada", async () => {
+    const quiet = "56900000009";
+    const roomId = await proposedRoom();
+    const opened = await openCommitteeSession(roomId, "whatsapp", quiet);
+    if (!opened.ok) throw new Error("no abrió la sesión");
+    await sealFromWeb(roomId);
+    const noWhatsApp = await proposedRoom();
+    await sealFromWeb(noWhatsApp);
+    expect(kapso.sendAudio).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+

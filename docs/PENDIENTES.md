@@ -27,7 +27,7 @@ Actualizado el 21 de noviembre de 2026.
 | i5 | **Canales del Comité sin probar contra Kapso ni ElevenLabs.** Solo hay pruebas unitarias. La llamada necesita un número de Twilio vinculado en ElevenLabs. | Sebastián | Configurar las variables en Render, registrar el webhook en Kapso con su secreto y hacer una prueba real de cada canal antes de mencionarlos en vivo. |
 | i6 | **Resuelto:** el README ya dice que las salas no usan base de datos y que Supabase solo atiende el formulario de acceso y las entrevistas de la portada. | Sebastián | Nada. |
 | k | **Resuelto:** `.playwright-mcp/` está en `.gitignore`. | Orquestador | Nada. |
-| s | **Lo que leen los jueces es lo publicado.** Lo de la ronda 8 sigue sin commit: `src/components/seat/`, la ruta `src/app/api/rooms/[roomId]/seat/`, `tests/seat.test.ts`, la galaxia de la pantalla grande (`src/components/stage/galaxy.tsx`, `seats.ts`, `join-view.tsx`, `ecg.tsx`, `tests/stage.test.ts`), `src/components/organs/telemetry-readout.tsx`, los órganos y piezas de `nexo/` borrados, y los cambios de `docs/`. El agente del ensayo lo notó: los docs nombran archivos que en GitHub todavía no están, y al revés. | Orquestador | Commit y push de todo junto antes de presentar, y confirmar en GitHub que se ve la versión nueva. |
+| s | **Lo que leen los jueces es lo publicado.** Lo de las rondas anteriores ya está en git; lo de la ronda 15 (acta en audio al sellar desde la web, decisiones automáticas marcadas, preguntas nuevas) todavía no. | Orquestador | Commit y push antes de presentar, y confirmar en GitHub que se ve la versión nueva. |
 | t | **Resuelto:** el panel del agente ahora vive en la pestaña «Sala» del celular (`src/components/seat/room-view.tsx`) y, si quien lo pide es el proponente, dice «Su valor reemplaza tu propuesta»; la firma sigue siendo de una persona. | Agente 1 | Nada. |
 | u | **Código que no se alcanza.** `resolveSeat` en `src/agents/role-agent.ts` arma una persona para el Comité árbitro, pero `runAgent` (`src/lib/store/rooms.ts`) responde 409 antes de llamar al agente para el árbitro. | Agente 2 | Borrar esa rama o decidir que el árbitro sí tenga agente. Mientras tanto, los docs dicen que no lo tiene. |
 
@@ -55,15 +55,15 @@ Actualizado el 21 de noviembre de 2026.
 
 - **Validación del evento.** Los cuatro requisitos que marcaba (nombre, descripción en español, URL del deploy y `project-description.md`) ya están completos en el repo oficial. El resultado solo se ve con la sesión iniciada en `hack.platan.us`: hay que revisarlo y confirmar que pasó.
 - **Latencia del SSE en Render gratis.** En una de cuatro corridas del e2e contra el deploy hubo mensajes que tardaron hasta 3 segundos en llegar; las otras tres pasaron 97 de 97. Subir el servicio a un plan pagado antes de presentar reduce ese riesgo.
-- **Reinicio de salas:** resuelto. `DELETE /api/rooms/:id` ahora exige el token de anfitrión que recibe quien crea la sala (o `NEXO_ADMIN_KEY`); el e2e usa el token de las salas que crea.
+- **Reinicio de salas:** resuelto. `DELETE /api/rooms/:id` exige el token de anfitrión que recibe quien crea la sala (o `NEXO_ADMIN_KEY`), salvo «Nueva ronda» en una sala de demo con el acta cerrada, que no lo pide (ronda 11).
 - **Fórmula de prioridad.** `computeTriageScore` resta el riesgo por demora, como dice el plan. Decidir si se invierte el signo: cambia el resultado de la demo.
 - **UX Pilot.** El servidor MCP quedó agregado, pero pide autenticación: correr `/mcp` en una sesión nueva de Claude Code y autorizarlo.
 
 ## Agregado en la ronda 8 (celular y sorteo de silla, 21 de noviembre, tarde)
 
-- **QR único y el Comité:** la ruta `POST /api/rooms/:id/seat` y la entrada `/room/<id>` sin rol están probadas (`tests/seat.test.ts`), y la pantalla grande ya dibuja ese QR (`src/components/stage/join-view.tsx`) sin `?key`. Así el Comité no entra al sorteo y sigue entrando por su propio QR. Si se quiere que también se sortee, ese enlace debe llevar `?key=<committeeKey>`.
+- **QR único y el Comité:** resuelto. En las salas de demo el Comité entra por el QR único sin clave, como tercera persona (rondas 11 y 12). En las salas normales, sin `?key` el Comité no entra al sorteo.
 - **WhatsApp contra el número real sin registrar.** El último commit de WhatsApp habla de «plantilla aprobada (número de producción)», pero `docs/MEDICIONES.md` no tiene ninguna prueba contra Kapso real y PREGUNTAS 11 y 28 dicen que los canales se probaron solo con pruebas unitarias. Confirmar con el equipo y anotar qué se probó y cuándo.
-- **`scripts/e2e.mjs` no recorre el sorteo de silla:** entra con `JOIN_ROLE` por rol. El sorteo está cubierto solo por `tests/seat.test.ts`.
+- **Resuelto:** `scripts/e2e.mjs` recorre el sorteo de silla, la sala de demo con 3 personas sin clave y el plan B.
 - **Silla del celular sin probar en teléfonos reales:** se probó con Playwright en 390 × 844 (claro y oscuro). Falta un ensayo con iPhone y Android para revisar el área segura y el teclado sobre la razón del Comité.
 - **Secretos y Sala se desplazan un poco** (hasta unos 160 px en 844 px de alto): tienen más filas que un turno. Los turnos no se desplazan.
 
@@ -78,7 +78,7 @@ Actualizado el 21 de noviembre de 2026.
 
 - **Asistente de voz ya creado en ElevenLabs:** el nombre, el prompt y el saludo nuevos («asistente del Comité de Sculptor») están en `src/integrations/elevenlabs.ts`, pero solo se usan al crear el agente. Si Render tiene `ELEVENLABS_AGENT_ID`, ese agente sigue diciendo «Nexo» hasta actualizarlo en el panel de ElevenLabs (o borrar la variable para que se cree uno nuevo).
 - **Plantilla de WhatsApp:** el nombre sugerido ahora es `sculptor_comite_caso`. Hay que crearla y aprobarla en Meta; mientras tanto, `KAPSO_TEMPLATE_NAME` debe seguir con el nombre de la plantilla ya aprobada. El encabezado del mensaje interactivo ya dice «Sculptor · Decisión del Comité».
-- **Fuera del reparto de la ronda 10:** `project-description.md` y `public/pitch/index.html` todavía dicen «Nexo».
+- **Fuera del reparto de la ronda 10:** `project-description.md` todavía dice «Nexo» (líneas 1 y 13). `public/pitch/index.html` ya está al día.
 
 ## Agregado en la ronda 11 (Comité sin clave en la demo)
 
@@ -87,5 +87,5 @@ Actualizado el 21 de noviembre de 2026.
 ## Agregado en la ronda 14 (notas de voz por WhatsApp)
 
 - **Probar contra los servicios reales:** activar `NEXO_VOICE_NOTES=1` en Render con el número de producción y confirmar que (a) ElevenLabs entrega el Opus en OGG y WhatsApp lo muestra como nota de voz, y (b) el audio del caso llega al tocar un botón y el del acta al escribir la razón.
-- **El acta en audio solo llega si el Comité decide por WhatsApp.** Si sella desde la web, no se envía (no hay conversación abierta conocida).
+- **Resuelto (ronda 15): el acta en audio también llega si el Comité sella desde la web,** siempre que a esa sala se le haya enviado el caso por WhatsApp y la conversación esté abierta (`sendActaAfterWebSeal`, llamada desde la ruta de acciones). Falta el caso del plan B: si el piloto sella solo en una sala de demo, no se envía audio.
 

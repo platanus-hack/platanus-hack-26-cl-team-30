@@ -159,9 +159,7 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
       <div className="gd-surround">
         <header className="gd-top">
           <div className="gd-brand">
-            <span className="gd-logo" aria-hidden="true">
-              <Mark size={26} bare />
-            </span>
+            <Mark size={28} />
             <div>
               <strong>SCULPTOR</strong>
             </div>
@@ -550,6 +548,8 @@ function ActaView({
               {room.decisions.map((decision) => (
                 <figure key={decision.ts} className="nx-rank-row" style={{ display: "block" }}>
                   <figcaption className="nx-meta">
+                    {/* Lo que decidió el piloto automático (bots o plan B) se dice: no se presenta como decisión de una persona. */}
+                    {decision.automatic && <span className="nx-state" data-state="plain" style={{ marginInlineEnd: 8 }}>automático</span>}
                     {roleLabel(room, decision.byOrgId, decision.byRoleId)} · {decision.decision === "APPROVE" ? "aprobó" : decision.decision === "VETO" ? "vetó" : "propuso otro valor"}
                     {decision.scope === "allocation" ? " la asignación" : ` en ${orgLabel(room, decision.targetOrgId ?? decision.byOrgId)}`} · {formatTime(decision.ts)}
                   </figcaption>

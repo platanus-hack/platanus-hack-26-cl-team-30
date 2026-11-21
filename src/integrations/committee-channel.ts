@@ -108,6 +108,16 @@ export function getSessionByPhone(phone: string): Session | undefined {
   return found;
 }
 
+/** Sesión de WhatsApp más reciente de una sala (la del Comité al que se le envió el caso). */
+export function getWhatsAppSessionForRoom(roomId: string): Session | undefined {
+  sweep();
+  let found: Session | undefined;
+  for (const session of sessions.values()) {
+    if (session.channel === "whatsapp" && session.roomId === roomId && (!found || session.createdAt > found.createdAt)) found = session;
+  }
+  return found;
+}
+
 /** Única sesión de voz abierta, si hay exactamente una (respaldo si la llamada no trae su id). */
 export function getOnlyVoiceSession(): Session | undefined {
   sweep();

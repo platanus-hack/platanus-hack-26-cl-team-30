@@ -83,6 +83,7 @@ describe("textos cortos", () => {
     expect(shortLabel("Costo de cobertura UCI")).toBe("Costo");
     expect(shortLabel("Camas UCI disponibles")).toBe("Camas UCI");
     expect(shortLabel("Gravedad clínica")).toBe("Gravedad clínica");
+    expect(shortLabel("Riesgo si la obra se detiene")).toBe("Riesgo");
   });
 });
 

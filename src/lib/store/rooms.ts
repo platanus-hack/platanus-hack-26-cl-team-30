@@ -979,7 +979,7 @@ function playTurnAutomatically(roomId: string, record: RoomRecord, key: string) 
   const result =
     turn.action === "submit"
       ? engine.submitCandidate(record.state, turn.seat, turn.caseId ?? undefined, now, detail)
-      : engine.sealAllocation(record.state, turn.seat, `Automático (plan B): el Comité no respondió en ${seconds} s; se acepta la propuesta de la regla.`, now, detail);
+      : engine.sealAllocation(record.state, turn.seat, `Automático (plan B): el Comité no respondió en ${seconds} s; se acepta la propuesta de la regla.`, now, detail, true);
   let state = result.state ?? record.state;
   state = engine.recordAutopilotEvent(state, { phase: "turn", automatic: true, seat: tokenKey(turn.seat), action: turn.action, outcome: result.ok ? "ok" : "failed", ...(result.ok ? {} : { code: result.code }) }, now);
   record.state = state;

@@ -1,6 +1,7 @@
 import { readJsonBody } from "@/lib/store/http";
 import { rateLimited } from "@/lib/store/rate-limit";
 import { applyAction } from "@/lib/store/rooms";
+import { sendActaAfterWebSeal } from "@/integrations/voice-notes";
 
 // POST /api/rooms/:roomId/action  body { type, orgId, roleId, token, ...datos }
 // Única puerta para cambiar una sala. La forma del body está en ActionSchema
@@ -16,5 +17,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ roo
   if (!body.ok) return Response.json({ error: body.error, code: "BAD_REQUEST" }, { status: 400 });
 
   const { status, body: response } = await applyAction(roomId, body.value);
+  // El Comité selló desde la web: el acta en audio por WhatsApp, si a esta sala se le
+  // envió el caso por ese canal y la conversación está abierta. En segundo plano y sin
+  // afectar la respuesta: el audio solo informa (src/integrations/voice-notes.ts).
+  const type = (body.value as { type?: unknown } | null)?.type;
+  if (status === 200 && type === "ALLOCATION_SEAL") {
+    void sendActaAfterWebSeal(roomId).then((note) => {
+      if (!note.sent && note.reason === "error") console.error("[nota de voz]", note.message);
+    });
+  }
   return Response.json(response, { status });
 }

@@ -1022,7 +1022,8 @@ export function attemptProtectedRead(
   );
 }
 
-export type GateDecisionInput = { decision: HumanDecision["decision"]; reason: string; counterValue?: number };
+/** automatic: la decisión la toma el piloto automático (bot o plan B), no una persona; queda marcada así. */
+export type GateDecisionInput = { decision: HumanDecision["decision"]; reason: string; counterValue?: number; automatic?: boolean };
 
 /**
  * Decisión humana sobre la compuerta de la organización de quien actúa. Solo el
@@ -1064,6 +1065,7 @@ export function recordGateDecision(state: RoomState, actor: ActorRef, input: Gat
     byOrgId: actor.orgId,
     byRoleId: actor.roleId,
     ts: nowTs,
+    ...(input.automatic ? { automatic: true } : {}),
   };
   const type: AuditEventType = input.decision === "APPROVE" ? "HITL_APPROVED" : input.decision === "VETO" ? "HITL_VETOED" : "COUNTER_PROPOSED";
   const events: NewEvent[] = [
@@ -1071,7 +1073,15 @@ export function recordGateDecision(state: RoomState, actor: ActorRef, input: Gat
       type,
       orgId: actor.orgId,
       roleId: actor.roleId,
-      detail: { scope: "gate", by: found.role.title, reason, proposedValue: genome.liveCase.proposedValue, threshold: gate.effectiveThreshold, ...(decision.counterValue !== undefined ? { counterValue: decision.counterValue } : {}) },
+      detail: {
+        scope: "gate",
+        by: found.role.title,
+        reason,
+        proposedValue: genome.liveCase.proposedValue,
+        threshold: gate.effectiveThreshold,
+        ...(decision.counterValue !== undefined ? { counterValue: decision.counterValue } : {}),
+        ...(input.automatic ? { automatic: true, modo: "automático" } : {}),
+      },
     },
   ];
   let next: RoomState = { ...replaceGenome(state, nextGenome), decisions: [...state.decisions, decision] };
@@ -1128,7 +1138,7 @@ function allocationProposedEvent(resolution: AllocationResolution): NewEvent {
 }
 
 /** detail: datos extra para la bitácora (por ejemplo, { modo: "automático" } cuando juega el plan B). */
-export type CommitteeDecisionInput = { decision: "APPROVE" | "VETO"; reason: string; detail?: Record<string, unknown> };
+export type CommitteeDecisionInput = { decision: "APPROVE" | "VETO"; reason: string; detail?: Record<string, unknown>; automatic?: boolean };
 
 /**
  * Decisión del Comité, con razón obligatoria.
@@ -1159,7 +1169,16 @@ export function recordCommitteeDecision(state: RoomState, actor: ActorRef, input
     return fail(409, "ALLOCATION_NOT_READY", "Todavía no hay una asignación propuesta: faltan candidatos por presentar");
   }
   const title = state.scarcity!.arbiter.title;
-  const decision: HumanDecision = { scope: "allocation", targetCaseId: winner.caseId, decision: input.decision, reason, byOrgId: actor.orgId, byRoleId: actor.roleId, ts: nowTs };
+  const decision: HumanDecision = {
+    scope: "allocation",
+    targetCaseId: winner.caseId,
+    decision: input.decision,
+    reason,
+    byOrgId: actor.orgId,
+    byRoleId: actor.roleId,
+    ts: nowTs,
+    ...(input.automatic ? { automatic: true } : {}),
+  };
 
   if (input.decision === "APPROVE") {
     const next: RoomState = { ...state, decisions: [...state.decisions, decision], allocationStatus: "SEALED", decisionSealedAt: nowTs };
@@ -1168,7 +1187,18 @@ export function recordCommitteeDecision(state: RoomState, actor: ActorRef, input
         type: "ALLOCATION_SEALED",
         orgId: actor.orgId,
         roleId: actor.roleId,
-        detail: { by: title, reason, winnerCaseId: winner.caseId, winnerOrgId: winner.orgId, patientLabel: winner.patientLabel, score: winner.score, tieBreakApplied: resolution.tieBreakApplied, tieBreakRule: resolution.tieBreakRule, ...input.detail },
+        detail: {
+          by: title,
+          reason,
+          winnerCaseId: winner.caseId,
+          winnerOrgId: winner.orgId,
+          patientLabel: winner.patientLabel,
+          score: winner.score,
+          tieBreakApplied: resolution.tieBreakApplied,
+          tieBreakRule: resolution.tieBreakRule,
+          ...(input.automatic ? { automatic: true } : {}),
+          ...input.detail,
+        },
       },
       { type: "STAKES_CONTAINED", detail: { timeToDecisionMs: waitedMs(state, nowTs) } },
     ];
@@ -1187,11 +1217,11 @@ export function recordCommitteeDecision(state: RoomState, actor: ActorRef, input
 }
 
 /** Sella la asignación propuesta. Solo el Comité árbitro. */
-export function sealAllocation(state: RoomState, actor: ActorRef, reason: string, nowTs: number, detail?: Record<string, unknown>): EngineResult {
+export function sealAllocation(state: RoomState, actor: ActorRef, reason: string, nowTs: number, detail?: Record<string, unknown>, automatic = false): EngineResult {
   if (!state.scarcity) return fail(409, "WRONG_MODE", "Esta sala no tiene un recurso compartido entre organizaciones");
   if (!isKnownActor(state, actor)) return fail(404, "ROLE_NOT_FOUND", `El rol ${actor.roleId} no existe en ${actor.orgId}`);
   if (!isArbiter(state, actor)) return deny(state, actor, nowTs, "ALLOCATION_SEAL", "solo el Comité árbitro sella la asignación", "Solo el Comité árbitro puede sellar la asignación");
-  return recordCommitteeDecision(state, actor, { decision: "APPROVE", reason, detail }, nowTs);
+  return recordCommitteeDecision(state, actor, { decision: "APPROVE", reason, detail, automatic }, nowTs);
 }
 
 export type AgentProposalInput = {
@@ -1386,11 +1416,18 @@ export function renderActaMarkdown(acta: AuditActa): string {
     if (acta.allocation.vetoedCaseIds.length > 0) lines.push("", `Casos vetados por el Comité: ${acta.allocation.vetoedCaseIds.join(", ")}.`);
     if (acta.crossOrgReliability) lines.push("", `Confiabilidad de la cadena entre organizaciones: ${percent(acta.crossOrgReliability.current)}. ${acta.crossOrgReliability.formula}`);
   }
-  lines.push("", "## Decisiones humanas", "");
-  if (acta.decisions.length === 0) lines.push("Ninguna todavía.");
-  for (const decision of acta.decisions) {
+  // Las decisiones del piloto automático (bots o plan B) van aparte: nunca se presentan como de una persona.
+  const humanDecisions = acta.decisions.filter((decision) => !decision.automatic);
+  const automaticDecisions = acta.decisions.filter((decision) => decision.automatic);
+  const decisionLine = (decision: HumanDecision) => {
     const target = decision.scope === "gate" ? `compuerta de ${decision.targetOrgId}` : `asignación, caso ${decision.targetCaseId}`;
-    lines.push(`- ${new Date(decision.ts).toISOString()} · ${decision.byOrgId}/${decision.byRoleId} · ${decision.decision} (${target}). Razón: ${oneLine(decision.reason)}`);
+    return `- ${new Date(decision.ts).toISOString()} · ${decision.byOrgId}/${decision.byRoleId} · ${decision.decision} (${target}). Razón: ${oneLine(decision.reason)}`;
+  };
+  lines.push("", "## Decisiones humanas", "");
+  if (humanDecisions.length === 0) lines.push("Ninguna todavía.");
+  lines.push(...humanDecisions.map(decisionLine));
+  if (automaticDecisions.length > 0) {
+    lines.push("", "## Decisiones automáticas (piloto automático: bots de la demo o plan B por tiempo)", "", ...automaticDecisions.map(decisionLine));
   }
   lines.push("", acta.auditLogDropped > 0 ? `## Bitácora (se descartaron ${acta.auditLogDropped} eventos de rutina antiguos)` : "## Bitácora completa", "", "| Hora (servidor) | Evento | Organización | Rol | Detalle |", "| --- | --- | --- | --- | --- |");
   for (const event of acta.auditLog) {

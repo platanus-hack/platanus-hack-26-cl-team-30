@@ -11,9 +11,16 @@ Formato de cada entrada:
 
 ---
 
+## Los componentes de 21st.dev se adaptan con CSS y GSAP, sin framer-motion
+
+- **Decisión:** las cuatro piezas elegidas de 21st.dev (`docs/diseno/21st/`) se reescribieron para las páginas de caso: tipografía cinética y foco con CSS (`kinetic-hero.tsx`), rayos SVG animados con CSS (`how-beam.tsx`), marco 3D con GSAP ScrollTrigger (`stage-scroll.tsx`) y bento oscuro con CSS (`seen-bento.tsx`). Con `prefers-reduced-motion` todo queda quieto y completo. Los íconos son de lucide: sin logos de terceros, tampoco el de WhatsApp. La captura de la pantalla grande de cada caso es real: una sala de demo de ese escenario jugada hasta el paso Comité (`public/casos/`).
+- **Alternativa descartada:** agregar framer-motion (`motion`), que usan los cuatro originales.
+- **Por qué:** GSAP ya estaba instalado y lo usa la portada; una dependencia más pesa en el bundle y suma otra forma de animar.
+- **Costo:** si cambia mucho la pantalla grande, hay que volver a sacar las tres capturas.
+
 ## Páginas de caso de uso con el mismo armado y cifras del motor
 
-- **Decisión:** `/casos/hospitales` se arma con componentes de `src/components/casos/`: el texto de cada caso es un objeto (`CaseStudy`, en `content.ts`) y las cifras (puntajes y qué ve cada rol) las calcula `caseView` (`data.ts`) en el servidor, proyectando la sala del escenario con el mismo motor. Para `/casos/construccion` basta otro objeto y otra página de tres líneas.
+- **Decisión:** `/casos/hospitales`, `/casos/construccion` y `/casos/logistica` se arman con los mismos componentes de `src/components/casos/`: el texto de cada caso es un objeto (`CaseStudy`, en `content.ts`) y las cifras (puntajes y qué ve cada rol) las calcula `caseView` (`data.ts`) en el servidor, proyectando la sala de demo del escenario con el mismo motor. Los nombres de cada organización salen de `demoSeats`, así que son los mismos que la gente ve en la demo de ese rubro («Cordillera», «Litoral Sur»…). Cada página abre la sala de demo fija de su escenario y enlaza a las otras dos.
 - **Alternativa descartada:** escribir la página de los hospitales a mano, con los puntajes y los candados copiados.
 - **Por qué:** así las cifras no se desactualizan y lo que se muestra como reservado es exactamente lo que el servidor no envía a ese rol. La portada general es de Ramón; esta página solo la enlaza una vez.
 - **Costo:** la tabla de «qué ve cada uno» muestra dos datos por organización (el costo primero), no todos.
@@ -111,7 +118,7 @@ Formato de cada entrada:
 
 ## Ensayo automático con las mismas funciones del motor, sin modelo
 
-- **Decisión:** el ensayo (`src/lib/engine/autopilot.ts`) es el guion de la demo como datos. Cada paso llama a la función del motor que usaría una persona, desde el puesto que corresponde. Los bots solo toman puestos libres y todo queda marcado (`AUTOPILOT`, `bot: true`). Es control de anfitrión. Adaptado del `autopilot.ts` de Ramón.
+- **Decisión:** el ensayo (`src/lib/engine/autopilot.ts`) es el guion de la demo como datos. Cada paso llama a la función del motor que usaría una persona, desde el puesto que corresponde. Los bots solo toman puestos libres y todo queda marcado (`AUTOPILOT`, `bot: true` en la entrada de cada bot, y `automatic: true` en cada decisión del piloto, que el acta lista aparte). Es control de anfitrión. Adaptado del `autopilot.ts` de Ramón.
 - **Alternativa descartada:** un ensayo que escribiera el estado final directamente, o que usara el agente con el modelo.
 - **Por qué:** así el ensayo prueba las reglas de verdad y es reproducible, sin gastar llamadas. Marcarlo evita presentar como decisión humana algo que hizo un bot.
 - **Costo:** los pasos de agente se omiten. Si una persona tiene un puesto, su paso se salta y el guion puede no llegar al final hasta que esa persona actúe.
@@ -281,7 +288,7 @@ Formato de cada entrada:
 
 ## Sorteo de silla en una ruta propia, no como acción
 
-- **Decisión:** el QR único de la sala abre `/room/<id>` sin rol, y el celular pide `POST /api/rooms/:id/seat`. El servidor elige al azar una silla libre (sin la clave del QR, el Comité no entra al sorteo) y entrega su token, igual que `JOIN_ROLE`.
+- **Decisión:** el QR único de la sala abre `/room/<id>` sin rol, y el celular pide `POST /api/rooms/:id/seat`. El servidor elige una silla libre (al azar en las salas normales, donde el Comité solo entra con la clave del QR; por orden de llegada en las de demo, donde el Comité entra sin clave, ver más abajo) y entrega su token, igual que `JOIN_ROLE`.
 - **Por qué:** una acción de `/action` exige `orgId` y `roleId` de quien actúa, y el recién llegado todavía no tiene. Agregarla como acción número 12 obligaba a volver opcional ese par en todo el contrato. En una ruta aparte, el contrato de las 11 acciones y sus pruebas quedan igual.
 - **Descartado:** sortear en el navegador y llamar a `JOIN_ROLE`. Dos personas que escanean a la vez sorteaban la misma silla y una recibía 409; en el servidor el sorteo y la reserva son un solo paso.
 - **Límite conocido:** «Sortear otro rol» solo se ofrece a quien llegó por sorteo; quien entró por el QR de un rol puede salir desde la pestaña «Sala».
@@ -307,7 +314,7 @@ Formato de cada entrada:
 
 ## En la demo, el Comité entra sin clave y «Nueva ronda» no pide token tras el acta
 
-- **Decisión:** en las salas de demo, el sorteo del QR único reparte también el asiento del Comité sin la clave de su QR (el azar elige entre los 3 asientos humanos libres). Y con el acta cerrada, `DELETE /api/rooms/:id` («Nueva ronda») funciona sin token de anfitrión (`canResetWithoutHost` en `src/lib/store/rooms.ts`). En las salas normales todo sigue igual: el Comité solo con la clave y el reinicio solo con el token.
+- **Decisión:** en las salas de demo, el sorteo del QR único reparte también el asiento del Comité sin la clave de su QR (desde la ronda 12, por orden de llegada: el tercero es el Comité). Y con el acta cerrada, `DELETE /api/rooms/:id` («Nueva ronda») funciona sin token de anfitrión (`canResetWithoutHost` en `src/lib/store/rooms.ts`). En las salas normales todo sigue igual: el Comité solo con la clave y el reinicio solo con el token.
 - **Por qué:** en una prueba con 3 celulares contra el deploy, el tercero vio «No quedan sillas libres» y la demo quedó trabada en «Falta: el Comité decide». En producción, una sala fija no entrega su token ni la clave del Comité sin `NEXO_ADMIN_KEY` (`POST /api/rooms/demo-cross/host` responde 403), así que la pantalla grande no podía mostrar el QR del Comité ni reiniciar la sala.
 - **Riesgo:** cualquiera que escanee el QR único de una sala de demo puede terminar siendo el Comité y decidir la asignación, y cualquiera puede empezar una ronda nueva apenas se cierra el acta, aunque el grupo quiera seguir mirando el resultado. Se acepta porque las salas de demo tienen datos simulados y son para mostrar el producto, no para decidir nada real. Lo que no cambia: antes del acta nadie sin token puede reiniciar (una ronda en curso no se puede borrar), `JOIN_ROLE` directo al Comité sigue pidiendo la clave, y cada decisión sigue exigiendo una razón y queda en el acta.
 - **Descartado:** definir `NEXO_ADMIN_KEY` en Render y abrir la pantalla grande con esa clave. Es lo correcto para un despliegue serio y sigue disponible, pero obliga a quien presenta a tener y escribir la clave en el momento, y si falla la demo se traba igual.
@@ -317,7 +324,7 @@ Formato de cada entrada:
 - **Decisión:** en las salas de demo el narrador guía en voz alta y quien juega no lee. Los asientos se reparten por orden de llegada, no al azar: 1.º la Clínica (quien presenta el primer caso), 2.º el Hospital Rural (el segundo) y 3.º el Comité. El servidor proyecta, solo en la demo, `seatOrder` (orden fijo, para el narrador; no se muestra como número), `seatLabel` (el nombre corto que se muestra: «Clínica», «Hospital Rural», «Comité») y `turn` (a quién le toca, con `remainingMs` y `totalMs`). El celular muestra «Eres la Clínica» en grande con su color, una sola línea, y cuando no es su turno solo «Espera: le toca al Hospital Rural»; cuando le toca, un botón enorme. El Comité ve «¿Aceptas o rechazas?» con una razón precargada («por equidad») que cambia con un toque; la razón sigue siendo obligatoria y queda en el acta tal como la eligió. Si la persona del turno no actúa en 20 s, el piloto juega por ella (plan B): presenta el caso, o el Comité acepta la propuesta de la regla, y queda en el acta con `modo: "automático"` y una razón que empieza con «Automático (plan B)».
 - **Por qué:** Sebastián quiere que en el pitch el narrador llame a cada juez por su rol («usted es la Clínica», «Comité, ¿acepta o rechaza?») y que la demo nunca se detenga porque alguien no encontró el botón. No se muestra «Jurado 1/2/3»: la identidad de cada persona es su rol y su color.
 - **Configuración:** `NEXO_DEMO_TURN_MS` cambia el plazo (por defecto 20 000; `0` apaga el plan B). Una sala nueva puede pedir otro plazo con `POST /api/rooms { mode: "cross_org", demo: true, turnMs }`. En las salas normales no hay orden de llegada, ni turno ni plan B.
-- **Riesgo:** con el plan B, una decisión del Comité puede tomarla el piloto si la persona no responde a tiempo. Se acepta porque es una sala de demo con datos simulados; la decisión automática queda marcada como tal en el acta y en la bitácora (`AUTOPILOT` con `automatic: true`), nunca como si la hubiera tomado una persona.
+- **Riesgo:** con el plan B, una decisión del Comité puede tomarla el piloto si la persona no responde a tiempo. Se acepta porque es una sala de demo con datos simulados; la decisión automática queda marcada como tal: `automatic: true` en la decisión, `modo: "automático"` en la bitácora y una sección «Decisiones automáticas» del acta, separada de las humanas. Firma con el asiento de la persona, pero nunca se presenta como si la hubiera tomado ella.
 - **Descartado:** obligar el orden en el servidor (rechazar que el Hospital Rural presente antes que la Clínica). El orden lo guía el celular; el servidor sigue aceptando cualquier acción válida, que es lo que ya prueban las demás pruebas.
 
 ## Notas de voz por WhatsApp: solo informan, dentro de la ventana de 24 h
@@ -328,4 +335,9 @@ Formato de cada entrada:
 - **Formato:** se pide Opus a ElevenLabs (`opus_48000_64`). Si llega en contenedor OGG va como nota de voz; si no, se pide MP3 y va como audio normal. La referencia de la API no dice el contenedor del Opus, por eso se revisan los primeros bytes en vez de suponerlo.
 - **Descartado:** servir el audio desde nuestro servidor con un enlace temporal. Se prefirió subirlo al endpoint de medios de WhatsApp (vía Kapso): no hay que exponer una ruta pública con archivos ni limpiar nada después.
 - **Riesgo:** sin probar contra los servicios reales (ElevenLabs y Kapso) desde este equipo; solo con dobles. Un fallo de cualquiera de los dos se registra y el canal de WhatsApp sigue funcionando sin audio.
+
+## Las decisiones del piloto automático se marcan y van aparte en el acta
+
+- **Decisión:** toda decisión que toma el piloto automático (bots del ensayo o de la demo, y el plan B por tiempo) lleva `automatic: true` en `HumanDecision`, `automatic: true` y `modo: "automático"` en el evento de la bitácora, y el acta Markdown la lista en «Decisiones automáticas», separada de «Decisiones humanas» (`renderActaMarkdown`).
+- **Por qué:** el ensayo final del agente de los jueces encontró que esas decisiones quedaban como decisiones humanas, sin marca, y que el acta las mezclaba con las de las personas. Eso contradecía el principio de no presentar nunca algo simulado como real.
 

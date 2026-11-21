@@ -1331,8 +1331,9 @@ async function demoPlanBJourney() {
     await step("los tres turnos quedan en el acta como automáticos", async () => {
       const acta = await request(baseUrl, "GET", `/api/rooms/${roomId}/acta`);
       check(acta.status === 200, `El acta debía responder 200: ${describeResponse(acta)}`);
-      const automatic = acta.data.auditLog.filter((event) => event.detail?.modo === "automático");
+      const automatic = acta.data.auditLog.filter((event) => ["CANDIDATE_SUBMITTED", "ALLOCATION_SEALED"].includes(event.type) && event.detail?.modo === "automático");
       check(automatic.length === 3, `Se esperaban 3 turnos automáticos (2 presentaciones y la firma del Comité) y hay ${automatic.length}`);
+      check(acta.data.decisions.every((decision) => decision.automatic === true), "Todas las decisiones de esta ronda las tomó el piloto: debían quedar marcadas automatic: true");
       check(/^Automático \(plan B\)/.test(acta.data.decisions.at(-1)?.reason ?? ""), "La razón del Comité debía decir que fue automática");
     });
   } finally {

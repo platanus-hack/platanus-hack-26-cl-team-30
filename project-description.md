@@ -1,4 +1,4 @@
-# Nexo
+# Sculptor
 
 **Dos hospitales necesitan la misma cama UCI. Quien decide no tiene los datos del otro.**
 
@@ -10,7 +10,7 @@ Las decisiones más caras de una organización (una cama, un traslado, una firma
 
 ## Qué hace
 
-Nexo es una sala compartida donde varias personas deciden a la vez, cada una desde su rol:
+Sculptor es una sala compartida donde varias personas deciden a la vez, cada una desde su rol:
 
 - **Cada rol ve solo lo suyo.** El servidor filtra los datos por organización y por rol antes de enviarlos. Lo reservado no llega al navegador de quien no debe verlo, y un intento de leerlo devuelve un 403 que queda registrado.
 - **Las decisiones se ven al instante.** Lo que una persona hace cambia en el mismo segundo la pantalla de las demás.

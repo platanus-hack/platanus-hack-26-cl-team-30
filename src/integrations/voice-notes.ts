@@ -25,6 +25,7 @@
 
 import type { ProjectedRoomState } from "@/lib/genome/schema";
 import { getRoom, projectRoom } from "@/lib/store/rooms";
+import { closeSession, getWhatsAppSessionForRoom } from "./committee-channel";
 import { sendAudioMessage, uploadAudio, whatsappStatus } from "./kapso";
 
 const TTS_API = "https://api.elevenlabs.io/v1/text-to-speech";
@@ -175,4 +176,18 @@ export async function sendCommitteeVoiceNote(kind: VoiceNoteKind, roomId: string
   } catch (error) {
     return { sent: false, reason: "error", message: error instanceof Error ? error.message.slice(0, 200) : String(error) };
   }
+}
+
+/**
+ * El Comité selló desde la web: si a esa sala se le envió el caso por WhatsApp,
+ * también le llega el acta en audio por WhatsApp (siempre que la ventana de 24 h
+ * esté abierta). La sesión de WhatsApp de esa sala se cierra: el caso ya se decidió.
+ * Si el Comité decidió por WhatsApp, el webhook ya envió el acta y cerró la sesión,
+ * así que aquí no se repite.
+ */
+export async function sendActaAfterWebSeal(roomId: string, now: number = Date.now()): Promise<VoiceNoteResult> {
+  const session = getWhatsAppSessionForRoom(roomId);
+  if (!session?.phone) return { sent: false, reason: "no_phone" };
+  closeSession(session);
+  return sendCommitteeVoiceNote("acta", roomId, session.phone, now);
 }

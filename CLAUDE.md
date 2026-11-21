@@ -21,7 +21,7 @@ El código vive en este repo: contrato de datos en `src/lib/genome/`, reglas en 
 ## Principios que no se negocian
 
 1. **El modelo solo produce contenido, nunca estructura.** El modelo genera un genoma JSON que se valida antes de usarse; nunca genera HTML ni JSX. Roles, jerarquía, compuertas, permisos, asignación y confiabilidad (p^n) son código determinista, sin modelo.
-2. **Nada se mueve sin una persona.** Los agentes nunca cambian el estado por su cuenta. Toda mutación, conflicto, asignación y veto lo dispara un humano y se refleja al instante en las demás pantallas.
+2. **Nada se mueve sin una persona.** Los agentes nunca cambian el estado por su cuenta. Toda mutación, conflicto, asignación y veto lo dispara un humano y se refleja al instante en las demás pantallas. Excepción documentada, solo en las salas de demo: el piloto automático juega los roles administrativos y, con el plan B, el turno de quien no actúa en 20 s, y la sala se reinicia sola 2 min después del acta. Todo eso queda marcado como automático (`automatic: true`, sección aparte del acta) y nunca como decisión de una persona (ver `docs/DECISIONES.md`).
 3. **Permisos de verdad.** El dato oculto no viaja por la red: se filtra en el servidor por `orgId` y `roleId`. Un intento de lectura ajena devuelve 403 y queda en la bitácora.
 4. **Demo con algo en juego.** Empieza y termina con 2 o más personas decidiendo sobre algo que cuesta (vida, dinero o tiempo).
 5. **La telemetría dice la verdad.** En modo local el modelo corre en el Spark y ningún dato sale de la red. El deploy público en Render usa Claude porque no llega al Spark, así que ahí sí salen datos a la nube. La telemetría muestra el proveedor real y si es local o nube; nunca un "0 bytes a la nube" fijo.
