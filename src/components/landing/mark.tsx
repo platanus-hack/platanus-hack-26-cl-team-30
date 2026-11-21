@@ -1,12 +1,12 @@
 import { SculptorLogo } from "@/components/brand/sculptor-logo";
 
 /**
- * Marca de Sculptor en los encabezados: el logo oficial, el cubo isométrico
- * (src/components/brand/sculptor-logo.tsx), sin animación. La animación grande
- * (SculptorGlassReveal) es solo para la landing general.
+ * Marca de Sculptor en los encabezados: el logo oficial, la galaxia NGC 253 en
+ * píxeles (src/components/brand/sculptor-logo.tsx), sin animación. La animación
+ * grande (SculptorGlassReveal) es solo para la landing general.
  *
- * La cara superior del cubo es marfil: en modo claro se perdería sobre el fondo,
- * así que lleva un contorno muy suave en tinta. En oscuro casi no se nota.
+ * Los píxeles del núcleo son marfil: en modo claro se perderían sobre el fondo,
+ * así que llevan un contorno muy suave en tinta. En oscuro casi no se nota.
  */
 export function Mark({ size = 32, className, title }: { size?: number; className?: string; title?: string; bare?: boolean }) {
   return (
@@ -25,7 +25,7 @@ export function Logo({ size = 28 }: { size?: number }) {
   return (
     <span className="inline-flex items-center gap-2.5">
       <Mark size={size} />
-      <span className="text-xl font-semibold tracking-tight">Sculptor</span>
+      <span className="text-xl font-bold tracking-tight">sculptor</span>
     </span>
   );
 }

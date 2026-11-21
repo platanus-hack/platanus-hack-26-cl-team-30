@@ -7,6 +7,8 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+import { GALAXY_SVG } from "./sculptor-logo"
+
 /*
  * 21st.dev Glass Reveal: the 21st.dev mark lingers big against the rim of a clear glass tile, the
  * glass bends it into colour at the corners, then lets go and leaves the mark.
@@ -1096,9 +1098,9 @@ function startEngine(
 
 
 /* ------------------------------------------------------------------
- * Sculptor: el cubo con sus propios colores, sobre el fondo oscuro de la marca.
+ * Sculptor: la galaxia en píxeles con sus propios colores, sobre el fondo oscuro de la marca.
  * ------------------------------------------------------------------ */
-export const SCULPTOR_MARK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 210"><polygon points="15,54 100,3 186,54 146,76 54,76" fill="#f2efe8"/><polygon points="11,58 51,81 97,158 97,207 11,158" fill="#71b0a0"/><polygon points="189,58 149,81 103,158 103,207 189,158" fill="#2f5f53"/><polygon points="60,82 141,82 100,152" fill="#d4f53c"/></svg>`
+export const SCULPTOR_MARK = GALAXY_SVG
 
 export type SculptorGlassRevealProps = Omit<GlassIconRevealProps, "logo">
 
@@ -1107,7 +1109,7 @@ export function SculptorGlassReveal({ tuning, ...props }: SculptorGlassRevealPro
   return (
     <GlassIconReveal
       logo={SCULPTOR_MARK}
-      label="Sculptor"
+      label="sculptor"
       look="dark"
       background="#0e1110"
       originalColors
