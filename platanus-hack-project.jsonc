@@ -1,12 +1,12 @@
 {
   // Your project's name, as it will appear on the voting page.
-  "project-name": "<FILL THIS>",
+  "project-name": "Nexo",
 
   // Short one-line summary of your project (in Spanish).
-  "project-oneliner-spanish": "<FILL THIS>",
+  "project-oneliner-spanish": "Dos hospitales, una cama UCI: personas y agentes por rol deciden en tiempo real sin ver los datos reservados del otro.",
 
   // Brief description of your project (in Spanish).
-  "project-description-spanish": "<FILL THIS>",
+  "project-description-spanish": "Nexo coordina decisiones críticas entre personas y agentes emparejados por rol, dentro de una organización y entre organizaciones que compiten por un recurso escaso. Cada participante recibe solo los datos que su rol y su organización pueden ver: el servidor filtra el resto antes de enviarlo. La asignación del recurso la calcula código determinista con una regla visible y desempate por equidad, no un modelo de lenguaje. Un Comité entra por código QR y aprueba o veta con una razón obligatoria, y todo queda en una bitácora. El caso de la demo es de salud y usa datos simulados; no es una herramienta clínica.",
 
   // Public URL where your project is deployed and running.
   // Must be a valid URL, for example: https://my-project.vercel.app

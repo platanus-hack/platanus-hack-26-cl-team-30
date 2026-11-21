@@ -8,7 +8,24 @@ Repo oficial del equipo 30 en Platanus Hack 26: Santiago ft. Buk. Track: **Multi
 - **Sebastián Vargas** (@iswebster1401): agente e infraestructura. Modelos, Spark, integraciones y deploy. Decide qué se corta cuando falta tiempo.
 - **Nahum Díaz** (@nadilopoff): negocio y pitch. Usuarios reales, finanzas y relato.
 
-La idea del proyecto todavía no está decidida.
+## Qué construimos
+
+**Nexo** (nombre de trabajo): un esqueleto organizacional multijugador que coordina decisiones críticas entre personas y agentes emparejados por rol. Cada persona entra con un rol, ve solo lo que su rol y su organización pueden ver, y lo que decide cambia en el mismo segundo lo que ven los demás.
+
+- **Suelo (lo que tiene que funcionar sí o sí):** una clínica (`clinica_andes`) con 3 roles: Jefatura de Urgencias, Dirección Administrativa y Comité Ético. Urgencias quiere autorizar una cama UCI; Gestión exige firma si se cruza un umbral; el Comité entra por QR y aprueba o veta con una razón obligatoria.
+- **Capa inter-org (la ambición):** 2 hospitales (`clinica_andes` y `hospital_rural`) compiten por 1 cama UCI de referencia. Ninguno ve el costo de cobertura del otro. Un algoritmo determinista ordena a los candidatos, desempata por equidad, y el Comité puede vetar. Todo queda en una bitácora exportable como acta.
+- **Regla de corte:** si la capa inter-org no queda estable, se presenta el suelo. Nunca se presenta algo que no corra.
+
+El plan se construye en este repo, evolucionando `src/lib/rooms.ts`. Los ids se escriben sin tilde (`clinica_andes`). Los datos del caso son simulados: no es una herramienta clínica.
+
+## Principios que no se negocian
+
+1. **El modelo solo produce contenido, nunca estructura.** El modelo genera un genoma JSON que se valida antes de usarse; nunca genera HTML ni JSX. Roles, jerarquía, compuertas, permisos, asignación y confiabilidad (p^n) son código determinista, sin modelo.
+2. **Nada se mueve sin una persona.** Los agentes nunca cambian el estado por su cuenta. Toda mutación, conflicto, asignación y veto lo dispara un humano y se refleja al instante en las demás pantallas.
+3. **Permisos de verdad.** El dato oculto no viaja por la red: se filtra en el servidor por `orgId` y `roleId`. Un intento de lectura ajena devuelve 403 y queda en la bitácora.
+4. **Demo con algo en juego.** Empieza y termina con 2 o más personas decidiendo sobre algo que cuesta (vida, dinero o tiempo).
+5. **La telemetría dice la verdad.** En modo local el modelo corre en el Spark y ningún dato sale de la red. El deploy público en Render usa Claude porque no llega al Spark, así que ahí sí salen datos a la nube. La telemetría muestra el proveedor real y si es local o nube; nunca un "0 bytes a la nube" fijo.
+6. **Una sola capa de modelos.** Todo pasa por `src/lib/llm.ts`. No se crea un cliente aparte para el modelo local.
 
 @AGENTS.md
 

@@ -2,11 +2,25 @@
 
 Documento vivo. Se actualiza en el mismo commit que cambia la arquitectura. Si este documento y el código no coinciden, el código manda y esto es un error que hay que corregir.
 
-**Estado:** base del proyecto. La idea final todavía no está decidida, así que las secciones marcadas "por completar" están vacías a propósito.
+**Estado:** la idea está decidida y la base multijugador existe. El motor de decisiones, la capa entre organizaciones y el Comité están en construcción; este documento marca qué existe hoy y qué no.
 
 ## Resumen
 
-_Por completar: cinco líneas. Qué problema resuelve, quiénes participan a la vez, qué hace el sistema con sus aportes y qué resultado entrega._
+Nexo (nombre de trabajo) coordina decisiones críticas entre personas y agentes emparejados por rol, dentro de una organización y entre organizaciones que compiten por un recurso escaso. Cada persona entra con un rol y recibe solo los datos que su rol y su organización pueden ver; el resto no sale del servidor. Las reglas (permisos, compuertas, asignación del recurso) son código determinista, sin modelo. El modelo solo redacta contenido. Toda decisión la dispara una persona y queda en una bitácora.
+
+El caso de la demo es de salud, con datos simulados: una clínica con 3 roles decide sobre una cama UCI (suelo), y 2 hospitales compiten por 1 cama de referencia mientras un Comité entra por QR y aprueba o veta con razón (capa inter-org).
+
+| Parte de la idea | Estado hoy |
+| --- | --- |
+| Salas, roles, token por rol, vista filtrada por rol, bitácora y eventos en tiempo real | Existe (`src/lib/rooms.ts`, `src/app/api/rooms/`) |
+| Entrada a un rol por código QR | Existe (`src/app/room/[roomId]/`) |
+| Capa de modelos con Claude o modelo local | Existe (`src/lib/llm.ts`) |
+| Permisos por organización (`orgId`), además de por rol | En construcción |
+| Caso de la clínica: roles reales, compuerta de autoridad y decisión del Comité con razón | En construcción |
+| Motor determinista: detección de choque, puntaje y asignación del recurso con desempate por equidad, confiabilidad p^n | En construcción |
+| Capa inter-org: 2 hospitales y 1 cama | En construcción |
+| Genoma de organización generado por el modelo y validado | En construcción |
+| Acta exportable y telemetría del modelo (proveedor, local o nube) | En construcción |
 
 ## Componentes
 
