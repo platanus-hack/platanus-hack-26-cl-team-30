@@ -1,6 +1,6 @@
 // Dirección pública con la que se arman los enlaces y códigos QR de una sala.
-// NEXT_PUBLIC_BASE_URL permite fijarla (por ejemplo, la IP de la red local o el
-// deploy) cuando la pantalla se abre desde localhost.
+// NEXT_PUBLIC_BASE_URL permite fijarla (la IP de la red local o el deploy)
+// cuando la pantalla se abre desde localhost.
 export function publicBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_BASE_URL?.trim();
   if (configured) return configured.replace(/\/+$/, "");
@@ -17,6 +17,8 @@ export function isLocalUrl(url: string): boolean {
   }
 }
 
-export function roleJoinUrl(baseUrl: string, roomId: string, roleId: string): string {
-  return `${baseUrl}/room/${encodeURIComponent(roomId)}?role=${encodeURIComponent(roleId)}`;
+/** Enlace que abre la estación de un rol. Es lo que codifica el QR. */
+export function roleJoinUrl(baseUrl: string, roomId: string, orgId: string, roleId: string): string {
+  const query = new URLSearchParams({ orgId, roleId });
+  return `${baseUrl}/room/${encodeURIComponent(roomId)}?${query}`;
 }

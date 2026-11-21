@@ -1,144 +1,124 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { MutateForm, describeMutation } from "@/components/nexo/mutate-form";
+import { PulseLine } from "@/components/organs/pulse-line";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { createRoom, mutateRoom } from "@/lib/client/use-room";
+import type { RoomMode } from "@/lib/genome/schema";
 
-type Message = { role: "user" | "assistant"; content: string };
-type Health = {
-  llm: { baseUrl: string; model: string; ok: boolean; detail: string };
-  supabase: { configured: boolean };
-};
-
-// Pantalla de prueba: confirma que la app habla con el modelo de punta a punta.
-// El viernes se reemplaza por el producto real.
+// Portada: abrir una sala (una clínica o dos hospitales), generar una
+// organización a partir de una frase, o ir a las salas fijas de la demo.
 export default function Home() {
   const router = useRouter();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<RoomMode | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [health, setHealth] = useState<Health | null>(null);
-  const endRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    fetch("/api/health")
-      .then((res) => res.json())
-      .then(setHealth)
-      .catch(() => setHealth(null));
-  }, []);
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  async function send() {
-    const text = input.trim();
-    if (!text || busy) return;
-    const history: Message[] = [...messages, { role: "user", content: text }];
-    setMessages([...history, { role: "assistant", content: "" }]);
-    setInput("");
-    setBusy(true);
+  async function open(mode: RoomMode) {
+    setBusy(mode);
     setError(null);
-
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history }),
-      });
-      if (!res.ok || !res.body) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? `Error ${res.status}`);
-      }
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let answer = "";
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        answer += decoder.decode(value, { stream: true });
-        setMessages([...history, { role: "assistant", content: answer }]);
-      }
+      router.push(`/stage/${encodeURIComponent(await createRoom(mode))}`);
     } catch (err) {
-      setMessages(history);
-      setError(err instanceof Error ? err.message : "Error desconocido");
-    } finally {
-      setBusy(false);
+      setError(err instanceof Error ? err.message : "No se pudo crear la sala");
+      setBusy(null);
+    }
+  }
+
+  // Frase libre: crea una sala de una organización y le pide al servidor que
+  // reemplace la organización de partida por la generada.
+  async function generate(description: string) {
+    try {
+      const roomId = await createRoom("single_org");
+      const outcome = describeMutation(await mutateRoom(roomId, description));
+      if (outcome.ok) router.push(`/stage/${encodeURIComponent(roomId)}`);
+      return outcome;
+    } catch (err) {
+      return { ok: false, message: err instanceof Error ? err.message : "No se pudo crear la sala" };
     }
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-4 p-4">
-      <header className="space-y-1">
-        <h1 className="text-xl font-semibold">Platanus Hack 26</h1>
-        <p className="text-sm text-muted-foreground">
-          {health === null
-            ? "Revisando el modelo…"
-            : health.llm.ok
-              ? `Modelo ${health.llm.model} en ${health.llm.baseUrl}`
-              : `Modelo sin conexión en ${health.llm.baseUrl}: ${health.llm.detail}`}
-          {health && !health.supabase.configured ? " · Supabase sin configurar" : ""}
-        </p>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={async () => {
-            const res = await fetch("/api/rooms", { method: "POST" });
-            const { id } = await res.json();
-            router.push(`/room/${id}`);
-          }}
-        >
-          Crear sala multijugador de prueba
-        </Button>
-      </header>
+    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 pt-10 pb-16 sm:px-8 sm:pt-16">
+      <p className="text-lg font-semibold font-stretch-[115%]">Nexo</p>
 
-      <section className="flex-1 space-y-3 overflow-y-auto">
-        {messages.length === 0 && (
-          <p className="text-sm text-muted-foreground">Escribe algo para probar el modelo.</p>
-        )}
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={
-              message.role === "user"
-                ? "ml-auto w-fit max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground"
-                : "w-fit max-w-[85%] whitespace-pre-wrap rounded-lg bg-muted px-3 py-2 text-sm"
-            }
-          >
-            {message.content || "…"}
-          </div>
-        ))}
-        <div ref={endRef} />
+      <h1 className="mt-6 max-w-[17ch] text-[clamp(2.4rem,7.5vw,5.25rem)] leading-[0.98] font-bold tracking-tight font-stretch-[88%]">
+        Hay una cama. Dos hospitales la necesitan. Quien decide no ve el dato del otro.
+      </h1>
+
+      <div className="relative mt-6 h-12 overflow-hidden">
+        <PulseLine beating className="absolute inset-x-0 top-0 h-12" />
+      </div>
+
+      <p className="mt-6 max-w-[58ch] text-lg leading-relaxed text-muted-foreground">
+        Nexo coordina decisiones críticas entre personas y agentes. Cada quien entra con su rol y recibe solo los datos que le corresponden. Una regla escrita en código ordena los
+        casos, y un Comité aprueba o veta dejando su razón por escrito.
+      </p>
+
+      <section className="mt-10 grid gap-4 sm:grid-cols-2" aria-label="Abrir una sala">
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-5">
+          <h2 className="text-xl font-semibold font-stretch-[108%]">Una clínica, tres roles</h2>
+          <p className="flex-1 text-sm leading-relaxed text-muted-foreground">
+            Urgencias quiere autorizar una cama UCI. Gestión exige una firma si se cruza el umbral. El Comité Ético entra con un código QR y decide.
+          </p>
+          <Button className="min-h-11 px-4" disabled={busy !== null} onClick={() => open("single_org")}>
+            {busy === "single_org" ? "Abriendo la sala…" : "Abrir sala de una clínica"}
+          </Button>
+        </div>
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-5">
+          <h2 className="text-xl font-semibold font-stretch-[108%]">Dos hospitales, una cama</h2>
+          <p className="flex-1 text-sm leading-relaxed text-muted-foreground">
+            Cada hospital presenta a su paciente sin ver el costo del otro. El orden sale de una fórmula fija con desempate por equidad, y el Comité de la red tiene la última palabra.
+          </p>
+          <Button className="min-h-11 px-4" disabled={busy !== null} onClick={() => open("cross_org")}>
+            {busy === "cross_org" ? "Abriendo la sala…" : "Abrir sala entre dos hospitales"}
+          </Button>
+        </div>
       </section>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p role="alert" className="mt-3 text-sm text-bleed">
+          {error}
+        </p>
+      )}
 
-      <form
-        className="flex items-end gap-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          send();
-        }}
-      >
-        <Textarea
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              send();
-            }
-          }}
-          placeholder="Mensaje"
-          rows={2}
-          className="flex-1"
-        />
-        <Button type="submit" disabled={busy || !input.trim()}>
-          {busy ? "Enviando…" : "Enviar"}
-        </Button>
-      </form>
+      <section className="mt-10 max-w-2xl">
+        <MutateForm action="Generar organización y abrir su sala" onSubmit={generate} />
+        <p className="mt-2 text-sm text-muted-foreground">
+          Un modelo propone los roles, los datos y el caso. El servidor valida esa propuesta antes de usarla; los permisos, la compuerta y los cálculos siguen siendo código.
+        </p>
+      </section>
+
+      <section className="mt-12 border-t border-border pt-6">
+        <h2 className="text-sm font-semibold">Salas fijas de la demostración</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Siempre existen: si el servidor se reinicia, se vuelven a crear solas.</p>
+        <ul className="mt-3 grid gap-x-10 gap-y-3 text-sm sm:grid-cols-2">
+          <li>
+            <p className="font-semibold">Clínica (sala «demo»)</p>
+            <p className="mt-0.5 flex gap-4">
+              <Link className="underline underline-offset-4" href="/stage/demo">
+                Pantalla general
+              </Link>
+              <Link className="underline underline-offset-4" href="/room/demo">
+                Entrar con un rol
+              </Link>
+            </p>
+          </li>
+          <li>
+            <p className="font-semibold">Dos hospitales (sala «demo-cross»)</p>
+            <p className="mt-0.5 flex gap-4">
+              <Link className="underline underline-offset-4" href="/stage/demo-cross">
+                Pantalla general
+              </Link>
+              <Link className="underline underline-offset-4" href="/room/demo-cross">
+                Entrar con un rol
+              </Link>
+            </p>
+          </li>
+        </ul>
+      </section>
     </main>
   );
 }

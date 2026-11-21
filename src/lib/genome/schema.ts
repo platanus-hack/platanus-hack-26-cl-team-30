@@ -84,6 +84,8 @@ export const LiveCaseSchema = z.object({
   stepCountN: z.number().int().min(3).max(15),
   /** Texto público de lo que está en juego. No debe revelar valores secretos. */
   stakesLabel: z.string().min(1),
+  /** Personas en riesgo mientras el caso espera. Lo usa el contador. Si falta, 0. Agregado al plan. */
+  livesAtRisk: z.number().int().min(0).optional(),
 });
 
 // --- 2.5 Genoma de organización ----------------------------------------------
@@ -151,6 +153,8 @@ export const OrgCandidateSchema = z.object({
   /** Organizaciones que reciben coverageCost: solo la dueña. */
   coverageCostVisibleToOrgs: z.array(z.string()),
   proposerRoleId: z.string().min(1),
+  /** true cuando la organización presentó el caso (SUBMIT_CANDIDATE). Si falta, false. Agregado al plan. */
+  submitted: z.boolean().optional(),
 });
 
 export const EquityTieBreakSchema = z.enum(["worst_unmet_need", "coverage_gap", "geographic"]);
@@ -251,6 +255,8 @@ export const HumanDecisionSchema = z.object({
   scope: z.enum(["gate", "allocation"]),
   /** Organización cuya compuerta se decide. Solo en scope "gate". */
   targetOrgId: z.string().optional(),
+  /** Caso sobre el que recae la decisión (el aprobado o el vetado). Solo en scope "allocation". */
+  targetCaseId: z.string().optional(),
   decision: z.enum(["APPROVE", "VETO", "COUNTER_PROPOSE"]),
   reason: z.string().trim().min(1, "La razón es obligatoria"),
   /** Valor contrapropuesto. Solo en COUNTER_PROPOSE. */
@@ -333,8 +339,12 @@ export const GateViewSchema = z.object({
   /** Umbral vigente: sealedThreshold si existe; si no, approverLimit. */
   effectiveThreshold: z.number(),
   crossesThreshold: z.boolean(),
-  /** Rol que debe decidir cuando la compuerta está bloqueada. */
+  /** Rol que debe decidir cuando la compuerta está bloqueada (el Comité si existe; si no, el aprobador). */
   pendingApproverRoleId: z.string().nullable(),
+  /** Roles a los que el motor les acepta la decisión: aprobador y Comité. */
+  deciderRoleIds: z.array(z.string()),
+  /** Cómo se cerró la compuerta. null mientras no hay decisión humana. */
+  outcome: z.enum(["approved", "vetoed", "counter_proposed"]).nullable(),
   message: z.string(),
 });
 
@@ -351,7 +361,7 @@ export const ReliabilityViewSchema = z.object({
   /** Cuál de los dos aplica ahora según el modo de compuerta y las decisiones tomadas. */
   current: z.number(),
   currentMode: z.enum(["autonomous", "hybrid"]),
-  /** Fórmula con los números reemplazados, para mostrar y auditar. */
+  /** Fórmula con los números reemplazados, para mostrar y auditar. Modelo ilustrativo, no una medición. */
   formula: z.string(),
 });
 
@@ -380,6 +390,10 @@ export const AllocationViewSchema = z.object({
   scoreGap: z.number(),
   /** Explicación de la regla aplicada, en una frase. */
   explanation: z.string(),
+  /** Casos vetados por el Comité: quedan fuera del orden. */
+  vetoedCaseIds: z.array(z.string()),
+  /** Candidatos que todavía no han sido presentados por su organización. */
+  pendingCaseIds: z.array(z.string()),
   /** Última decisión del Comité sobre la asignación, si la hay. */
   committeeDecision: HumanDecisionSchema.nullable(),
 });

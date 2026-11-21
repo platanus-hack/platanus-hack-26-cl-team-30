@@ -20,6 +20,7 @@ import {
   type SharedScarcity,
   type Telemetry,
 } from "./schema";
+import { isLocalHost } from "../llm";
 
 // --- Semilla 1: clínica (suelo de la demo) -----------------------------------
 
@@ -147,6 +148,7 @@ const clinicaAndesInput: OrgGenomeInput = {
     proposedValue: 82,
     stepCountN: 10,
     stakesLabel: "1 vida en riesgo · cobertura sobre el umbral · cierre 18:00",
+    livesAtRisk: 1,
   },
 };
 
@@ -276,6 +278,7 @@ const hospitalRuralInput: OrgGenomeInput = {
     proposedValue: 84,
     stepCountN: 12,
     stakesLabel: "1 vida en riesgo · 140 km de traslado · ventana 18:00",
+    livesAtRisk: 1,
   },
 };
 
@@ -507,21 +510,27 @@ export function getSeedScarcity(): SharedScarcity {
 
 /**
  * Telemetría antes de la primera llamada al modelo. Solo declara lo que se sabe
- * por configuración; los contadores parten en 0 y los actualiza la capa de modelos.
+ * por configuración: "local" únicamente si el modelo se sirve desde esta máquina
+ * o una red privada (misma regla que la capa de modelos, isLocalHost); cualquier
+ * otro host cuenta como nube. Los contadores parten en 0 y los lleva la capa de
+ * modelos (getTelemetry en src/lib/llm.ts).
  */
 export function initialTelemetry(): Telemetry {
-  const cloud = process.env.LLM_PROVIDER === "anthropic";
+  const anthropic = process.env.LLM_PROVIDER === "anthropic";
   let endpointHost = "api.anthropic.com";
-  if (!cloud) {
+  let local = false;
+  if (!anthropic) {
     try {
-      endpointHost = new URL(process.env.LLM_BASE_URL ?? "http://localhost:11434/v1").host;
+      const url = new URL(process.env.LLM_BASE_URL ?? "http://localhost:11434/v1");
+      endpointHost = url.host;
+      local = isLocalHost(url.hostname);
     } catch {
       endpointHost = "desconocido";
     }
   }
   return {
-    modelName: process.env.LLM_MODEL ?? (cloud ? "claude-opus-5-5" : "gpt-oss:20b"),
-    provider: cloud ? "cloud" : "local",
+    modelName: process.env.LLM_MODEL ?? (anthropic ? "claude-opus-5-5" : "gpt-oss:20b"),
+    provider: local ? "local" : "cloud",
     endpointHost,
     bytesSentToCloud: 0,
     queueDepth: 0,
