@@ -241,6 +241,8 @@ function findLeaks(participant, secrets) {
       } else {
         visibleFieldValues.add(String(field.value));
         // Nadie de fuera de la organización dueña recibe un campo no público.
+        // La pantalla general no tiene identidad: solo recibe campos públicos.
+        if (field.classification !== "public" && participant.isStage) problems.push(`${participant.label}: la pantalla general recibió ${name} (${field.classification})`);
         if (field.classification !== "public" && !participant.isStage && org.orgId !== participant.orgId) {
           problems.push(`${participant.label}: recibió ${name} (${field.classification}) de otra organización`);
         }
@@ -281,8 +283,7 @@ function findLeaks(participant, secrets) {
   const belongsToCompetingOrg = state.orgs.some((org) => org.orgId === participant.orgId);
   if (!belongsToCompetingOrg) {
     for (const [name, secret] of secrets) {
-      const forbidden = secret.classification === "secret" || !participant.isStage;
-      if (forbidden && distinctive(secret.value) && traffic.includes(String(secret.value))) {
+      if (distinctive(secret.value) && traffic.includes(String(secret.value))) {
         problems.push(`${participant.label}: el valor reservado ${name} (${secret.value}) viajó en su SSE`);
       }
     }
@@ -574,12 +575,15 @@ async function tickCheck(stage) {
     const firstCount = stage.arrivals.length;
     const firstElapsed = stage.state.stakes.elapsedMs;
     const firstNow = stage.state.serverNowTs;
-    await sleep(3200);
+    // El servidor emite una vez por segundo. Por internet los mensajes llegan con
+    // variación, así que se observa una ventana de 4,5 s y se tolera hasta 1,8 s
+    // entre dos mensajes: más que eso ya es un pulso perdido.
+    await sleep(4500);
     const received = stage.arrivals.slice(firstCount);
-    check(received.length >= 3, `En 3,2 s llegaron ${received.length} mensajes; se esperaban al menos 3`);
+    check(received.length >= 3, `En 4,5 s llegaron ${received.length} mensajes; se esperaban al menos 3`);
     const gaps = received.slice(1).map((at, index) => at - received[index]);
     const worst = Math.max(...gaps);
-    check(worst <= 1500, `Hubo ${worst.toFixed(0)} ms entre dos mensajes; el contrato pide uno por segundo`);
+    check(worst <= 1800, `Hubo ${worst.toFixed(0)} ms entre dos mensajes; el contrato pide uno por segundo`);
     check(stage.state.stakes.elapsedMs > firstElapsed && stage.state.serverNowTs > firstNow, "stakes.elapsedMs y serverNowTs debían avanzar con el reloj del servidor");
     return `${received.length} mensajes, mayor espera ${worst.toFixed(0)} ms`;
   });

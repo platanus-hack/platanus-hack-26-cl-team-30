@@ -29,7 +29,7 @@ function lastGateDecision(room: ProjectedRoomState, org: ProjectedOrg): HumanDec
 // envía a ese rol. Cada acción pasa por useRoom().act y la valida el servidor.
 export default function RoomClient() {
   const { roomId } = useParams<{ roomId: string }>();
-  const { room, status, unreachable, session, notice, join, leave, act } = useRoom(roomId);
+  const { room, status, unreachable, problem, session, notice, join, leave, act } = useRoom(roomId);
 
   // Entrada por código QR: el enlace trae la organización y el rol.
   useEffect(() => {
@@ -55,6 +55,11 @@ export default function RoomClient() {
         ) : (
           <p className="flex items-center gap-3 text-sm text-muted-foreground">
             Conectando con la sala <ConnectionBadge status={status} />
+          </p>
+        )}
+        {problem && (
+          <p role="alert" className="rounded-md border border-clash/50 bg-clash-soft px-3 py-2 text-sm">
+            {problem}
           </p>
         )}
       </main>
@@ -134,6 +139,12 @@ export default function RoomClient() {
         </div>
       </header>
 
+      {problem && (
+        <p role="alert" className="rounded-md border border-clash/50 bg-clash-soft px-3 py-2 text-sm">
+          {problem}
+        </p>
+      )}
+
       {notice && (
         <p role="alert" className="rounded-md border border-bleed/50 bg-bleed-soft px-3 py-2 text-sm text-bleed">
           {notice}
@@ -160,10 +171,10 @@ export default function RoomClient() {
         <div className="grid items-start gap-4 lg:grid-cols-2">
           <div className="space-y-4">
             {board}
-            {fog}
+            {room.orgs.map(caseCard)}
           </div>
           <div className="space-y-4">
-            {room.orgs.map(caseCard)}
+            {fog}
             <LivingGraphOrgan room={room} />
             <AuditConsole room={room} acta={acta} />
           </div>

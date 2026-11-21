@@ -7,7 +7,7 @@ import { ACCENT } from "@/components/organs/format";
 
 type Props = {
   room: ProjectedRoomState;
-  onJoin: (orgId: string, roleId: string) => Promise<unknown>;
+  onJoin: (orgId: string, roleId: string) => Promise<{ ok: boolean }>;
 };
 
 /** Elegir organización y rol. Botones grandes: se usa sobre todo desde el teléfono. */
@@ -17,8 +17,10 @@ export function RolePicker({ room, onJoin }: Props) {
 
   async function pick(orgId: string, roleId: string) {
     setBusy(`${orgId}/${roleId}`);
-    await onJoin(orgId, roleId);
+    const result = await onJoin(orgId, roleId);
     setBusy(null);
+    // En el teléfono el selector queda abajo; al entrar se vuelve al principio de la estación.
+    if (result.ok) window.scrollTo({ top: 0 });
   }
 
   return (

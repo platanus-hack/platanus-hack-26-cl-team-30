@@ -1,3 +1,4 @@
+import { readJsonBody } from "@/lib/store/http";
 import { applyAction } from "@/lib/store/rooms";
 
 // POST /api/rooms/:roomId/action  body { type, orgId, roleId, token, ...datos }
@@ -8,13 +9,9 @@ import { applyAction } from "@/lib/store/rooms";
 export async function POST(request: Request, { params }: { params: Promise<{ roomId: string }> }) {
   const { roomId } = await params;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return Response.json({ error: "El body no es JSON válido", code: "BAD_REQUEST" }, { status: 400 });
-  }
+  const body = await readJsonBody(request);
+  if (!body.ok) return Response.json({ error: body.error, code: "BAD_REQUEST" }, { status: 400 });
 
-  const { status, body: response } = await applyAction(roomId, body);
+  const { status, body: response } = await applyAction(roomId, body.value);
   return Response.json(response, { status });
 }

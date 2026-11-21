@@ -80,33 +80,25 @@ export function FogOfWarPanelOrgan({ orgs, viewer, onBreach, onToggleSecret, den
                   const shared = !field.redacted && field.visibleToRoleIds.length > 1;
                   return (
                     <li key={field.key} className={dense ? "py-1.5" : "py-2.5"}>
-                      <div className="flex items-center justify-between gap-x-4">
+                      <div className="flex items-start justify-between gap-x-4">
                         <div className="min-w-0">
                           <p className="text-sm">{field.label}</p>
                           {!dense && (
                             <p className="text-xs text-muted-foreground">
                               {CLASSIFICATION[field.classification]}, de {owner?.title ?? field.ownerRoleId}
+                              {field.redacted && <span className="max-sm:hidden">; {org.orgId}: {field.reason}</span>}
                             </p>
                           )}
                         </div>
                         {field.redacted ? (
-                          <div className="flex shrink-0 flex-col items-end gap-0.5">
-                            <span className="redaction block h-4 w-24" role="img" aria-label="Valor oculto: el servidor no lo envió" />
-                            {!dense && <span className="text-[0.7rem] text-muted-foreground">{org.orgId}: {field.reason}</span>}
-                          </div>
+                          <span className="redaction mt-0.5 block h-4 w-20 shrink-0 sm:w-24" role="img" aria-label="Valor oculto: el servidor no lo envió" />
                         ) : (
                           <p className="shrink-0 text-base font-semibold tabular-nums">{formatValue(field.value, field.unit)}</p>
                         )}
                       </div>
 
                       {field.redacted && me && onBreach && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="mt-2 min-h-9"
-                          disabled={busy === id}
-                          onClick={() => breach(org.orgId, field.key)}
-                        >
+                        <Button variant="outline" size="sm" className="mt-1.5 min-h-9 text-xs" disabled={busy === id} onClick={() => breach(org.orgId, field.key)}>
                           {busy === id ? "Pidiendo el dato…" : "Intentar leerlo con mi agente"}
                         </Button>
                       )}

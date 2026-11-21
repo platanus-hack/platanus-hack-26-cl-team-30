@@ -116,13 +116,18 @@ const AUDIT_SKIP = new Set(["title", "by", "scope", "reason", "explanation", "me
  * (explicación o mensaje), la razón escrita por una persona, y el resto de los
  * valores simples. Los objetos anidados no se muestran: están en el acta.
  */
-export function auditDetail(detail: Record<string, unknown>): { text: string; reason: string | null } {
-  const lead = [detail.explanation, detail.message].find((value): value is string => typeof value === "string" && value.length > 0);
+/** Eventos cuya razón la escribió una persona y se cita textual. */
+const HUMAN_REASON_EVENTS = new Set<AuditEvent["type"]>(["HITL_APPROVED", "HITL_VETOED", "COUNTER_PROPOSED", "ALLOCATION_SEALED"]);
+
+export function auditDetail(detail: Record<string, unknown>, type?: AuditEvent["type"]): { text: string; reason: string | null } {
+  const human = type === undefined || HUMAN_REASON_EVENTS.has(type);
+  const systemReason = !human && typeof detail.reason === "string" ? detail.reason : undefined;
+  const lead = [detail.explanation, detail.message, systemReason].find((value): value is string => typeof value === "string" && value.length > 0);
   const rest = Object.entries(detail)
     .filter(([key, value]) => !AUDIT_SKIP.has(key) && (typeof value === "string" || typeof value === "number" || typeof value === "boolean"))
     .map(([key, value]) => `${key}: ${typeof value === "boolean" ? (value ? "sí" : "no") : value}`)
     .join("; ");
-  return { text: lead ?? rest, reason: typeof detail.reason === "string" && detail.reason ? detail.reason : null };
+  return { text: lead ?? rest, reason: human && typeof detail.reason === "string" && detail.reason ? detail.reason : null };
 }
 
 /** Resultado de una acción tal como lo necesitan los órganos para mostrar el error. */

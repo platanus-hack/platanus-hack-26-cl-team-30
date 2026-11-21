@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MutateForm, describeMutation } from "@/components/nexo/mutate-form";
 import { PulseLine } from "@/components/organs/pulse-line";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { createRoom, mutateRoom } from "@/lib/client/use-room";
 import type { RoomMode } from "@/lib/genome/schema";
 
@@ -52,18 +53,33 @@ export default function Home() {
         <PulseLine beating className="absolute inset-x-0 top-0 h-12" />
       </div>
 
-      <p className="mt-6 max-w-[58ch] text-lg leading-relaxed text-muted-foreground">
-        Nexo coordina decisiones críticas entre personas y agentes. Cada quien entra con su rol y recibe solo los datos que le corresponden. Una regla escrita en código ordena los
-        casos, y un Comité aprueba o veta dejando su razón por escrito.
+      <p className="mt-6 max-w-[56ch] text-xl leading-relaxed">
+        Nexo es una sala en tiempo real donde personas y agentes de distintas organizaciones deciden juntos sobre un recurso escaso, y cada uno recibe solo los datos que su rol
+        puede ver.
       </p>
 
-      <section className="mt-10 grid gap-4 sm:grid-cols-2" aria-label="Abrir una sala">
+      {/* Camino corto para un juez: un clic a la sala fija, otro para elegir rol. */}
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <Link href="/room/demo-cross" className={cn(buttonVariants(), "min-h-12 px-5 text-base")}>
+          Entrar a la sala de demostración
+        </Link>
+        <Link href="/stage/demo-cross" className={cn(buttonVariants({ variant: "outline" }), "min-h-12 px-5 text-base")}>
+          Ver la pantalla general
+        </Link>
+      </div>
+      <p className="mt-3 max-w-[60ch] text-sm text-muted-foreground">
+        Elige un rol (Urgencias, Gestión, el hospital rural o el Comité) y decide. Abre la pantalla general en otra pestaña o en otro teléfono para ver cómo cambia al
+        instante.
+      </p>
+
+      <h2 className="mt-14 text-sm font-semibold">O abre una sala nueva</h2>
+      <section className="mt-3 grid gap-4 sm:grid-cols-2" aria-label="Abrir una sala nueva">
         <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-5">
           <h2 className="text-xl font-semibold font-stretch-[108%]">Una clínica, tres roles</h2>
           <p className="flex-1 text-sm leading-relaxed text-muted-foreground">
             Urgencias quiere autorizar una cama UCI. Gestión exige una firma si se cruza el umbral. El Comité Ético entra con un código QR y decide.
           </p>
-          <Button className="min-h-11 px-4" disabled={busy !== null} onClick={() => open("single_org")}>
+          <Button variant="outline" className="min-h-11 px-4" disabled={busy !== null} onClick={() => open("single_org")}>
             {busy === "single_org" ? "Abriendo la sala…" : "Abrir sala de una clínica"}
           </Button>
         </div>
@@ -72,7 +88,7 @@ export default function Home() {
           <p className="flex-1 text-sm leading-relaxed text-muted-foreground">
             Cada hospital presenta a su paciente sin ver el costo del otro. El orden sale de una fórmula fija con desempate por equidad, y el Comité de la red tiene la última palabra.
           </p>
-          <Button className="min-h-11 px-4" disabled={busy !== null} onClick={() => open("cross_org")}>
+          <Button variant="outline" className="min-h-11 px-4" disabled={busy !== null} onClick={() => open("cross_org")}>
             {busy === "cross_org" ? "Abriendo la sala…" : "Abrir sala entre dos hospitales"}
           </Button>
         </div>
@@ -92,32 +108,18 @@ export default function Home() {
       </section>
 
       <section className="mt-12 border-t border-border pt-6">
-        <h2 className="text-sm font-semibold">Salas fijas de la demostración</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Siempre existen: si el servidor se reinicia, se vuelven a crear solas.</p>
-        <ul className="mt-3 grid gap-x-10 gap-y-3 text-sm sm:grid-cols-2">
-          <li>
-            <p className="font-semibold">Clínica (sala «demo»)</p>
-            <p className="mt-0.5 flex gap-4">
-              <Link className="underline underline-offset-4" href="/stage/demo">
-                Pantalla general
-              </Link>
-              <Link className="underline underline-offset-4" href="/room/demo">
-                Entrar con un rol
-              </Link>
-            </p>
-          </li>
-          <li>
-            <p className="font-semibold">Dos hospitales (sala «demo-cross»)</p>
-            <p className="mt-0.5 flex gap-4">
-              <Link className="underline underline-offset-4" href="/stage/demo-cross">
-                Pantalla general
-              </Link>
-              <Link className="underline underline-offset-4" href="/room/demo-cross">
-                Entrar con un rol
-              </Link>
-            </p>
-          </li>
-        </ul>
+        <h2 className="text-sm font-semibold">Sala fija de una clínica</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          La versión con una sola organización. Igual que la de demostración, siempre existe: si el servidor se reinicia, se vuelve a crear sola.
+        </p>
+        <p className="mt-2 flex gap-5 text-sm">
+          <Link className="font-semibold underline underline-offset-4" href="/room/demo">
+            Entrar con un rol
+          </Link>
+          <Link className="font-semibold underline underline-offset-4" href="/stage/demo">
+            Pantalla general
+          </Link>
+        </p>
       </section>
     </main>
   );

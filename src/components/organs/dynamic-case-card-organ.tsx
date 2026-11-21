@@ -100,7 +100,8 @@ export function DynamicCaseCardOrgan({ org, candidate, decision, decisionRoleTit
           <p className={cn("font-semibold", blocked && "text-bleed", gate.status === "SEALED" && "text-calm", gate.status === "AUTO_EXECUTED_UNSAFE" && "text-clash")}>
             {GATE_LABEL[gate.status]}
           </p>
-          <p className="mt-0.5">{gate.message}</p>
+          {/* Con decisión humana, la razón ya se cita abajo; el mensaje del motor la repetiría. */}
+          {!(decision && gate.status === "SEALED") && <p className="mt-0.5">{gate.message}</p>}
           {blocked && pendingRole && <p className="mt-0.5 text-muted-foreground">Decide: {pendingRole.title}.</p>}
         </div>
 
@@ -117,7 +118,13 @@ export function DynamicCaseCardOrgan({ org, candidate, decision, decisionRoleTit
           </figure>
         )}
 
-        {canDecide && blocked && onDecision && (
+        {canDecide && blocked && org.conflict.hasConflict && (
+          <p className="rounded-md border border-clash/50 bg-clash-soft px-3 py-2 text-sm">
+            Para decidir, primero hay que sellar la regla: quién puede autorizar hasta dónde todavía está en disputa.
+          </p>
+        )}
+
+        {canDecide && blocked && !org.conflict.hasConflict && onDecision && (
           <DecisionForm
             prompt={`Te toca decidir: ${formatValue(gate.proposedValue, rule.unit)} supera el umbral de ${formatValue(gate.effectiveThreshold, rule.unit)}.`}
             options={options}
@@ -158,8 +165,8 @@ function CandidateSummary({ candidate }: { candidate: ProjectedCandidate }) {
             <dd className="col-span-2 text-right font-semibold tabular-nums">{formatValue(cost, "CLP")}</dd>
           ) : (
             <dd className="col-span-2 flex items-center justify-end gap-2">
-              <span className="redaction inline-block h-3.5 w-20" aria-hidden />
-              <span className="text-xs text-muted-foreground">no se envió a esta pantalla</span>
+              <span className="redaction inline-block h-3.5 w-16" aria-hidden />
+              <span className="text-xs whitespace-nowrap text-muted-foreground">no se envió aquí</span>
             </dd>
           )}
         </div>

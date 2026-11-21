@@ -53,6 +53,13 @@ export const PROJECTED_AUDIT_LIMIT = 80;
 /** Tope de la bitácora en memoria. */
 export const MAX_AUDIT_EVENTS = 2000;
 
+/**
+ * Tope de intentos sin identidad válida (AUTH_FAILED) que se conservan. Los puede
+ * provocar cualquiera sin token, así que tienen cupo propio: inundarlos no desplaza
+ * ningún otro evento.
+ */
+export const MAX_AUTH_FAILED_EVENTS = 300;
+
 export const ACTA_DISCLAIMER =
   "Demostración simulada de coordinación organizacional. Los datos del caso son de ejemplo; no constituye diagnóstico ni uso real de datos de pacientes.";
 
@@ -97,6 +104,11 @@ function round(value: number, digits = 6): number {
 
 function percent(value: number): string {
   return `${(value * 100).toFixed(1).replace(".", ",")}%`;
+}
+
+/** Texto escrito por una persona, en una sola línea, para que no rompa el formato del acta. */
+function oneLine(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
 }
 
 function decimal(value: number): string {
@@ -532,14 +544,19 @@ export function normalizeViewer(state: RoomState, viewer: Viewer): Viewer {
 
 /**
  * Permiso doble sobre un campo: la organización del viewer debe estar en
- * visibleToOrgIds Y su rol en visibleToRoleIds. La pantalla general solo ve lo
- * que pueden ver todas las organizaciones de la sala y todos los roles de la
- * organización dueña.
+ * visibleToOrgIds Y su rol en visibleToRoleIds.
+ *
+ * La pantalla general ("stage") no tiene identidad: la recibe cualquiera que
+ * conozca la sala, y de ella sale también el acta. Por eso solo ve los campos
+ * clasificados "public" que además pueden ver todas las organizaciones de la
+ * sala y todos los roles de la organización dueña. Un campo "restricted"
+ * compartido con todos los roles sigue siendo interno: no sale a la pantalla general.
  */
 export function canViewField(state: Pick<RoomState, "orgGenomes">, field: RoleVisibilityField, viewer: Viewer): boolean {
   if (viewer === "stage") {
     const owner = state.orgGenomes.find((genome) => genome.orgId === field.ownerOrgId);
     return (
+      field.classification === "public" &&
       state.orgGenomes.every((genome) => field.visibleToOrgIds.includes(genome.orgId)) &&
       !!owner &&
       owner.roles.every((role) => field.visibleToRoleIds.includes(role.id))
@@ -663,6 +680,36 @@ export function projectStateForOrgAndRole(state: RoomState, viewer: Viewer, nowT
 // las transiciones (choque detectado, compuerta bloqueada), recalcula el estado
 // de compuerta de la sala y sube la versión.
 
+/** Eventos que nunca se descartan: son la decisión misma y su rastro. */
+const PROTECTED_AUDIT_TYPES: ReadonlySet<AuditEventType> = new Set<AuditEventType>([
+  "ROOM_CREATED",
+  "HITL_APPROVED",
+  "HITL_VETOED",
+  "COUNTER_PROPOSED",
+  "CANDIDATE_SUBMITTED",
+  "ALLOCATION_PROPOSED",
+  "ALLOCATION_SEALED",
+  "STAKES_CONTAINED",
+]);
+
+/**
+ * Mantiene la bitácora dentro de sus topes sin perder lo importante:
+ *   1. Los AUTH_FAILED tienen cupo propio (los provoca cualquiera sin token).
+ *   2. Sobre el tope general se descartan primero los eventos de rutina más
+ *      antiguos; las decisiones y su rastro se conservan.
+ * Devuelve cuántos eventos se descartaron, para que el acta lo declare.
+ */
+export function trimAudit(events: AuditEvent[]): { events: AuditEvent[]; dropped: number } {
+  let kept = events;
+  let authExcess = kept.reduce((count, event) => count + (event.type === "AUTH_FAILED" ? 1 : 0), 0) - MAX_AUTH_FAILED_EVENTS;
+  if (authExcess > 0) kept = kept.filter((event) => !(event.type === "AUTH_FAILED" && authExcess-- > 0));
+  let excess = kept.length - MAX_AUDIT_EVENTS;
+  if (excess > 0) kept = kept.filter((event) => PROTECTED_AUDIT_TYPES.has(event.type) || excess-- <= 0);
+  // Última defensa: ni siquiera los eventos protegidos crecen sin límite.
+  if (kept.length > MAX_AUDIT_EVENTS * 2) kept = kept.slice(-MAX_AUDIT_EVENTS * 2);
+  return { events: kept, dropped: events.length - kept.length };
+}
+
 function commit(prev: RoomState, next: RoomState, events: NewEvent[], nowTs: number): RoomState {
   const derived: NewEvent[] = [];
   for (const genome of next.orgGenomes) {
@@ -700,8 +747,14 @@ function commit(prev: RoomState, next: RoomState, events: NewEvent[], nowTs: num
       ...(event.roleId !== undefined ? { roleId: event.roleId } : {}),
       detail: event.detail ?? {},
     })),
-  ].slice(-MAX_AUDIT_EVENTS);
-  const committed = { ...next, auditLog, version: prev.version + 1 };
+  ];
+  const trimmed = trimAudit(auditLog);
+  const committed: RoomState = {
+    ...next,
+    auditLog: trimmed.events,
+    version: prev.version + 1,
+    ...(trimmed.dropped > 0 ? { auditDropped: (next.auditDropped ?? 0) + trimmed.dropped } : {}),
+  };
   return { ...committed, gateStatus: computeRoomGateStatus(committed) };
 }
 
@@ -1014,6 +1067,11 @@ export type AgentProposalInput = {
   suggestedValue: number | null;
   /** Clave de un campo que el agente intentó leer, si lo hizo. */
   attemptedFieldRead: string | null;
+  /**
+   * Organización dueña de ese campo. La misma clave puede existir en varias
+   * organizaciones ("coverage_cost"), así que sin este dato se asume la propia.
+   */
+  attemptedFieldOrgId?: string | null;
   source: "model" | "fallback";
 };
 
@@ -1048,7 +1106,10 @@ export function applyAgentProposal(state: RoomState, actor: ActorRef, input: Age
   let deniedFieldKey: string | null = null;
   if (input.attemptedFieldRead) {
     const key = input.attemptedFieldRead;
-    const owner = [genome, ...state.orgGenomes.filter((other) => other.orgId !== genome.orgId)].find((candidate) => candidate.fields.some((field) => field.key === key));
+    const hasKey = (candidate: OrgGenome) => candidate.fields.some((field) => field.key === key);
+    // Si el agente dijo de qué organización es el campo, se evalúa contra esa. Si no, primero la propia.
+    const named = input.attemptedFieldOrgId ? findGenome(state, input.attemptedFieldOrgId) : undefined;
+    const owner = named && hasKey(named) ? named : [genome, ...state.orgGenomes.filter((other) => other.orgId !== genome.orgId)].find(hasKey);
     if (owner) {
       const read = attemptProtectedRead(committed, actor, { orgId: owner.orgId, fieldKey: key }, nowTs);
       if (!read.ok && read.state) {
@@ -1103,8 +1164,10 @@ export type AuditActa = {
   crossOrgReliability: ReliabilityView | null;
   /** Decisiones humanas, con su razón. */
   decisions: HumanDecision[];
-  /** Bitácora completa, en orden. */
+  /** Bitácora en orden. Completa salvo que auditLogDropped sea mayor que 0. */
   auditLog: AuditEvent[];
+  /** Eventos de rutina antiguos descartados por el tope de memoria. Las decisiones nunca se descartan. */
+  auditLogDropped: number;
   telemetry: RoomState["telemetry"];
   notes: string[];
 };
@@ -1143,11 +1206,15 @@ export function buildAuditActa(state: RoomState, nowTs: number): AuditActa {
     crossOrgReliability: view.crossOrgReliability,
     decisions: state.decisions,
     auditLog: state.auditLog,
+    auditLogDropped: state.auditDropped ?? 0,
     telemetry: state.telemetry,
     notes: [
       "La asignación, los permisos, la compuerta y el contador los calcula código determinista; ningún modelo de lenguaje decide.",
       "La confiabilidad p^n es un modelo ilustrativo, no una medición.",
       "Los valores reservados de cada organización no aparecen en esta acta.",
+      ...(state.auditDropped
+        ? [`La bitácora superó el tope de memoria: se descartaron los ${state.auditDropped} eventos de rutina más antiguos. Las decisiones se conservan todas.`]
+        : []),
     ],
   };
 }
@@ -1175,7 +1242,7 @@ export function renderActaMarkdown(acta: AuditActa): string {
       "",
       `- Caso: ${org.caseTitle}`,
       `- Regla: ${org.authorityRule.metricLabel}. ${org.conflict.message}`,
-      `- Compuerta: ${org.gate.status}. ${org.gate.message}`,
+      `- Compuerta: ${org.gate.status}. ${oneLine(org.gate.message)}`,
       `- Confiabilidad vigente: ${percent(org.reliability.current)} (${org.reliability.currentMode === "hybrid" ? "híbrido" : "autónomo"}). ${org.reliability.formula}`,
     );
   }
@@ -1191,9 +1258,9 @@ export function renderActaMarkdown(acta: AuditActa): string {
   if (acta.decisions.length === 0) lines.push("Ninguna todavía.");
   for (const decision of acta.decisions) {
     const target = decision.scope === "gate" ? `compuerta de ${decision.targetOrgId}` : `asignación, caso ${decision.targetCaseId}`;
-    lines.push(`- ${new Date(decision.ts).toISOString()} · ${decision.byOrgId}/${decision.byRoleId} · ${decision.decision} (${target}). Razón: ${decision.reason}`);
+    lines.push(`- ${new Date(decision.ts).toISOString()} · ${decision.byOrgId}/${decision.byRoleId} · ${decision.decision} (${target}). Razón: ${oneLine(decision.reason)}`);
   }
-  lines.push("", "## Bitácora completa", "", "| Hora (servidor) | Evento | Organización | Rol | Detalle |", "| --- | --- | --- | --- | --- |");
+  lines.push("", acta.auditLogDropped > 0 ? `## Bitácora (se descartaron ${acta.auditLogDropped} eventos de rutina antiguos)` : "## Bitácora completa", "", "| Hora (servidor) | Evento | Organización | Rol | Detalle |", "| --- | --- | --- | --- | --- |");
   for (const event of acta.auditLog) {
     const detail = JSON.stringify(event.detail).replaceAll("|", "\\|");
     lines.push(`| ${new Date(event.ts).toISOString()} | ${event.type} | ${event.orgId ?? ""} | ${event.roleId ?? ""} | ${detail} |`);

@@ -196,12 +196,27 @@ describe("projectStateForOrgAndRole: lo reservado no sale del servidor", () => {
     }
   });
 
-  it("en una sola organización, la pantalla general solo recibe lo que ven todos los roles", () => {
+  it("en una sola organización, la pantalla general solo recibe campos públicos que ven todos los roles", () => {
     const projected = view(singleRoom(), "stage");
     const visible = projected.orgs[0].fields.filter((field) => !field.redacted).map((field) => field.key);
-    expect(visible.sort()).toEqual(["deadline_window", "icu_beds_available"]);
+    expect(visible).toEqual(["deadline_window"]);
     const json = JSON.stringify(projected);
     for (const secret of ["2400000", "3100000", "18/40"]) expect(json).not.toContain(secret);
+  });
+
+  it("un campo restringido que ven todos los roles sigue siendo interno: no sale a la pantalla general ni al acta", () => {
+    // icu_beds_available lo ven los tres roles, pero está clasificado "restricted".
+    const state = singleRoom();
+    const field = genomeOf(state, CLINIC).fields.find((item) => item.key === "icu_beds_available")!;
+    expect(field.classification).toBe("restricted");
+    expect(field.visibleToRoleIds).toEqual(["role_a", "role_b", "role_c"]);
+    for (const viewer of [A_CLINIC, B_CLINIC, C_CLINIC]) {
+      expect(view(state, viewer).orgs[0].fields.find((item) => item.key === "icu_beds_available")).toMatchObject({ redacted: false, value: 1 });
+    }
+    expect(view(state, "stage").orgs[0].fields.find((item) => item.key === "icu_beds_available")).toMatchObject({ redacted: true, reason: "RBAC_SERVER_FILTERED" });
+    // El acta se arma desde la vista general: tampoco trae el valor.
+    const actaFields = JSON.stringify(buildAuditActa(state, T0));
+    expect(actaFields).not.toMatch(/"key":"icu_beds_available"[^}]*"value"/);
   });
 
   it("un viewer desconocido, o de una organización que no está en la sala, recibe la vista general", () => {
@@ -226,7 +241,9 @@ describe("projectStateForOrgAndRole: lo reservado no sale del servidor", () => {
         for (const field of genome.fields) {
           const allowed =
             viewer === "stage"
-              ? state.orgGenomes.every((org) => field.visibleToOrgIds.includes(org.orgId)) && genome.roles.every((role) => field.visibleToRoleIds.includes(role.id))
+              ? field.classification === "public" &&
+                state.orgGenomes.every((org) => field.visibleToOrgIds.includes(org.orgId)) &&
+                genome.roles.every((role) => field.visibleToRoleIds.includes(role.id))
               : field.visibleToOrgIds.includes(viewer.orgId) && field.visibleToRoleIds.includes(viewer.roleId);
           expect(json.includes(String(field.value)), `${JSON.stringify(viewer)} y ${genome.orgId}.${field.key}`).toBe(allowed);
         }

@@ -30,7 +30,7 @@ const noopSubscribe = () => () => {};
 // códigos QR para que las personas entren desde su teléfono.
 export default function StageClient() {
   const { roomId } = useParams<{ roomId: string }>();
-  const { room, status, unreachable } = useRoom(roomId, { spectator: true });
+  const { room, status, unreachable, problem } = useRoom(roomId, { spectator: true });
   // La dirección pública solo existe en el navegador; en el servidor es null.
   const baseUrl = useSyncExternalStore(noopSubscribe, publicBaseUrl, () => null);
 
@@ -48,6 +48,11 @@ export default function StageClient() {
         ) : (
           <p className="flex items-center gap-3 text-sm text-muted-foreground">
             Conectando con la sala <ConnectionBadge status={status} />
+          </p>
+        )}
+        {problem && (
+          <p role="alert" className="rounded-md border border-clash/50 bg-clash-soft px-3 py-2 text-sm">
+            {problem}
           </p>
         )}
       </main>
@@ -81,6 +86,12 @@ export default function StageClient() {
           <ConnectionBadge status={status} />
         </div>
       </header>
+
+      {problem && (
+        <p role="alert" className="rounded-md border border-clash/50 bg-clash-soft px-3 py-2 text-sm">
+          {problem}
+        </p>
+      )}
 
       <SharedStakesCounterOrgan stakes={room.stakes} size="stage" />
 

@@ -24,20 +24,22 @@ Requiere Node 20.
 npm install
 cp .env.example .env.local   # elegir modelo local (Ollama) o Claude
 npm run dev                  # http://localhost:3000
-npm test                     # pruebas del motor y de los permisos
+npm test                     # pruebas del motor, los permisos y la API, sin modelo
 ```
 
-`GET /api/health` dice si el modelo y la base están configurados.
+`GET /api/health` dice si el modelo configurado responde. No hay base de datos: las salas viven en la memoria del servidor.
 
-Prueba de carga, solo contra un servidor local:
+Recorrido completo por HTTP y prueba de carga (esta última, solo contra un servidor local):
 
 ```bash
+node scripts/e2e.mjs http://localhost:3000
 node scripts/load-test.mjs http://localhost:3000 50
 ```
 
 ## Arquitectura
 
-- [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md): componentes, tiempo real, modelos y qué existe hoy.
+- [`docs/RECORRIDO.md`](docs/RECORRIDO.md): los archivos que hay que leer, en orden, para entender el sistema.
+- [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md): componentes, flujo de un dato, tiempo real, modelos y qué es real o simulado.
 - [`docs/DECISIONES.md`](docs/DECISIONES.md): por qué se eligió cada cosa.
 - [`docs/PREGUNTAS.md`](docs/PREGUNTAS.md): preguntas técnicas probables y sus respuestas.
 

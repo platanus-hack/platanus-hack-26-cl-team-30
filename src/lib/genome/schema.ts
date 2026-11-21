@@ -298,6 +298,8 @@ export const RoomStateSchema = z.object({
   decisionSealedAt: z.number().nullable(),
   /** Sube en cada cambio. Agregado al plan. */
   version: z.number().int().min(0),
+  /** Eventos antiguos de la bitácora descartados por el tope de memoria. Si falta, 0. */
+  auditDropped: z.number().int().min(0).optional(),
 });
 
 // --- Vista del cliente: lo que emite el SSE ----------------------------------

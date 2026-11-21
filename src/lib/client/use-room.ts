@@ -53,6 +53,20 @@ function storeSession(roomId: string, session: RoomSession | null): void {
 
 // --- Peticiones ---------------------------------------------------------------
 
+/**
+ * Mensaje para la persona cuando el servidor responde con uno de sus topes.
+ * Dice qué pasó y qué hacer; el código técnico se sigue mostrando aparte.
+ */
+const FRIENDLY_ERRORS: Partial<Record<string, string>> = {
+  BUSY: "Todavía se está procesando la petición anterior al modelo. Espera unos segundos y vuelve a intentarlo.",
+  ROOM_LIMIT: "El servidor llegó al máximo de salas abiertas y todas tienen gente. Entra a la sala de demostración o intenta de nuevo en un minuto.",
+  TOO_MANY_CONNECTIONS: "El servidor tiene demasiadas pantallas conectadas. Esta pantalla se volverá a conectar sola en unos segundos.",
+};
+
+export function friendlyError(code: string | undefined, fallback: string): string {
+  return (code && FRIENDLY_ERRORS[code]) || fallback;
+}
+
 async function postAction(roomId: string, body: Record<string, unknown>): Promise<ActResult> {
   try {
     const res = await fetch(`/api/rooms/${encodeURIComponent(roomId)}/action`, {
@@ -66,7 +80,7 @@ async function postAction(roomId: string, body: Record<string, unknown>): Promis
       ok: false,
       status: res.status,
       code: (data.code as ActionErrorCode | undefined) ?? "BAD_REQUEST",
-      error: typeof data.error === "string" ? data.error : `El servidor respondió ${res.status}`,
+      error: friendlyError(data.code, typeof data.error === "string" ? data.error : `El servidor respondió ${res.status}`),
     };
   } catch {
     return { ok: false, status: 0, code: "NETWORK", error: "No se pudo llegar al servidor. Revisa la conexión." };
@@ -82,7 +96,7 @@ export async function createRoom(mode: RoomMode, seed?: string): Promise<string>
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || typeof data.roomId !== "string") {
-    throw new Error(typeof data.error === "string" ? data.error : "No se pudo crear la sala");
+    throw new Error(friendlyError(data.code, typeof data.error === "string" ? data.error : "No se pudo crear la sala"));
   }
   return data.roomId;
 }
@@ -98,7 +112,11 @@ export async function mutateRoom(roomId: string, description: string): Promise<M
       body: JSON.stringify({ description }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, error: typeof data.error === "string" ? data.error : `El servidor respondió ${res.status}` };
+    if (!res.ok) {
+      const fallback = typeof data.error === "string" ? data.error : `El servidor respondió ${res.status}`;
+      // En la mutación, BUSY significa que esta misma sala ya está generando una organización.
+      return { ok: false, error: data.code === "BUSY" ? "Esta sala ya está generando una organización. Espera a que termine." : friendlyError(data.code, fallback) };
+    }
     return { ok: true, source: data.source, latencyMs: data.latencyMs };
   } catch {
     return { ok: false, error: "No se pudo llegar al servidor." };
@@ -128,6 +146,8 @@ export function useRoom(roomId: string, { spectator = false }: Options = {}) {
   // al cambiar de rol, lo recibido con la identidad anterior deja de contar.
   const [feed, setFeed] = useState<{ url: string; room: ProjectedRoomState | null; status: ConnectionStatus; failures: number } | null>(null);
   const [lastRoom, setLastRoom] = useState<ProjectedRoomState | null>(null);
+  /** Motivo legible del último rechazo de la conexión en vivo, si el servidor lo dio. */
+  const [problem, setProblem] = useState<string | null>(null);
 
   const params = new URLSearchParams();
   if (session) {
@@ -169,10 +189,27 @@ export function useRoom(roomId: string, { spectator = false }: Options = {}) {
 
     const publish = (next: ConnectionStatus) => setFeed({ url, room: latest, status: next, failures: attempts });
 
+    // Pide la misma URL con fetch solo para leer el código del rechazo (por
+    // ejemplo, 503 TOO_MANY_CONNECTIONS) y la corta apenas tiene la respuesta.
+    const explainFailure = async () => {
+      const controller = new AbortController();
+      try {
+        const res = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
+        if (res.ok) return;
+        const data = await res.json().catch(() => ({}));
+        if (!stopped && typeof data.code === "string") setProblem(friendlyError(data.code, typeof data.error === "string" ? data.error : `El servidor respondió ${res.status}`));
+      } catch {
+        // Sin red: el estado "reconectando" ya lo dice.
+      } finally {
+        controller.abort();
+      }
+    };
+
     const open = () => {
       source = new EventSource(url);
       source.onopen = () => {
         attempts = 0;
+        setProblem(null);
         publish("connected");
       };
       source.onmessage = (event) => {
@@ -189,6 +226,7 @@ export function useRoom(roomId: string, { spectator = false }: Options = {}) {
         if (stopped) return;
         if (source?.readyState === EventSource.CLOSED) {
           source.close();
+          void explainFailure();
           const delay = Math.min(1000 * 2 ** attempts, 10000);
           attempts += 1;
           retryTimer = setTimeout(open, delay);
@@ -205,7 +243,12 @@ export function useRoom(roomId: string, { spectator = false }: Options = {}) {
     };
   }, [url]);
 
-  const join = useCallback(
+  // Peticiones de rol en curso. En desarrollo React ejecuta los efectos dos veces
+  // y la entrada por enlace pedía el mismo rol dos veces: la segunda respondía
+  // 409 y mostraba "ese rol ya lo tiene otra persona" a quien sí lo tenía.
+  const joining = useRef(new Map<string, Promise<ActResult>>());
+
+  const joinOnce = useCallback(
     async (orgId: string, roleId: string): Promise<ActResult> => {
       const previous = sessionRef.current;
       const sameRole = previous?.orgId === orgId && previous.roleId === roleId;
@@ -222,6 +265,18 @@ export function useRoom(roomId: string, { spectator = false }: Options = {}) {
       return result;
     },
     [roomId, setSession],
+  );
+
+  const join = useCallback(
+    (orgId: string, roleId: string): Promise<ActResult> => {
+      const key = `${orgId}/${roleId}`;
+      const pending = joining.current.get(key);
+      if (pending) return pending;
+      const request = joinOnce(orgId, roleId).finally(() => joining.current.delete(key));
+      joining.current.set(key, request);
+      return request;
+    },
+    [joinOnce],
   );
 
   const leave = useCallback(async () => {
@@ -254,5 +309,5 @@ export function useRoom(roomId: string, { spectator = false }: Options = {}) {
     void join(session.orgId, session.roleId);
   }, [downgraded, session, join]);
 
-  return { room, status, unreachable, session, notice, setNotice, join, leave, act };
+  return { room, status, unreachable, problem: status === "connected" ? null : problem, session, notice, setNotice, join, leave, act };
 }

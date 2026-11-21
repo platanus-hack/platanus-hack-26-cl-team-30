@@ -11,11 +11,18 @@ import { z } from "zod";
 import type { EngineErrorCode } from "../engine/deterministic";
 import { GateModeSchema } from "../genome/schema";
 
+// Topes de largo: todo texto que llega de un cliente tiene un máximo, porque
+// parte de él termina en la bitácora y viaja a todas las pantallas.
+const id = z.string().min(1).max(64);
+/** Largo máximo de la razón de una decisión. La interfaz debe limitar el campo a esto. */
+export const REASON_MAX_LENGTH = 500;
+const reason = z.string().max(REASON_MAX_LENGTH);
+
 const actor = {
   /** Organización de quien actúa. El Comité inter-org usa el orgId del árbitro. */
-  orgId: z.string().min(1),
-  roleId: z.string().min(1),
-  token: z.string().optional(),
+  orgId: id,
+  roleId: id,
+  token: z.string().max(128).optional(),
 };
 
 /** Tomar un rol. Devuelve el token. Con el token vigente sirve para reconectarse. */
@@ -41,7 +48,7 @@ export const UpdateAuthoritySliderActionSchema = z.object({
 export const ToggleFieldSecretActionSchema = z.object({
   type: z.literal("TOGGLE_FIELD_SECRET"),
   ...actor,
-  fieldKey: z.string().min(1),
+  fieldKey: id,
 });
 
 /**
@@ -74,8 +81,8 @@ export const RunRoleAgentActionSchema = z.object({
 export const TestRbacBreachActionSchema = z.object({
   type: z.literal("TEST_RBAC_BREACH"),
   ...actor,
-  targetOrgId: z.string().min(1).optional(),
-  fieldKey: z.string().min(1),
+  targetOrgId: id.optional(),
+  fieldKey: id,
 });
 
 export const HitlDecisionKindSchema = z.enum(["APPROVE", "VETO", "COUNTER_PROPOSE"]);
@@ -89,7 +96,7 @@ export const HitlDecisionActionSchema = z.object({
   type: z.literal("HITL_DECISION"),
   ...actor,
   decision: HitlDecisionKindSchema,
-  reason: z.string(),
+  reason,
   counterValue: z.number().optional(),
 });
 
@@ -100,7 +107,7 @@ export const HitlDecisionActionSchema = z.object({
 export const SubmitCandidateActionSchema = z.object({
   type: z.literal("SUBMIT_CANDIDATE"),
   ...actor,
-  caseId: z.string().min(1).optional(),
+  caseId: id.optional(),
 });
 
 /**
@@ -110,7 +117,7 @@ export const SubmitCandidateActionSchema = z.object({
 export const AllocationSealActionSchema = z.object({
   type: z.literal("ALLOCATION_SEAL"),
   ...actor,
-  reason: z.string(),
+  reason,
 });
 
 /**
@@ -123,7 +130,7 @@ export const AllocationSealActionSchema = z.object({
 export const CommitteeVetoActionSchema = z.object({
   type: z.literal("COMMITTEE_VETO"),
   ...actor,
-  reason: z.string(),
+  reason,
 });
 
 export const ActionSchema = z.discriminatedUnion("type", [
@@ -167,9 +174,20 @@ export const ACTION_TYPES = ActionSchema.options.map((option) => option.shape.ty
  *   403 RBAC_DENIED (el rol no tiene permiso; queda en la bitácora)
  *   404 ROOM_NOT_FOUND · ROLE_NOT_FOUND · FIELD_NOT_FOUND · CANDIDATE_NOT_FOUND
  *   409 ROLE_TAKEN · WRONG_MODE · RULE_NOT_SEALED · GATE_NOT_BLOCKED ·
- *       DECISION_SEALED · ALLOCATION_NOT_READY · FIXED_ROOM (las salas de demo no se mutan)
+ *       DECISION_SEALED · ALLOCATION_NOT_READY · FIXED_ROOM (las salas de demo no se mutan) ·
+ *       BUSY (ya hay una llamada al modelo en curso para ese rol o esa sala)
+ *   503 ROOM_LIMIT · TOO_MANY_CONNECTIONS (topes del servidor; reintentar más tarde)
  */
-export type ActionErrorCode = EngineErrorCode | "BAD_REQUEST" | "INVALID_TOKEN" | "ROOM_NOT_FOUND" | "ROLE_TAKEN" | "FIXED_ROOM";
+export type ActionErrorCode =
+  | EngineErrorCode
+  | "BAD_REQUEST"
+  | "INVALID_TOKEN"
+  | "ROOM_NOT_FOUND"
+  | "ROLE_TAKEN"
+  | "FIXED_ROOM"
+  | "BUSY" // 409: ya hay una llamada al modelo en curso para este rol o esta sala
+  | "ROOM_LIMIT" // 503: el servidor llegó al tope de salas y ninguna se puede liberar
+  | "TOO_MANY_CONNECTIONS"; // 503: tope de conexiones SSE
 
 export type ActionError = { error: string; code: ActionErrorCode };
 

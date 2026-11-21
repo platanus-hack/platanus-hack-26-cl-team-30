@@ -1,4 +1,6 @@
-@import "tailwindcss";
+/* Las clases solo viven en src/. Sin esto Tailwind vigila toda la raíz del repo y
+   cualquier archivo que cambie ahí (logs, capturas) recarga la página en desarrollo. */
+@import "tailwindcss" source("..");
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 

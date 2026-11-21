@@ -10,6 +10,10 @@
 //
 // El estado vive en memoria del proceso (ver docs/DECISIONES.md). Las salas
 // "demo" y "demo-cross" se recrean solas desde la semilla si el servidor se reinicia.
+//
+// Topes, para que un deploy público no se llene: cantidad de salas, salas
+// inactivas que se borran solas, conexiones SSE por sala y en total, y una sola
+// llamada al modelo a la vez por rol (agente) y por sala (mutación).
 
 import { EventEmitter } from "node:events";
 import { randomBytes, timingSafeEqual } from "node:crypto";
@@ -26,13 +30,23 @@ type RoomRecord = {
   state: RoomState;
   /** Token vigente por rol, con clave "orgId:roleId". Secreto: nunca sale del servidor. */
   tokens: Map<string, string>;
+  /** Última actividad (acción, conexión o mutación), en reloj real. Solo para la limpieza. */
+  lastActiveAt: number;
+  /** Llamadas al modelo en curso: "mutate" o "agent:orgId:roleId". */
+  busy: Set<string>;
 };
 
-type Store = { rooms: Map<string, RoomRecord>; bus: EventEmitter };
+type Store = {
+  rooms: Map<string, RoomRecord>;
+  bus: EventEmitter;
+  /** Conexiones SSE abiertas por sala. Se llevan por id: sobreviven al reinicio de la sala. */
+  connections: Map<string, number>;
+  lastSweepAt: number;
+};
 
 // Se guarda en globalThis para que la recarga en caliente de desarrollo no lo borre.
-const globalStore = globalThis as unknown as { __nexoRoomStore?: Store };
-const store: Store = (globalStore.__nexoRoomStore ??= { rooms: new Map(), bus: new EventEmitter() });
+const globalStore = globalThis as unknown as { __nexoRoomStoreV2?: Store };
+const store: Store = (globalStore.__nexoRoomStoreV2 ??= { rooms: new Map(), bus: new EventEmitter(), connections: new Map(), lastSweepAt: 0 });
 store.bus.setMaxListeners(0);
 
 /** Salas de id fijo que se recrean solas: el suelo de la demo y la capa inter-org. */
@@ -42,13 +56,89 @@ export function isFixedRoom(roomId: string): boolean {
   return Object.hasOwn(FIXED_ROOMS, roomId);
 }
 
+// --- Topes --------------------------------------------------------------------
+
+function envInt(name: string, fallback: number): number {
+  const value = Number.parseInt(process.env[name] ?? "", 10);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+/** Máximo de salas creadas por POST /api/rooms que viven a la vez. Las fijas no cuentan. */
+export const maxRooms = () => envInt("NEXO_MAX_ROOMS", 200);
+/** Una sala sin conexiones ni actividad durante este tiempo se borra. */
+export const ROOM_IDLE_TTL_MS = 2 * 60 * 60 * 1000;
+/** Una sala fija usada que queda sin conexiones ni actividad este tiempo vuelve a su semilla. */
+export const FIXED_ROOM_IDLE_RESET_MS = 15 * 60 * 1000;
+export const MAX_CONNECTIONS_PER_ROOM = 200;
+export const MAX_CONNECTIONS_TOTAL = 1000;
+const SWEEP_INTERVAL_MS = 30_000;
+
+/** No se pueden crear más salas: todas las existentes tienen gente conectada. */
+export class RoomLimitError extends Error {
+  constructor() {
+    super("El servidor llegó al tope de salas. Intenta de nuevo en unos minutos.");
+    this.name = "RoomLimitError";
+  }
+}
+
+// El nombre del evento lleva prefijo: un EventEmitter trata distinto a "error".
+const channel = (roomId: string) => `room:${roomId}`;
+
 function emit(roomId: string) {
-  store.bus.emit(roomId);
+  store.bus.emit(channel(roomId));
+}
+
+function connectionsOf(roomId: string): number {
+  return store.connections.get(roomId) ?? 0;
+}
+
+function touch(record: RoomRecord) {
+  record.lastActiveAt = Date.now();
+}
+
+/**
+ * Limpieza de salas inactivas. Nunca toca una sala con conexiones abiertas.
+ *   - Sala creada por un usuario: se borra tras ROOM_IDLE_TTL_MS sin actividad.
+ *   - Sala fija ("demo", "demo-cross"): si alguien la usó y lleva
+ *     FIXED_ROOM_IDLE_RESET_MS sin actividad, se borra y renace desde la semilla
+ *     la próxima vez que alguien entre, para que el siguiente visitante no
+ *     encuentre un caso ya decidido.
+ * Devuelve cuántas salas quitó.
+ */
+export function sweepRooms(now: number = Date.now()): number {
+  store.lastSweepAt = now;
+  let removed = 0;
+  for (const [roomId, record] of store.rooms) {
+    if (connectionsOf(roomId) > 0 || record.busy.size > 0) continue;
+    const idle = now - record.lastActiveAt;
+    const expired = isFixedRoom(roomId) ? record.state.version > 0 && idle >= FIXED_ROOM_IDLE_RESET_MS : idle >= ROOM_IDLE_TTL_MS;
+    if (expired) {
+      store.rooms.delete(roomId);
+      removed += 1;
+    }
+  }
+  return removed;
+}
+
+/** Hace lugar para una sala nueva. Lanza RoomLimitError si no se puede. */
+function makeRoomFor(roomId: string) {
+  if (isFixedRoom(roomId)) return;
+  const userRooms = () => [...store.rooms.keys()].filter((id) => !isFixedRoom(id));
+  if (userRooms().length < maxRooms()) return;
+  sweepRooms();
+  // Sigue llena: sale la sala sin conexiones que lleva más tiempo sin actividad.
+  while (userRooms().length >= maxRooms()) {
+    const victim = userRooms()
+      .filter((id) => connectionsOf(id) === 0 && store.rooms.get(id)!.busy.size === 0)
+      .sort((a, b) => store.rooms.get(a)!.lastActiveAt - store.rooms.get(b)!.lastActiveAt)[0];
+    if (!victim) throw new RoomLimitError();
+    store.rooms.delete(victim);
+  }
 }
 
 function newRoomId(): string {
   let id: string;
-  do id = randomBytes(4).toString("hex").slice(0, 6);
+  do id = randomBytes(4).toString("hex");
   while (store.rooms.has(id) || isFixedRoom(id));
   return id;
 }
@@ -74,10 +164,15 @@ export type CreateRoomInput = {
   now?: number;
 };
 
-/** Crea una sala desde una semilla (o un genoma validado) y la deja lista para recibir jugadores. */
+/**
+ * Crea una sala desde una semilla (o un genoma validado) y la deja lista para
+ * recibir jugadores. Lanza RoomLimitError si el servidor está en su tope de salas
+ * y todas tienen gente conectada.
+ */
 export function createRoom(input: CreateRoomInput = {}): RoomState {
   const id = input.id ?? newRoomId();
   if (store.rooms.has(id)) throw new Error(`La sala ${id} ya existe`);
+  makeRoomFor(id);
   const now = input.now ?? Date.now();
   const options = { now, telemetry: liveTelemetry() };
   const initial =
@@ -85,12 +180,13 @@ export function createRoom(input: CreateRoomInput = {}): RoomState {
       ? getInitialCrossOrgRoom(id, options)
       : getInitialSingleOrgRoom(id, input.genome ?? input.seed, options);
   const state = engine.openRoom(initial, now);
-  store.rooms.set(id, { state, tokens: new Map() });
+  store.rooms.set(id, { state, tokens: new Map(), lastActiveAt: Date.now(), busy: new Set() });
   return state;
 }
 
 /** Busca una sala. Las de id fijo se crean al vuelo si no existen. */
 function lookup(roomId: string): RoomRecord | undefined {
+  if (Date.now() - store.lastSweepAt >= SWEEP_INTERVAL_MS) sweepRooms();
   const existing = store.rooms.get(roomId);
   if (existing) return existing;
   if (!isFixedRoom(roomId)) return undefined;
@@ -120,8 +216,30 @@ export function resetRoom(roomId: string): boolean {
 
 /** Avisa cada vez que la sala cambia. Devuelve la función para dejar de escuchar. */
 export function subscribe(roomId: string, listener: () => void): () => void {
-  store.bus.on(roomId, listener);
-  return () => store.bus.off(roomId, listener);
+  store.bus.on(channel(roomId), listener);
+  return () => store.bus.off(channel(roomId), listener);
+}
+
+/**
+ * Registra una conexión SSE abierta. Devuelve la función para cerrarla, o null
+ * si la sala o el servidor ya están en su tope de conexiones. Una sala con
+ * conexiones abiertas no se borra por inactividad.
+ */
+export function openConnection(roomId: string): (() => void) | null {
+  const total = [...store.connections.values()].reduce((sum, count) => sum + count, 0);
+  if (connectionsOf(roomId) >= MAX_CONNECTIONS_PER_ROOM || total >= MAX_CONNECTIONS_TOTAL) return null;
+  store.connections.set(roomId, connectionsOf(roomId) + 1);
+  let open = true;
+  return () => {
+    if (!open) return;
+    open = false;
+    const left = connectionsOf(roomId) - 1;
+    if (left > 0) store.connections.set(roomId, left);
+    else store.connections.delete(roomId);
+    // La inactividad se cuenta desde que se fue la última conexión.
+    const record = store.rooms.get(roomId);
+    if (record) touch(record);
+  };
 }
 
 // --- Identidad ---------------------------------------------------------------
@@ -242,6 +360,7 @@ function join(roomId: string, record: RoomRecord, actor: engine.ActorRef, token:
 export async function applyAction(roomId: string, rawBody: unknown, now: number = Date.now()): Promise<ActionResponse> {
   const record = lookup(roomId);
   if (!record) return reject(404, "ROOM_NOT_FOUND", "La sala no existe");
+  touch(record);
 
   const parsed = ActionSchema.safeParse(rawBody);
   if (!parsed.success) {
@@ -300,7 +419,17 @@ async function runAgent(roomId: string, record: RoomRecord, actor: engine.ActorR
 
   const view = projectRoom(roomId, actor);
   if (!view) return reject(404, "ROOM_NOT_FOUND", "La sala no existe");
-  const turn = await runRoleAgentTurn(view, { instruction });
+
+  // Una sola llamada al modelo a la vez por rol: repetir el botón no encola más trabajo.
+  const busyKey = `agent:${tokenKey(actor)}`;
+  if (record.busy.has(busyKey)) return reject(409, "BUSY", "El agente de este rol todavía está respondiendo");
+  record.busy.add(busyKey);
+  let turn: Awaited<ReturnType<typeof runRoleAgentTurn>>;
+  try {
+    turn = await runRoleAgentTurn(view, { instruction });
+  } finally {
+    record.busy.delete(busyKey);
+  }
 
   // La llamada al modelo tarda: la sala pudo reiniciarse o el rol pudo cambiar de manos.
   if (store.rooms.get(roomId) !== record || !record.tokens.has(tokenKey(actor))) {
@@ -309,7 +438,7 @@ async function runAgent(roomId: string, record: RoomRecord, actor: engine.ActorR
   const result = engine.applyAgentProposal(
     record.state,
     actor,
-    { suggestedValue: turn.suggestedValue, attemptedFieldRead: turn.attemptedFieldRead, source: turn.source },
+    { suggestedValue: turn.suggestedValue, attemptedFieldRead: turn.attemptedFieldRead, attemptedFieldOrgId: turn.attemptedFieldOrgId, source: turn.source },
     Date.now(),
   );
   return settle(roomId, record, result, {
@@ -342,7 +471,16 @@ export async function mutateRoom(roomId: string, description: unknown): Promise<
   if (record.state.mode !== "single_org") return { status: 409, body: { error: "Solo se puede mutar una sala de una sola organización", code: "WRONG_MODE" } };
   if (typeof description !== "string" || !description.trim()) return { status: 400, body: { error: "Se espera { description } con una frase que describa la organización", code: "BAD_REQUEST" } };
 
-  const mutation = await mutateGenomeFromPrompt(description);
+  // Una sola mutación a la vez por sala.
+  if (record.busy.has("mutate")) return { status: 409, body: { error: "Esta sala ya se está mutando", code: "BUSY" } };
+  record.busy.add("mutate");
+  touch(record);
+  let mutation: Awaited<ReturnType<typeof mutateGenomeFromPrompt>>;
+  try {
+    mutation = await mutateGenomeFromPrompt(description);
+  } finally {
+    record.busy.delete("mutate");
+  }
   // Segunda validación aquí: nada entra a una sala sin pasar el esquema, venga de donde venga.
   const checked = OrgGenomeSchema.safeParse(mutation.genome);
   const genome = checked.success ? checked.data : getSeedGenome();

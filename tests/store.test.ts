@@ -495,14 +495,10 @@ describe("RUN_ROLE_AGENT: el agente hereda los permisos del rol", () => {
     expect(events(roomId, "RBAC_DENIED").at(-1)).toMatchObject({ orgId: CLINIC, roleId: "role_a", detail: { fieldKey: "coverage_cost", targetOrgId: CLINIC, crossOrg: false } });
   });
 
-  // ERROR CONOCIDO, reportado al orquestador. El agente informa de qué organización
-  // es el campo que quiso leer (attemptedFieldOrgId), pero el almacén no se lo pasa
-  // al motor, que busca la clave primero en la organización propia. Como
-  // "coverage_cost" existe en ambas, el intento de Gestión de la clínica sobre el
-  // costo del hospital se resuelve contra su propio campo (que sí puede ver) y no
-  // queda ningún 403. No hay fuga de datos: lo que falta es el registro del intento.
-  // Cuando se corrija, esta prueba empezará a "fallar": quitar el ".fails".
-  it.fails("si el agente intenta leer un campo de OTRA organización, queda como 403 entre organizaciones", async () => {
+  // Antes era un error conocido: el almacén no le pasaba al motor de qué organización
+  // era el campo, y como "coverage_cost" existe en ambas, el intento se resolvía
+  // contra el campo propio sin dejar 403. Corregido con attemptedFieldOrgId.
+  it("si el agente intenta leer un campo de OTRA organización, queda como 403 entre organizaciones", async () => {
     const roomId = cross();
     const b = await join(roomId, CLINIC, "role_b");
     agents.runRoleAgentTurn.mockResolvedValue(agentTurn({ attemptedFieldRead: "coverage_cost", attemptedFieldOrgId: RURAL }));

@@ -31,7 +31,7 @@ export function AuditConsole({ room, limit = 40, acta }: Props) {
             const role = roleLabel(room, event.orgId, event.roleId);
             const org = room.orgs.length > 1 ? orgLabel(room, event.orgId) : "";
             const who = [role, org !== role ? org : ""].filter(Boolean).join(", ");
-            const detail = auditDetail(event.detail);
+            const detail = auditDetail(event.detail, event.type);
             return (
               <li key={`${event.ts}-${index}`} className="grid grid-cols-[auto_1fr] gap-x-3 text-sm">
                 <time className="pt-0.5 text-xs text-muted-foreground tabular-nums">{formatTime(event.ts)}</time>

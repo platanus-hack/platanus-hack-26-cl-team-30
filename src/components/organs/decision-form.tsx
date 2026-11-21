@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { REASON_MAX_LENGTH } from "@/lib/store/actions";
 import { cn } from "@/lib/utils";
 import type { OrganResult } from "./format";
 
@@ -57,9 +58,13 @@ export function DecisionForm({ prompt, options, onDecide }: Props) {
           onChange={(event) => setReason(event.target.value)}
           rows={3}
           required
+          maxLength={REASON_MAX_LENGTH}
           placeholder="Por qué apruebas o vetas"
           className="w-full rounded-md border border-input bg-card px-3 py-2 font-serif text-base leading-relaxed outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
         />
+        <span className={cn("block text-right text-xs tabular-nums", reason.length >= REASON_MAX_LENGTH ? "text-bleed" : "text-muted-foreground")}>
+          {reason.length} de {REASON_MAX_LENGTH} caracteres
+        </span>
       </label>
 
       {options

@@ -4,7 +4,7 @@ Repo oficial del equipo 30 en Platanus Hack 26: Santiago ft. Buk. Track: **Multi
 
 ## Equipo
 
-- **Ramón Molina** (@rm004607): producto web. Pantallas, rutas de la API y tablas de Supabase.
+- **Ramón Molina** (@rm004607): producto web. Pantallas y rutas de la API.
 - **Sebastián Vargas** (@iswebster1401): agente e infraestructura. Modelos, Spark, integraciones y deploy. Decide qué se corta cuando falta tiempo.
 - **Nahum Díaz** (@nadilopoff): negocio y pitch. Usuarios reales, finanzas y relato.
 
@@ -16,7 +16,7 @@ Repo oficial del equipo 30 en Platanus Hack 26: Santiago ft. Buk. Track: **Multi
 - **Capa inter-org (la ambición):** 2 hospitales (`clinica_andes` y `hospital_rural`) compiten por 1 cama UCI de referencia. Ninguno ve el costo de cobertura del otro. Un algoritmo determinista ordena a los candidatos, desempata por equidad, y el Comité puede vetar. Todo queda en una bitácora exportable como acta.
 - **Regla de corte:** si la capa inter-org no queda estable, se presenta el suelo. Nunca se presenta algo que no corra.
 
-El plan se construye en este repo, evolucionando `src/lib/rooms.ts`. Los ids se escriben sin tilde (`clinica_andes`). Los datos del caso son simulados: no es una herramienta clínica.
+El código vive en este repo: contrato de datos en `src/lib/genome/`, reglas en `src/lib/engine/deterministic.ts`, salas e identidad en `src/lib/store/rooms.ts`. Los ids se escriben sin tilde (`clinica_andes`). Los datos del caso son simulados: no es una herramienta clínica.
 
 ## Principios que no se negocian
 
@@ -38,9 +38,9 @@ El plan se construye en este repo, evolucionando `src/lib/rooms.ts`. Los ids se 
 ## Stack
 
 - Next.js (App Router, `src/`), TypeScript, Tailwind y shadcn/ui. Componentes nuevos con `npx shadcn@latest add <nombre>`.
-- Supabase para base de datos y auth. Cliente en `src/lib/supabase.ts`. Toda tabla lleva RLS.
+- Sin base de datos: las salas viven en la memoria del servidor (`src/lib/store/rooms.ts`). Ver `docs/DECISIONES.md`.
+- Zod para validar todo lo que entra (`src/lib/genome/schema.ts`, `src/lib/store/actions.ts`).
 - Deploy público en Render (`render.yaml`), desde un repo personal espejo.
-- Voz con ElevenLabs si la idea lo pide. La API key vive solo en el servidor.
 
 ## Regla de modelos
 
@@ -53,15 +53,19 @@ Toda llamada a un modelo pasa por `src/lib/llm.ts`. No llamar a un proveedor dir
 
 - `npm run dev`: servidor local en http://localhost:3000
 - `npm run build` y `npm run lint`: correr antes de cada deploy
-- `GET /api/health`: dice si el modelo y Supabase están configurados
+- `npm test`: pruebas del motor, los permisos y la API (Vitest, sin modelo)
+- `node scripts/e2e.mjs <url>`: recorrido completo por HTTP contra un servidor levantado
+- `GET /api/health`: dice si el modelo configurado responde
 
 ## Documentación técnica
 
 Los jueces revisan este repositorio con un agente de IA mientras el equipo presenta, y después hacen preguntas sobre la estructura de la solución. Por eso la documentación se mantiene al día durante todo el desarrollo, no al final.
 
+- `docs/RECORRIDO.md`: los archivos que hay que leer, en orden, para entender el sistema.
 - `docs/ARQUITECTURA.md`: componentes, flujo de un dato, agentes, modelos, integraciones y qué es real o simulado.
 - `docs/DECISIONES.md`: por qué se eligió cada cosa y qué se descartó.
 - `docs/PREGUNTAS.md`: preguntas probables del jurado con respuestas de 20 segundos.
+- `docs/PENDIENTES.md`: lo que sigue abierto o sin verificar.
 
 Reglas para cualquier cambio:
 

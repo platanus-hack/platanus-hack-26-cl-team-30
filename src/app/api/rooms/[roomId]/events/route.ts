@@ -1,4 +1,4 @@
-import { getRoom, isStakesRunning, projectRoom, resolveViewer, subscribe, touchPresence, type Credentials } from "@/lib/store/rooms";
+import { getRoom, isStakesRunning, openConnection, projectRoom, resolveViewer, subscribe, touchPresence, type Credentials } from "@/lib/store/rooms";
 
 /** Cada cuántos segundos se envía la sala aunque nada haya cambiado. Mantiene viva la conexión. */
 const KEEPALIVE_SECONDS = 15;
@@ -16,8 +16,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ room
   const search = new URL(request.url).searchParams;
   const credentials: Credentials = { orgId: search.get("orgId"), roleId: search.get("roleId"), token: search.get("token") };
 
+  // Tope de conexiones por sala y en total: sin esto, abrir conexiones es una forma barata de agotar el servidor.
+  const release = openConnection(roomId);
+  if (!release) {
+    return Response.json(
+      { error: "Demasiadas conexiones abiertas. Intenta de nuevo en unos segundos.", code: "TOO_MANY_CONNECTIONS" },
+      { status: 503, headers: { "Retry-After": "5" } },
+    );
+  }
+
   const encoder = new TextEncoder();
-  let cleanup = () => {};
+  let cleanup: () => void = release;
 
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
@@ -60,6 +69,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ room
       cleanup = () => {
         clearInterval(tick);
         unsubscribe();
+        release();
       };
       request.signal.addEventListener("abort", close);
     },
