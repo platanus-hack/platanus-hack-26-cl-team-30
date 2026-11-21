@@ -94,3 +94,8 @@ Actualizado el 21 de noviembre de 2026.
 - **Probar el botón wa.me contra el número real** (+1 208 485 0157): que el webhook de Kapso reciba «Hola, soy el Comité de la sala <código>», responda la confirmación y, al decidir, llegue el acta en texto y nota de voz (con `NEXO_VOICE_NOTES=1`).
 - **Plantilla para el acta:** si `KAPSO_TEMPLATE_NAME` está configurada, el acta se envía por esa plantilla con {{1}} = sala y {{2}} = resumen. La plantilla del caso fue pensada para el caso con botones; si el texto no calza, conviene aprobar una plantilla propia para el acta.
 
+## Agregado en la ronda 19 (componentes de 21st, segunda búsqueda)
+
+- **Particle Galaxy (21st 18257) no se integró.** Necesita three.js, que suma más de 600 KB minificado aunque se cargue diferido con `next/dynamic`, sobre el límite de 200 KB que se fijó para la página. Si Ramón la quiere para el héroe de la landing general, habría que medir el bundle con three.js o rehacerla en canvas 2D.
+- **Si cambia la pantalla grande o el celular, hay que volver a sacar las capturas de `public/casos/`**: salen de salas de demo jugadas con Playwright (pasos 1 a 3 de la pantalla grande y los tres celulares de cada rubro).
+

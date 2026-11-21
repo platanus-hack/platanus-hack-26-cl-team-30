@@ -56,6 +56,7 @@ export function DemoSeatView({ room, me, act, acta, session }: { room: Projected
             <p>
               Listo: {words.resource} es para {winnerSeat ? withArticle(winnerSeat.label) : (winner?.patientLabel ?? "el caso elegido")}.
             </p>
+            {room.allocation?.committeeDecision?.decision === "VETO" && <p className="st-demo-line">El Comité rechazó la propuesta de la regla.</p>}
           </section>
         ) : myTurn && turn.action === "decide" ? (
           <section className="st-card st-demo-state">

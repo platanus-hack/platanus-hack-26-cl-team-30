@@ -258,7 +258,9 @@ export function storyMissing(room: ProjectedRoomState): StoryMissing {
     if (allocation.status === "SEALED") {
       const winner = allocation.ranking.find((entry) => entry.caseId === allocation.winnerCaseId);
       const name = orgOf(winner?.orgId)?.orgName;
-      const shown = name && isDemoRoom(room) ? shortLabel(name) : name;
+      // En la demo, el mismo nombre del asiento («Litoral Sur»), no un recorte del nombre de la empresa.
+      const seatName = winner ? stageSeats(room).find((seat) => seat.id === `${winner.orgId}/${scarcity.candidates.find((c) => c.caseId === winner.caseId)?.proposerRoleId}`)?.short : undefined;
+      const shown = isDemoRoom(room) ? (seatName ?? (name ? shortLabel(name) : name)) : name;
       return { lead: "Listo", text: `${shown ?? winner?.patientLabel ?? "El caso"} recibe el recurso`, who: "Acta lista", whoConnected: null };
     }
     if (allocation.status === "PROPOSED") {

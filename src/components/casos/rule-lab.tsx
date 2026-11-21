@@ -9,6 +9,7 @@ import { useMemo, useState } from "react";
 import { RotateCcw, Star } from "lucide-react";
 import { resolveAllocation } from "@/lib/engine/deterministic";
 import type { SharedScarcity } from "@/lib/genome/schema";
+import { Ticker } from "./ticker";
 
 const d2 = new Intl.NumberFormat("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const KEYS = ["severity", "timeCriticality", "delayRisk"] as const;
@@ -50,7 +51,7 @@ export function RuleLab({ scarcity, labels, orgLabels }: { scarcity: SharedScarc
                   {winner && <Star className="size-5 fill-current text-calm" aria-label="Va primero" />}
                 </span>
                 <span className={`tabular font-extrabold tracking-tight ${winner ? "text-calm" : ""}`} style={{ fontSize: "clamp(2.4rem, 2rem + 1.6vw, 3.4rem)", lineHeight: 0.9, letterSpacing: "-0.05em" }}>
-                  {d2.format(entry.score)}
+                  <Ticker value={entry.score} decimals={2} durationMs={700} />
                 </span>
               </div>
               <span className="mt-4 block h-2 overflow-hidden rounded-full bg-muted">

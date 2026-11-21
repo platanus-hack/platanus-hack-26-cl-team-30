@@ -11,6 +11,13 @@ Formato de cada entrada:
 
 ---
 
+## La guía es un segundo agente de ElevenLabs que solo ve lo público
+
+- **Decisión:** «Sculptor · Guía» es un agente de ElevenLabs separado del asistente del Comité (`src/integrations/guide-agent.ts`). Explica qué es Sculptor y guía la demo en una o dos frases, con trato de usted. Su única herramienta, `estado_sala`, devuelve una frase armada con la vista general de la sala (la misma de la pantalla grande), así que nunca lleva un dato reservado. En la web se abre por voz o por texto con una URL firmada (`POST /api/guide/voice`) y el SDK `@elevenlabs/client`, que ya usaba el Comité.
+- **Alternativa descartada:** reutilizar el agente del Comité, o un chat propio con `src/lib/llm.ts`.
+- **Por qué:** el agente del Comité registra decisiones; la guía no debe poder hacer eso, así que no comparte herramientas. Voz y texto en el mismo agente, sin otro canal, y sin dependencias nuevas.
+- **Costo:** como el asistente del Comité, el modelo de conversación corre dentro de ElevenLabs y es una excepción a «todo pasa por `src/lib/llm.ts`». No decide nada ni lee datos reservados.
+
 ## Un solo tema para toda la app, en data-theme de <html>
 
 - **Decisión:** el tema claro u oscuro es uno para toda la app: `data-theme` en `<html>`, fijado por un script en el `<head>` antes de pintar (lo elegido en `localStorage`, clave `sculptor:theme`, o la preferencia del sistema). Cada pantalla tiene el mismo botón (`ThemeToggle`) y lo lee con `useTheme()`. El deck estático repite el script.

@@ -147,7 +147,7 @@ Vienen del mentor («bombardean con texto todo, eso no aporta») y valen para to
 
 ## Páginas de caso (/casos/*)
 
-Una idea por sección y mucho aire entre ellas. El orden es: héroe con la pantalla grande real enderezándose al bajar; cómo funciona (rayos); la regla con sus pesos (la única sección con puntajes); lo que ve cada persona (una sola tabla oscura, con candados); por qué firma una persona (dos números grandes); otros rubros (enlaces simples, sin tarjetas); y el llamado final a todo el ancho.
+Una idea por sección y mucho aire entre ellas. El orden es: héroe con la pantalla grande real enderezándose al bajar; los tres pasos, con la captura real de la pantalla grande en cada uno (fija a un lado mientras se baja); los tres celulares reales; la regla con sus pesos (la única sección con puntajes, que cuentan al aparecer); lo que ve cada persona (una tabla oscura, con lo reservado cifrado); el acta como línea de tiempo; por qué firma una persona (dos números que cuentan); otros rubros (enlaces simples); y el llamado final a todo el ancho. Todas las capturas son de salas de demo jugadas y están en `public/casos/` (`<rubro>-paso-1..3.jpg`, `<rubro>-cel-1..3.jpg`, `<rubro>-pantalla.jpg`).
 
 - Se alternan secciones angostas (máximo unos 64 rem) y franjas a todo el ancho.
 - Solo Manrope, con una escala propia (`cs-h1`, `cs-h2`, `cs-lede`, `cs-body` en `src/components/casos/casos.css`) y nada menor a 16 px.
@@ -170,7 +170,8 @@ Reglas de texto (feedback del mentor: «bombardean con texto todo»): título de
 | Qué | Dónde |
 |---|---|
 | Portada (landing) | `src/app/page.tsx` y `src/components/landing/` |
-| Casos de uso (salud, construcción, logística) | `src/app/casos/<rubro>/page.tsx` y `src/components/casos/` (texto en `content.ts`, cifras y nombres del motor en `data.ts`; héroe cinético, rayos, marco 3D y bento adaptados de 21st.dev en `kinetic-hero.tsx`, `how-beam.tsx`, `stage-scroll.tsx`, `seen-bento.tsx` y `casos.css`; capturas reales de la pantalla grande en `public/casos/`) |
+| Casos de uso (salud, construcción, logística) | `src/app/casos/<rubro>/page.tsx` y `src/components/casos/` (texto en `content.ts`, cifras, nombres y acta del motor en `data.ts`; piezas adaptadas de 21st.dev sin dependencias: `kinetic-hero`, `stage-scroll`, `steps-scroll`, `phone-trio`, `ticker`, `encrypted-text`, `acta-feed`, `seen-bento`; capturas reales en `public/casos/`) |
+| Piezas de marca para la landing general | `src/components/brand/` (`dither-background`, `logo-particles`, `multiplayer-cursors`), a la vista en `/marca` |
 | Pantalla grande | `src/app/stage/[roomId]/stage-client.tsx` |
 | Deck del pitch (6 láminas, flechas o espacio para avanzar; diseño v2 de Nahum con cifras del repo) | `public/pitch/index.html`, se abre en `/pitch/index.html` |
 | Teléfono de cada rol | `src/app/room/[roomId]/room-client.tsx` y `src/components/seat/` |

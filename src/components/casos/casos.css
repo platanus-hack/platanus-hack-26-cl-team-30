@@ -75,3 +75,14 @@
   .cs-matrix thead th { font-size: 1rem; }
   .cs-matrix .cs-lock-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
+
+/* ── Ronda 19: pasos con imagen fija, celulares y texto cifrado ─────────── */
+.cs-fade { opacity: 0; transition: opacity .6s ease; }
+.cs-fade[data-on="true"] { opacity: 1; }
+.cs-step { transition: opacity .4s ease; }
+@media (min-width: 768px) and (prefers-reduced-motion: no-preference) { .cs-step[data-on="false"] { opacity: .55; } }
+.cs-phone { position: relative; width: min(100%, 300px); padding: 10px; border-radius: 44px; background: #151515; border: 1px solid rgb(255 253 248 / 14%);
+  box-shadow: 0 30px 60px -28px rgb(0 0 0 / 55%), inset 0 0 0 2px #2c2c2a; }
+.cs-phone img { border-radius: 34px; display: block; }
+.cs-phone-notch { position: absolute; top: 18px; left: 50%; width: 30%; height: 22px; translate: -50% 0; border-radius: 999px; background: #0a0a0a; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { .cs-fade, .cs-step { transition: none; } }

@@ -2,9 +2,9 @@
 // es (su texto está en content.ts) y las cifras del motor (CaseView, data.ts).
 //
 // Una idea por sección, con ritmo: el héroe a todo el ancho con la pantalla grande
-// real como protagonista; después se alternan secciones angostas (cómo funciona,
-// por qué firma una persona, otros rubros) y franjas a todo el ancho (la regla, lo
-// que ve cada uno, el llamado final). Solo Manrope, titulares grandes y nada de
+// real como protagonista; después, los tres pasos con sus capturas, los celulares,
+// la regla, lo que ve cada uno, el acta, por qué firma una persona, otros rubros y
+// el llamado final. Todas las capturas son reales (public/casos/). Solo Manrope, titulares grandes y nada de
 // texto menor a 16 px. Las piezas animadas vienen de 21st.dev (docs/diseno/21st/),
 // adaptadas con CSS y GSAP.
 
@@ -16,11 +16,14 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import "./casos.css";
 import { CASE_ORDER, CASES, otherUses, type CaseSlug } from "./content";
 import type { CaseView } from "./data";
-import { HowBeam } from "./how-beam";
+import { ActaFeed } from "./acta-feed";
 import { KineticHero } from "./kinetic-hero";
+import { PhoneTrio } from "./phone-trio";
 import { RuleLab } from "./rule-lab";
 import { SeenBento } from "./seen-bento";
 import { StageScroll } from "./stage-scroll";
+import { StepsScroll } from "./steps-scroll";
+import { Ticker } from "./ticker";
 
 function DemoButton({ room, large = false }: { room: string; large?: boolean }) {
   return (
@@ -53,7 +56,6 @@ function CaseLinks({ current }: { current: CaseSlug }) {
 
 export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
   const study = CASES[slug];
-  const pct = (value: number) => `${Math.round(value * 100)} %`;
   return (
     <>
       <header className="border-b border-border">
@@ -78,30 +80,46 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
         </KineticHero>
         <StageScroll src={`/casos/${slug}-pantalla.jpg`} alt={`Pantalla grande de la demo de ${study.nav.toLowerCase()}: el Comité decide`} />
 
-        {/* 2. Angosta: cómo funciona, en una imagen y tres líneas. */}
+        {/* 2. Cómo se decide: tres pasos, cada uno con su captura real de la pantalla grande. */}
         <section className="cs-section" aria-labelledby="pasos-titulo">
-          <div className="wrap max-w-5xl">
-            <h2 id="pasos-titulo" className="cs-h2 mx-auto max-w-[16ch] text-center">
-              Todos deciden en la misma sala.
+          <div className="wrap">
+            <h2 id="pasos-titulo" className="cs-h2 max-w-[14ch]">
+              Así se decide, en tres pasos.
             </h2>
-            <div className="mt-16">
-              <HowBeam orgs={[view.viewers[0]?.label ?? "", view.viewers[1]?.label ?? ""]} arbiter={view.viewers[2]?.label ?? study.arbiterLabel} />
+            <div className="mt-14">
+              <StepsScroll
+                steps={study.steps.map((step, index) => ({
+                  title: step.title,
+                  detail: step.detail,
+                  src: `/casos/${slug}-paso-${index + 1}.jpg`,
+                  alt: `Pantalla grande de la demo de ${study.nav.toLowerCase()}, paso ${index + 1}: ${step.title.toLowerCase()}`,
+                }))}
+              />
             </div>
-            <ol className="mt-16 grid gap-10 md:grid-cols-3">
-              {study.steps.map((step, index) => (
-                <li key={step.title}>
-                  <span className="cs-step-num" aria-hidden>
-                    {index + 1}
-                  </span>
-                  <p className="mt-3 text-xl font-bold tracking-tight">{step.title}</p>
-                  <p className="cs-body mt-2 text-muted-foreground">{step.detail}</p>
-                </li>
-              ))}
-            </ol>
           </div>
         </section>
 
-        {/* 3. A todo el ancho: la regla, la única sección con puntajes. */}
+        {/* 3. A todo el ancho: cada persona, en su celular (capturas reales). */}
+        <section className="cs-section bg-muted/60" aria-labelledby="cel-titulo">
+          <div className="wrap">
+            <h2 id="cel-titulo" className="cs-h2 max-w-[16ch]">
+              Cada persona, en su celular.
+            </h2>
+            <p className="cs-lede mt-6 max-w-[34rem] text-muted-foreground">Un botón cuando le toca. Nada más.</p>
+            <div className="mt-16">
+              <PhoneTrio
+                phones={view.viewers.map((viewer, index) => ({
+                  label: viewer.label,
+                  src: `/casos/${slug}-cel-${index + 1}.jpg`,
+                  alt: `Celular de ${viewer.label} en la demo`,
+                  tone: ["#6faf9b", "#8fd3bd", "#b9aaf0"][index] ?? "#6faf9b",
+                }))}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* 4. Angosta: la regla, la única sección con puntajes (cuentan al aparecer). */}
         <section className="cs-section bg-brand-soft/60" aria-labelledby="regla-titulo">
           <div className="wrap">
             <h2 id="regla-titulo" className="cs-h2 max-w-[14ch]">
@@ -114,10 +132,27 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
           </div>
         </section>
 
-        {/* 4. A todo el ancho, en oscuro: qué recibe cada persona. */}
+        {/* 5. A todo el ancho, en oscuro: qué recibe cada persona; lo reservado se ve cifrado. */}
         <SeenBento viewers={view.viewers} />
 
-        {/* 5. Angosta: por qué firma una persona, dicho con dos números. */}
+        {/* 6. Angosta: el acta de una ronda, como línea de tiempo, y cuánto dura como máximo. */}
+        <section className="cs-section" aria-labelledby="acta-titulo">
+          <div className="wrap grid max-w-6xl gap-14 lg:grid-cols-[1fr_1.1fr]">
+            <div>
+              <h2 id="acta-titulo" className="cs-h2 max-w-[12ch]">
+                Todo queda en el acta.
+              </h2>
+              <p className="mt-10">
+                <Ticker value={60} suffix=" s" className="cs-big text-brand" />
+                <span className="cs-body mt-3 block">como máximo por ronda, una vez que entran los tres.</span>
+              </p>
+              <p className="cs-body mt-6 max-w-[28rem] text-muted-foreground">Si alguien no aprieta, el sistema juega su turno a los 20 s y queda marcado como automático.</p>
+            </div>
+            <ActaFeed entries={view.acta} />
+          </div>
+        </section>
+
+        {/* 7. Angosta: por qué firma una persona, dicho con dos números que cuentan. */}
         <section className="cs-section" aria-labelledby="bot-titulo">
           <div className="wrap max-w-5xl">
             <h2 id="bot-titulo" className="cs-h2 max-w-[16ch]">
@@ -125,11 +160,11 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
             </h2>
             <div className="mt-14 grid gap-12 sm:grid-cols-2">
               <p>
-                <span className="cs-big text-bleed">{pct(view.reliability.autonomous)}</span>
+                <Ticker value={Math.round(view.reliability.autonomous * 100)} suffix=" %" className="cs-big text-bleed" />
                 <span className="cs-body mt-3 block">de las veces termina bien una cadena de agentes solos.</span>
               </p>
               <p>
-                <span className="cs-big text-calm">{pct(view.reliability.hybrid)}</span>
+                <Ticker value={Math.round(view.reliability.hybrid * 100)} suffix=" %" className="cs-big text-calm" />
                 <span className="cs-body mt-3 block">si una persona revisa y firma.</span>
               </p>
             </div>
@@ -137,7 +172,7 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
           </div>
         </section>
 
-        {/* 6. Angosta: el mismo esqueleto en otros rubros, como enlaces simples. */}
+        {/* 8. Angosta: el mismo esqueleto en otros rubros, como enlaces simples. */}
         <section className="cs-section border-t border-border" aria-labelledby="mas-titulo">
           <div className="wrap max-w-5xl">
             <h2 id="mas-titulo" className="cs-h2 max-w-[16ch]">
@@ -166,7 +201,7 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
           </div>
         </section>
 
-        {/* 7. A todo el ancho: el llamado final. */}
+        {/* 9. A todo el ancho: el llamado final. */}
         <section className="cs-section cs-cta text-center" aria-labelledby="probar-titulo">
           <div className="wrap flex flex-col items-center">
             <h2 id="probar-titulo" className="cs-h2 max-w-[14ch]">

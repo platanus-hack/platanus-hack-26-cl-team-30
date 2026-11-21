@@ -2,9 +2,11 @@
 // Filas: los datos de cada organización. Columnas: las tres personas de la demo.
 // Cada celda es lo que el servidor le manda a esa persona: el valor, o un candado.
 // Adaptado del bento oscuro de 21st.dev (9594), con una sola pieza y sin framer-motion.
+// Lo reservado se ve cifrado y nunca se descifra (Encrypted Text, 21st 18575).
 
 import { Check, Lock } from "lucide-react";
 import type { CaseViewer } from "./data";
+import { EncryptedText } from "./encrypted-text";
 
 export function SeenBento({ viewers }: { viewers: CaseViewer[] }) {
   const rows = viewers[0]?.rows.map((row) => row.label) ?? [];
@@ -46,7 +48,7 @@ export function SeenBento({ viewers }: { viewers: CaseViewer[] }) {
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-2" style={{ color: "var(--cs-lock)" }}>
-                            <Lock className="size-5" aria-hidden /> <span className="cs-lock-word">Reservado</span>
+                            <Lock className="size-5 shrink-0" aria-hidden /> <EncryptedText length={7} className="cs-lock-word" />
                           </span>
                         )}
                       </td>
