@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { CircleDashed, LoaderCircle, UserRound } from "lucide-react";
 import type { ProjectedRoomState } from "@/lib/genome/schema";
 import { Why } from "./parts";
+import { demoHumanSeat } from "./screen";
 import { SeatMain } from "./seat-shell";
 
 type Props = {
@@ -38,7 +39,8 @@ export function SeatPicker({ room, onJoin, children }: Props) {
             <div key={org.orgId}>
               {room.orgs.length > 1 && <p className="st-org-name">{org.orgName}</p>}
               {org.roles
-                .filter((role) => !role.isQrOptional)
+                // En la demo solo se eligen los asientos de quien presenta; los demás son bots.
+                .filter((role) => (room.demo ? demoHumanSeat(room, org.orgId, role.id) : !role.isQrOptional))
                 .map((role) => {
                   const id = `${org.orgId}/${role.id}`;
                   return (

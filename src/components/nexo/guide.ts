@@ -134,6 +134,22 @@ export function seatTurn(room: ProjectedRoomState): Turn | null {
     };
   }
 
+  // Sala de demo: quien presenta el caso no ve el límite ni la firma; eso lo
+  // hacen los bots administrativos. Solo presenta y espera al Comité.
+  if (cross && room.demo && candidate && candidate.proposerRoleId === viewer.roleId) {
+    if (!candidate.submitted) {
+      return {
+        kind: "action",
+        title: `Presenta a ${candidate.patientLabel}`,
+        body: "Tu costo no sale de aquí.",
+        actionLabel: `Presentar a ${candidate.patientLabel}`,
+        action: { type: "SUBMIT_CANDIDATE", caseId: candidate.caseId },
+      };
+    }
+    if (allocation.status === "PROPOSED") return { kind: "wait", title: "El Comité está decidiendo", body: "Lo verás aquí al instante." };
+    return { kind: "wait", title: "Falta el otro caso", body: "Después decide el Comité." };
+  }
+
   // 1. Acordar el límite.
   if (org.conflict.hasConflict) {
     const agreed = Math.min(rule.proposerLimit, rule.approverLimit);

@@ -16,6 +16,8 @@ const CreateSchema = z.discriminatedUnion("mode", [
   z.object({
     mode: z.literal("cross_org"),
     scenario: z.enum(CROSS_ORG_SCENARIO_IDS).optional(),
+    /** Sala de demo: 3 asientos humanos y bots en los roles administrativos. */
+    demo: z.boolean().optional(),
   }),
 ]);
 
@@ -24,7 +26,9 @@ const CreateSchema = z.discriminatedUnion("mode", [
 //   { mode: "single_org", description }                -> sala NUEVA ya mutada desde una frase (modelo,
 //                                                          máx. 15 s; si no, la semilla más parecida)
 //   { mode: "cross_org", scenario? }                   -> dos organizaciones y un recurso escaso:
-//                                                          "hospitales" (por defecto), "construccion", "logistica"
+//                                                          "hospitales" (por defecto), "construccion", "logistica".
+//                                                          Con demo: true, sala de demo (3 personas, bots en los
+//                                                          roles administrativos)
 // Responde { roomId, hostToken, committeeKey, mode, scenario?, source?, latencyMs?, orgName? }.
 // hostToken habilita los controles de la pantalla grande (encabezado x-host-token);
 // committeeKey va dentro del QR del Comité. Se entregan solo aquí: guardarlos.
@@ -57,12 +61,13 @@ export async function POST(request: Request) {
       return Response.json({ ...room, ...getHostCredentials(room.roomId), mode: "single_org" });
     }
     const room =
-      input.mode === "cross_org" ? createRoom({ mode: "cross_org", scenario: input.scenario }) : createRoom({ mode: "single_org", seed: input.seed });
+      input.mode === "cross_org" ? createRoom({ mode: "cross_org", scenario: input.scenario, demo: input.demo }) : createRoom({ mode: "single_org", seed: input.seed });
     return Response.json({
       roomId: room.roomId,
       ...getHostCredentials(room.roomId),
       mode: room.mode,
       ...(room.scenarioId ? { scenario: room.scenarioId } : {}),
+      ...(room.demo ? { demo: true } : {}),
     });
   } catch (error) {
     if (error instanceof RoomLimitError) {

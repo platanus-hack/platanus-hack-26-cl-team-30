@@ -49,18 +49,20 @@ import type { AuditEvent, ProjectedRoomState } from "@/lib/genome/schema";
 import { CROSS_ORG_SCENARIOS, CROSS_ORG_SCENARIO_IDS } from "@/lib/genome/scenarios";
 import { SUGGESTIONS, answer } from "./ask";
 import { commandStyles } from "./command-styles";
-import { Dialog, Dock, Panel, State, type ViewId, type ViewInfo } from "./command-parts";
+import { Dialog, Dock, NewRoundButton, Panel, State, type ViewId, type ViewInfo } from "./command-parts";
 import { Galaxy } from "./galaxy";
 import { JoinView } from "./join-view";
-import { shortLabel, stageSeats } from "./seats";
+import { isDemoRoom, shortLabel, stageSeats } from "./seats";
 import { storyProgress } from "./story";
 import { StoryView } from "./story-view";
 
 const VIEWS: ViewInfo[] = [
   { id: "mando", label: "Centro de mando", short: "Mando", icon: LayoutDashboard },
   { id: "ranking", label: "Ranking", short: "Ranking", icon: BarChart3 },
-  { id: "organizaciones", label: "Organizaciones", short: "Orgs.", icon: Users },
+  { id: "organizaciones", label: "Organizaciones", short: "Equipos", icon: Users },
   { id: "acta", label: "Acta", short: "Acta", icon: FileText },
+  // No es una vista: abre «Pregúntale al caso». Vive en el dock para despejar la barra de arriba.
+  { id: "preguntar", label: "Pregúntale al caso", short: "Preguntar", icon: Search },
 ];
 
 const SCENARIO_SHORT: Record<string, string> = { hospitales: "Hospitales", construccion: "Construcción", logistica: "Logística" };
@@ -117,12 +119,23 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
 
   const cross = room.mode === "cross_org" && !!room.scarcity && !!room.allocation;
   // La galaxia sale de los asientos reales de la sala: un nodo por rol conectado.
-  const seats = stageSeats(room);
+  const demo = isDemoRoom(room);
+  const allSeats = stageSeats(room);
+  // En la demo la galaxia arma una esfera de personas; los asientos automáticos no son nodos.
+  const seats = demo ? allSeats.filter((seat) => seat.human) : allSeats;
   const progress = storyProgress(room);
   const joining = useLinger(progress.index === 0, JOIN_LINGER_MS);
   const sealed = progress.done;
   const canNotify = !!host && cross && !!integrations && (integrations.whatsapp || (integrations.voice && integrations.canCall));
   const current = VIEWS.find((entry) => entry.id === view)!;
+  const select = (id: ViewId) => (id === "preguntar" ? setModal("ask") : setView(id));
+  const newRound = host
+    ? async () => {
+        const result = await hostRequest(room.roomId, host, "", "DELETE");
+        if (!result.ok) window.alert(result.error ?? "No se pudo reiniciar la sala.");
+        setView("mando");
+      }
+    : undefined;
 
   const openLog = () => {
     setView("acta");
@@ -131,7 +144,7 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
   };
 
   return (
-    <div className="gd-app" data-theme={theme}>
+    <div className="gd-app" data-theme={theme} data-demo={demo}>
       <style>{commandStyles}</style>
       <div className="gd-surround">
         <header className="gd-top">
@@ -141,14 +154,9 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
             </span>
             <div>
               <strong>NEXO</strong>
-              <small>Pantalla grande</small>
             </div>
           </div>
-          <button type="button" className="gd-ask" aria-label="Pregúntale al caso" onClick={() => setModal("ask")}>
-            <span className="gd-orb" aria-hidden="true" />
-            <span className="gd-prompt">Pregúntale al caso</span>
-            <Search aria-hidden="true" className="gd-ask-search" />
-          </button>
+          <span aria-hidden="true" />
           <div className="gd-top-actions">
             <span className="gd-icon-button" role="status" title={status === "connected" ? "En vivo" : status === "reconnecting" ? "Reconectando" : "Conectando"} aria-label={status === "connected" ? "En vivo" : status === "reconnecting" ? "Reconectando" : "Conectando"} style={{ color: status === "connected" ? "var(--gd-calm)" : "var(--gd-sign)" }}>
               {status === "connected" ? <Wifi aria-hidden="true" /> : <WifiOff aria-hidden="true" />}
@@ -163,7 +171,7 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
         </header>
 
         <div className="gd-stage-wrap">
-          <Dock views={VIEWS} active={view} side select={setView} />
+          <Dock views={VIEWS} active={view} side select={select} />
           <main className="gd-stage" data-join={view === "mando" && joining}>
             {view === "mando" && <Galaxy seats={seats} sealed={sealed} variant={joining ? "hero" : "backdrop"} theme={theme} />}
             <div className="gd-stage-scroll">
@@ -172,7 +180,8 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
                   <h1>{view === "mando" && joining ? "Escanea y entra" : current.label}</h1>
                 </div>
                 <div className="gd-view-actions">
-                  {cross && (
+                  {/* En la demo el escenario no se cambia desde la vista principal: está en los controles del anfitrión. */}
+                  {cross && !demo && (
                     <nav className="gd-period" aria-label="Escenario">
                       {CROSS_ORG_SCENARIO_IDS.map((id) => (
                         <Link key={id} href={`/stage/${CROSS_ORG_SCENARIOS[id].fixedRoomId}`} aria-current={id === (room.scenarioId ?? "hospitales") ? "page" : undefined}>
@@ -186,21 +195,21 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
 
               <div className="gd-content" data-view={view}>
                 {view === "mando" &&
-                  (joining ? <JoinView room={room} seats={seats} theme={theme} baseUrl={baseUrl} /> : <StoryView room={room} onNotify={canNotify ? () => setModal("notify") : undefined} />)}
+                  (joining ? <JoinView room={room} seats={allSeats} theme={theme} baseUrl={baseUrl} /> : <StoryView room={room} onNotify={canNotify ? () => setModal("notify") : undefined} onNewRound={newRound} />)}
                 {view === "ranking" && <RankingView room={room} />}
                 {view === "organizaciones" && <OrgsView room={room} baseUrl={baseUrl} committeeKey={host?.committeeKey ?? null} onOpenOwnRoom={onOpenOwnRoom} />}
                 {view === "acta" && (
-                  <ActaView room={room} acta={acta} host={host} onNotify={canNotify ? () => setModal("notify") : undefined} logOpen={logOpen} onLogToggle={setLogOpen} logRef={logRef} />
+                  <ActaView room={room} acta={acta} host={host} onNotify={canNotify ? () => setModal("notify") : undefined} logOpen={logOpen} onLogToggle={setLogOpen} logRef={logRef} onNewRound={progress.done ? newRound : undefined} />
                 )}
               </div>
             </div>
           </main>
-          <Dock views={VIEWS} active={view} select={setView} />
+          <Dock views={VIEWS} active={view} select={select} />
         </div>
         <footer className="gd-footer">
-          <span className="nx-footer-note">Demostración simulada. No es una herramienta clínica.</span>
+          <span className="nx-footer-note">{demo ? "Demostración simulada" : "Demostración simulada. No es una herramienta clínica."}</span>
           <Link href={`/room/${encodeURIComponent(room.roomId)}`}>
-            <Smartphone aria-hidden="true" width={12} height={12} /> Entrar con un rol
+            <Smartphone aria-hidden="true" width={12} height={12} /> {demo ? "Entrar" : "Entrar con un rol"}
           </Link>
         </footer>
       </div>
@@ -212,7 +221,8 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
         </Dialog>
       )}
       {/* Al unirse, las entradas ya se ven en la galaxia y los avisos taparían el código. */}
-      {!(view === "mando" && joining) && <EventToasts room={room} />}
+      {/* Sin avisos emergentes al unirse (taparían el código) ni en la demo (las tarjetas ya cambian a la vista). */}
+      {!(view === "mando" && joining) && !demo && <EventToasts room={room} />}
     </div>
   );
 }
@@ -489,6 +499,7 @@ function ActaView({
   logOpen,
   onLogToggle,
   logRef,
+  onNewRound,
 }: {
   room: ProjectedRoomState;
   acta: { md: string; json: string };
@@ -497,11 +508,13 @@ function ActaView({
   logOpen: boolean;
   onLogToggle: (open: boolean) => void;
   logRef: React.RefObject<HTMLDetailsElement | null>;
+  onNewRound?: () => Promise<void>;
 }) {
   const telemetry = room.telemetry;
   const local = telemetry.provider === "local";
   return (
     <div className="gd-analytics">
+      {onNewRound && <NewRoundButton onNewRound={onNewRound} />}
       <div className="gd-analytics-grid">
         <Panel title="Decisiones con su razón">
           {room.decisions.length === 0 ? (
@@ -577,8 +590,18 @@ function HostPanel({ room, credentials, onNotify }: { room: ProjectedRoomState; 
     setBusy(null);
     setMessage(result.ok ? ok : (result.error ?? "No se pudo."));
   }
+  const cross = room.mode === "cross_org" && !!room.scarcity;
   return (
     <Panel title="Controles del presentador" subtitle={room.autopilot?.lastStep ? `Ensayo: ${room.autopilot.lastStep}` : undefined}>
+      {cross && (
+        <nav className="gd-period nx-host-scenarios" aria-label="Escenario">
+          {CROSS_ORG_SCENARIO_IDS.map((id) => (
+            <Link key={id} href={`/stage/${CROSS_ORG_SCENARIOS[id].fixedRoomId}`} aria-current={id === (room.scenarioId ?? "hospitales") ? "page" : undefined}>
+              {SCENARIO_SHORT[id] ?? CROSS_ORG_SCENARIOS[id].title}
+            </Link>
+          ))}
+        </nav>
+      )}
       <div className="gd-balance-actions" style={{ margin: 0 }}>
         {onNotify && (
           <button type="button" className="gd-primary" onClick={onNotify}>

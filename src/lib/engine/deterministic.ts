@@ -499,6 +499,21 @@ export function buildAllocationView(state: Pick<RoomState, "scarcity" | "decisio
 // --- Contador de lo que está en juego ---------------------------------------------
 
 /**
+ * Desde cuándo corre el reloj de espera: desde que entró la primera persona
+ * (clockStartedAt). null si nadie ha entrado. Un estado sin ese campo (armado a
+ * mano o anterior al cambio) usa caseOpenedAt.
+ */
+export function clockStart(state: Pick<RoomState, "clockStartedAt" | "caseOpenedAt">): number | null {
+  return state.clockStartedAt === undefined ? state.caseOpenedAt : state.clockStartedAt;
+}
+
+/** Tiempo desde que empezó el reloj hasta nowTs. 0 si no ha empezado. */
+function waitedMs(state: RoomState, nowTs: number): number {
+  const start = clockStart(state);
+  return start === null ? 0 : Math.max(0, nowTs - start);
+}
+
+/**
  * Contador compartido. nowTs es el reloj del servidor.
  * BLEEDING mientras no hay decisión sellada; CONTAINED desde decisionSealedAt
  * (firma de la compuerta en single_org, sello de la asignación en cross_org).
@@ -506,7 +521,8 @@ export function buildAllocationView(state: Pick<RoomState, "scarcity" | "decisio
 export function computeSharedStakesCounter(state: RoomState, nowTs: number): StakesView {
   const sealed = state.decisionSealedAt !== null;
   const end = state.decisionSealedAt ?? nowTs;
-  const elapsedMs = Math.max(0, end - state.caseOpenedAt);
+  const start = clockStart(state);
+  const elapsedMs = start === null ? 0 : Math.max(0, end - start);
   const timeToDecisionMs = sealed ? elapsedMs : null;
 
   if (state.scarcity) {
@@ -615,7 +631,14 @@ function projectCandidate(state: RoomState, candidate: OrgCandidate, viewer: Vie
   };
 }
 
+/** true si el asiento lo tiene un bot del piloto automático. */
+export function isBotSeat(state: Pick<RoomState, "botSeats">, actor: ActorRef): boolean {
+  return (state.botSeats ?? []).some((seat) => seat.orgId === actor.orgId && seat.roleId === actor.roleId);
+}
+
+/** Un asiento bot cuenta como conectado toda la ronda, aunque el piloto ya haya terminado sus pasos. */
 function isConnected(state: RoomState, actor: ActorRef, nowTs: number): boolean {
+  if (isBotSeat(state, actor)) return true;
   return state.connectedPlayers.some(
     (player) => player.orgId === actor.orgId && player.roleId === actor.roleId && nowTs - player.heartbeatMs < PRESENCE_TTL_MS,
   );
@@ -637,7 +660,10 @@ export function projectStateForOrgAndRole(state: RoomState, viewer: Viewer, nowT
     orgStyle: genome.orgStyle,
     authorityRule: genome.authorityRule,
     liveCase: genome.liveCase,
-    roles: genome.roles.map((role) => ({ ...role, connected: isConnected(state, { orgId: genome.orgId, roleId: role.id }, nowTs) })),
+    roles: genome.roles.map((role) => {
+      const seat = { orgId: genome.orgId, roleId: role.id };
+      return { ...role, connected: isConnected(state, seat, nowTs), bot: isBotSeat(state, seat) };
+    }),
     fields: genome.fields.map((field) => projectField(state, field, safeViewer)),
     conflict: detectRuleConflict(genome.authorityRule),
     gate: evaluateGate(genome, genome.liveCase.proposedValue, gateDecisionOf(state, genome.orgId)),
@@ -649,6 +675,7 @@ export function projectStateForOrgAndRole(state: RoomState, viewer: Viewer, nowT
     version: state.version,
     mode: state.mode,
     ...(state.scenarioId !== undefined ? { scenarioId: state.scenarioId } : {}),
+    demo: state.demo === true,
     viewer: safeViewer,
     serverNowTs: nowTs,
     orgs,
@@ -657,7 +684,7 @@ export function projectStateForOrgAndRole(state: RoomState, viewer: Viewer, nowT
           resource: state.scarcity.resource,
           rule: state.scarcity.rule,
           candidates: state.scarcity.candidates.map((candidate) => projectCandidate(state, candidate, safeViewer)),
-          arbiter: { ...state.scarcity.arbiter, connected: isConnected(state, state.scarcity.arbiter, nowTs) },
+          arbiter: { ...state.scarcity.arbiter, connected: isConnected(state, state.scarcity.arbiter, nowTs), bot: isBotSeat(state, state.scarcity.arbiter) },
           deadlineLabel: state.scarcity.deadlineLabel,
           stakesLabel: state.scarcity.stakesLabel,
         }
@@ -779,7 +806,10 @@ export function openRoom(state: RoomState, nowTs: number): RoomState {
   return { ...opened, version: 0 };
 }
 
-/** Marca un rol como presente. El Comité (rol por QR o árbitro) queda como QR_JOINED. */
+function withoutSeat(seats: ActorRef[] | undefined, actor: ActorRef): ActorRef[] {
+  return (seats ?? []).filter((seat) => !(seat.orgId === actor.orgId && seat.roleId === actor.roleId));
+}
+
 /**
  * Marca un rol como presente. El Comité (rol por QR o árbitro) queda como
  * QR_JOINED. extra se agrega al detalle del evento: el ensayo automático marca
@@ -789,14 +819,27 @@ export function markRoleJoined(state: RoomState, actor: ActorRef, nowTs: number,
   if (!isKnownActor(state, actor)) return fail(404, "ROLE_NOT_FOUND", `El rol ${actor.roleId} no existe en ${actor.orgId}`);
   const viaQr = isArbiter(state, actor) || findRole(state, actor)?.role.isQrOptional === true;
   const players = state.connectedPlayers.filter((player) => !(player.orgId === actor.orgId && player.roleId === actor.roleId));
-  const next = { ...state, connectedPlayers: [...players, { orgId: actor.orgId, roleId: actor.roleId, heartbeatMs: nowTs }] };
+  const bot = extra.bot === true;
+  // Un bot queda marcado en botSeats; una persona que entra a ese asiento lo desmarca.
+  // El reloj de espera arranca con la primera persona, nunca con un bot.
+  const botSeats = [...withoutSeat(state.botSeats, actor), ...(bot ? [{ orgId: actor.orgId, roleId: actor.roleId }] : [])];
+  const next: RoomState = {
+    ...state,
+    connectedPlayers: [...players, { orgId: actor.orgId, roleId: actor.roleId, heartbeatMs: nowTs }],
+    ...(bot || state.botSeats !== undefined ? { botSeats } : {}),
+    ...(!bot && state.clockStartedAt === null ? { clockStartedAt: nowTs } : {}),
+  };
   return { ok: true, state: commit(state, next, [{ type: viaQr ? "QR_JOINED" : "ROLE_JOINED", orgId: actor.orgId, roleId: actor.roleId, detail: { title: actorTitle(state, actor), ...extra } }], nowTs) };
 }
 
 /** Marca un rol como ausente. extra se agrega al detalle (por ejemplo, { revokedByHost: true }). */
 export function markRoleLeft(state: RoomState, actor: ActorRef, nowTs: number, extra: Record<string, unknown> = {}): EngineResult {
   if (!isKnownActor(state, actor)) return fail(404, "ROLE_NOT_FOUND", `El rol ${actor.roleId} no existe en ${actor.orgId}`);
-  const next = { ...state, connectedPlayers: state.connectedPlayers.filter((player) => !(player.orgId === actor.orgId && player.roleId === actor.roleId)) };
+  const next: RoomState = {
+    ...state,
+    connectedPlayers: state.connectedPlayers.filter((player) => !(player.orgId === actor.orgId && player.roleId === actor.roleId)),
+    ...(state.botSeats !== undefined ? { botSeats: withoutSeat(state.botSeats, actor) } : {}),
+  };
   return { ok: true, state: commit(state, next, [{ type: "ROLE_LEFT", orgId: actor.orgId, roleId: actor.roleId, detail: { title: actorTitle(state, actor), ...extra } }], nowTs) };
 }
 
@@ -971,7 +1014,7 @@ export function recordGateDecision(state: RoomState, actor: ActorRef, input: Gat
   let next: RoomState = { ...replaceGenome(state, nextGenome), decisions: [...state.decisions, decision] };
   if (state.mode === "single_org" && state.decisionSealedAt === null) {
     next = { ...next, decisionSealedAt: nowTs };
-    events.push({ type: "STAKES_CONTAINED", orgId: actor.orgId, detail: { timeToDecisionMs: Math.max(0, nowTs - state.caseOpenedAt) } });
+    events.push({ type: "STAKES_CONTAINED", orgId: actor.orgId, detail: { timeToDecisionMs: waitedMs(state, nowTs) } });
   }
   return { ok: true, state: commit(state, next, events, nowTs) };
 }
@@ -1063,7 +1106,7 @@ export function recordCommitteeDecision(state: RoomState, actor: ActorRef, input
         roleId: actor.roleId,
         detail: { by: title, reason, winnerCaseId: winner.caseId, winnerOrgId: winner.orgId, patientLabel: winner.patientLabel, score: winner.score, tieBreakApplied: resolution.tieBreakApplied, tieBreakRule: resolution.tieBreakRule },
       },
-      { type: "STAKES_CONTAINED", detail: { timeToDecisionMs: Math.max(0, nowTs - state.caseOpenedAt) } },
+      { type: "STAKES_CONTAINED", detail: { timeToDecisionMs: waitedMs(state, nowTs) } },
     ];
     return { ok: true, state: commit(state, next, events, nowTs) };
   }
@@ -1152,7 +1195,7 @@ export function applyAgentProposal(state: RoomState, actor: ActorRef, input: Age
  */
 export function replaceRoomGenome(state: RoomState, genome: OrgGenome, source: string, nowTs: number): EngineResult {
   if (state.mode !== "single_org") return fail(409, "WRONG_MODE", "Solo se puede mutar una sala de una sola organización");
-  const next: RoomState = { ...state, orgGenomes: [genome], decisions: [], connectedPlayers: [], caseOpenedAt: nowTs, decisionSealedAt: null };
+  const next: RoomState = { ...state, orgGenomes: [genome], decisions: [], connectedPlayers: [], caseOpenedAt: nowTs, ...(state.clockStartedAt !== undefined ? { clockStartedAt: null } : {}), botSeats: undefined, decisionSealedAt: null };
   const event: NewEvent = { type: "MUTATION", orgId: genome.orgId, detail: { change: "genome", orgName: genome.orgName, industry: genome.industry, source } };
   // Se compara contra una sala sin organizaciones para que el choque y la compuerta del caso nuevo queden en la bitácora.
   const committed = commit({ ...state, orgGenomes: [] }, next, [event], nowTs);

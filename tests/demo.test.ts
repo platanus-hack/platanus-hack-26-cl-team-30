@@ -1,0 +1,271 @@
+// Pruebas de la sala de demo (ronda 9): la demo entre organizaciones se juega con
+// 3 personas y 3 toques. Lo que se comprueba:
+//   1. El sorteo del QR único reparte solo 3 asientos: quien presenta en cada
+//      organización y, con su clave, el Comité.
+//   2. Al entrar la primera persona, el piloto automático toma los roles
+//      administrativos, sella el límite y firma solo, y esos asientos se ven
+//      como bots (role.bot en la vista que viaja por el SSE).
+//   3. El reloj de espera cuenta desde que entra la primera persona.
+//   4. Tras el acta, la sala se reinicia con «Nueva ronda» (reinicio del
+//      anfitrión) o sola tras 2 minutos sin actividad.
+//   5. Una sala que no es de demo sigue igual: 5 asientos y sin bots.
+//
+// Los bots corren con temporizadores: se usan relojes simulados de Vitest.
+
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const agents = vi.hoisted(() => ({ runRoleAgentTurn: vi.fn(), mutateGenomeFromPrompt: vi.fn() }));
+vi.mock("../src/agents", () => agents);
+vi.mock("server-only", () => ({}));
+
+import { buildDemoBotScript, demoBotSeats } from "../src/lib/engine/autopilot";
+import { clockStart } from "../src/lib/engine/deterministic";
+import { DEMO_BOT_STEP_MS, DEMO_RESET_IDLE_MS, applyAction, createRoom, getHostCredentials, getRoom, joinRandomSeat, projectRoom, resetRoom } from "../src/lib/store/rooms";
+import { POST as createRoomRoute } from "../src/app/api/rooms/route";
+
+const CLINIC = "clinica_andes";
+const RURAL = "hospital_rural";
+const ARBITER = { orgId: "comite_red", roleId: "role_c" };
+const id = (seat: { orgId: string; roleId: string }) => `${seat.orgId}/${seat.roleId}`;
+
+type Seat = { orgId: string; roleId: string; token: string };
+
+const demo = () => createRoom({ mode: "cross_org", demo: true }).roomId;
+const keyOf = (roomId: string) => getHostCredentials(roomId)!.committeeKey;
+const stage = (roomId: string) => projectRoom(roomId, "stage")!;
+const role = (roomId: string, orgId: string, roleId: string) => stage(roomId).orgs.find((org) => org.orgId === orgId)!.roles.find((entry) => entry.id === roleId)!;
+
+function draw(roomId: string, body: Record<string, unknown> = {}): Seat {
+  const res = joinRandomSeat(roomId, body);
+  if (res.status !== 200 || !res.body.seat || !res.body.token) throw new Error(`El sorteo falló: ${JSON.stringify(res)}`);
+  return { ...res.body.seat, token: res.body.token };
+}
+
+async function join(roomId: string, orgId: string, roleId: string, committeeKey?: string): Promise<Seat> {
+  const res = await applyAction(roomId, { type: "JOIN_ROLE", orgId, roleId, committeeKey });
+  if (res.status !== 200 || !res.body.token) throw new Error(`JOIN_ROLE falló: ${JSON.stringify(res)}`);
+  return { orgId, roleId, token: res.body.token };
+}
+
+const act = (roomId: string, seat: Seat, type: string, payload: Record<string, unknown> = {}) => applyAction(roomId, { type, ...seat, ...payload });
+
+/** Deja que los bots terminen su guion. */
+const letBotsPlay = () => vi.advanceTimersByTime(DEMO_BOT_STEP_MS * 6);
+
+beforeEach(() => {
+  vi.useFakeTimers({ now: new Date("2026-11-22T12:00:00Z") });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe("sala de demo: 3 asientos humanos", () => {
+  it("la vista dice que es sala de demo; las salas entre organizaciones normales no", () => {
+    expect(stage(demo()).demo).toBe(true);
+    expect(stage(createRoom({ mode: "cross_org" }).roomId).demo).toBe(false);
+    expect(stage(createRoom({ mode: "single_org" }).roomId).demo).toBe(false);
+  });
+
+  it("las salas fijas entre organizaciones son de demo; la de una clínica no", () => {
+    for (const roomId of ["demo-cross", "demo-construccion", "demo-logistica"]) {
+      resetRoom(roomId);
+      expect(getRoom(roomId)!.demo, roomId).toBe(true);
+    }
+    expect(getRoom("demo")!.demo).toBeUndefined();
+  });
+
+  it("el sorteo reparte solo quien presenta en cada organización; sin sillas, 409", () => {
+    const roomId = demo();
+    const drawn = [draw(roomId), draw(roomId)].map(id).sort();
+    expect(drawn).toEqual([`${CLINIC}/role_a`, `${RURAL}/role_a`]);
+    expect(joinRandomSeat(roomId, {})).toMatchObject({ status: 409, body: { code: "NO_FREE_SEAT" } });
+  });
+
+  it("con la clave del QR, el Comité es el tercer asiento del sorteo", () => {
+    const roomId = demo();
+    const drawn = [1, 2, 3].map(() => id(draw(roomId, { committeeKey: keyOf(roomId) }))).sort();
+    expect(drawn).toEqual([`${CLINIC}/role_a`, id(ARBITER), `${RURAL}/role_a`].sort());
+    expect(joinRandomSeat(roomId, { committeeKey: keyOf(roomId) })).toMatchObject({ status: 409, body: { code: "NO_FREE_SEAT" } });
+  });
+
+  it("POST /api/rooms con demo: true crea una sala de demo", async () => {
+    const res = await createRoomRoute(new Request("http://nexo.test/api/rooms", { method: "POST", body: JSON.stringify({ mode: "cross_org", demo: true }) }));
+    const data = await res.json();
+    expect(data).toMatchObject({ mode: "cross_org", demo: true });
+    expect(getRoom(data.roomId)!.demo).toBe(true);
+  });
+});
+
+describe("sala de demo: los roles administrativos los juega el piloto automático", () => {
+  it("el guion de demo solo usa a los aprobadores: sella el límite y firma", () => {
+    const state = getRoom(demo())!;
+    expect(demoBotSeats(state).map(id)).toEqual([`${CLINIC}/role_b`, `${RURAL}/role_b`]);
+    expect(buildDemoBotScript(state).map((step) => id(step.seat))).toEqual([`${CLINIC}/role_b`, `${RURAL}/role_b`, `${CLINIC}/role_b`, `${RURAL}/role_b`]);
+  });
+
+  it("nadie adentro: no hay bots todavía", () => {
+    const roomId = demo();
+    expect(getRoom(roomId)!.botSeats ?? []).toEqual([]);
+    expect(role(roomId, CLINIC, "role_b")).toMatchObject({ connected: false, bot: false });
+  });
+
+  it("al entrar la primera persona, los bots toman los asientos administrativos y se ven como bots", () => {
+    const roomId = demo();
+    draw(roomId);
+    for (const orgId of [CLINIC, RURAL]) expect(role(roomId, orgId, "role_b"), orgId).toMatchObject({ connected: true, bot: true });
+    expect(role(roomId, CLINIC, "role_a").bot).toBe(false);
+    expect(stage(roomId).scarcity!.arbiter.bot).toBe(false);
+    expect(stage(roomId).autopilot).toMatchObject({ running: true, botSeats: [{ orgId: CLINIC, roleId: "role_b" }, { orgId: RURAL, roleId: "role_b" }] });
+    expect(getRoom(roomId)!.auditLog.filter((event) => event.type === "ROLE_JOINED" && event.detail.bot === true)).toHaveLength(2);
+  });
+
+  it("los bots sellan el límite y firman solos, sin que nadie más haga nada, y siguen visibles al terminar", () => {
+    const roomId = demo();
+    draw(roomId);
+    letBotsPlay();
+    const view = stage(roomId);
+    for (const org of view.orgs) {
+      expect(org.conflict.hasConflict, org.orgId).toBe(false);
+      expect(org.gate.outcome, org.orgId).toBe("approved");
+    }
+    expect(view.autopilot).toMatchObject({ running: false });
+    // Pasado el tiempo de presencia, un bot sigue conectado: no deja la silla vacía a mitad de ronda.
+    vi.advanceTimersByTime(60_000);
+    expect(role(roomId, RURAL, "role_b")).toMatchObject({ connected: true, bot: true });
+    const signatures = getRoom(roomId)!.decisions.filter((decision) => decision.scope === "gate");
+    expect(signatures.map((decision) => decision.byRoleId)).toEqual(["role_b", "role_b"]);
+    expect(signatures.every((decision) => decision.reason.includes("bot"))).toBe(true);
+  });
+
+  it("los bots arrancan una sola vez por ronda", () => {
+    const roomId = demo();
+    draw(roomId);
+    draw(roomId);
+    letBotsPlay();
+    expect(getRoom(roomId)!.auditLog.filter((event) => event.type === "AUTOPILOT" && event.detail.phase === "start")).toHaveLength(1);
+  });
+
+  it("si una persona toma un asiento administrativo a mano, ese no lo juega un bot", async () => {
+    const roomId = demo();
+    await join(roomId, CLINIC, "role_b");
+    expect(role(roomId, CLINIC, "role_b").bot).toBe(false);
+    expect(role(roomId, RURAL, "role_b").bot).toBe(true);
+    letBotsPlay();
+    expect(stage(roomId).orgs.find((org) => org.orgId === CLINIC)!.gate.outcome).toBeNull();
+  });
+
+  it("recorrido completo con 3 personas y 3 toques: dos casos presentados y el Comité decide", async () => {
+    const roomId = demo();
+    const key = keyOf(roomId);
+    const seats = [draw(roomId, { committeeKey: key }), draw(roomId, { committeeKey: key }), draw(roomId, { committeeKey: key })];
+    const committee = seats.find((seat) => id(seat) === id(ARBITER))!;
+    const presenters = seats.filter((seat) => seat !== committee);
+    // Quien presenta no espera a los bots: puede presentar de inmediato.
+    for (const seat of presenters) expect((await act(roomId, seat, "SUBMIT_CANDIDATE")).status).toBe(200);
+    expect(stage(roomId).allocation!.status).toBe("PROPOSED");
+    expect((await act(roomId, committee, "ALLOCATION_SEAL", { reason: "Mayor necesidad sin cubrir." })).status).toBe(200);
+    letBotsPlay();
+    const view = stage(roomId);
+    expect(view.allocation!.status).toBe("SEALED");
+    expect(view.stakes.status).toBe("CONTAINED");
+  });
+});
+
+describe("reloj de espera", () => {
+  it("marca 0 hasta que entra la primera persona, aunque la sala lleve más de una hora creada", () => {
+    const roomId = demo();
+    // Menos de ROOM_IDLE_TTL_MS (2 h): pasado eso, la limpieza borra la sala vacía.
+    vi.advanceTimersByTime(90 * 60 * 1000);
+    expect(stage(roomId).stakes).toMatchObject({ status: "BLEEDING", elapsedMs: 0 });
+    draw(roomId);
+    vi.advanceTimersByTime(7000);
+    expect(stage(roomId).stakes.elapsedMs).toBe(7000);
+  });
+
+  it("un bot no arranca el reloj; una persona sí, y el tiempo hasta la decisión cuenta desde ella", async () => {
+    const roomId = demo();
+    const created = getRoom(roomId)!;
+    expect(created.clockStartedAt).toBeNull();
+    vi.advanceTimersByTime(30_000);
+    const first = draw(roomId, { committeeKey: keyOf(roomId) });
+    expect(getRoom(roomId)!.clockStartedAt).toBe(created.caseOpenedAt + 30_000);
+    expect(clockStart(getRoom(roomId)!)).toBe(created.caseOpenedAt + 30_000);
+    const rest = [draw(roomId, { committeeKey: keyOf(roomId) }), draw(roomId, { committeeKey: keyOf(roomId) })];
+    const all = [first, ...rest];
+    for (const seat of all.filter((seat) => id(seat) !== id(ARBITER))) await act(roomId, seat, "SUBMIT_CANDIDATE");
+    vi.advanceTimersByTime(5000);
+    await act(roomId, all.find((seat) => id(seat) === id(ARBITER))!, "ALLOCATION_SEAL", { reason: "Equidad." });
+    expect(stage(roomId).stakes.timeToDecisionMs).toBe(5000);
+  });
+
+  it("las salas que no son de demo también cuentan desde la primera persona", async () => {
+    const roomId = createRoom({ mode: "single_org" }).roomId;
+    vi.advanceTimersByTime(60_000);
+    expect(stage(roomId).stakes.elapsedMs).toBe(0);
+    await join(roomId, CLINIC, "role_a");
+    vi.advanceTimersByTime(3000);
+    expect(stage(roomId).stakes.elapsedMs).toBe(3000);
+  });
+});
+
+describe("nueva ronda", () => {
+  async function sealedDemo(): Promise<string> {
+    const roomId = demo();
+    const key = keyOf(roomId);
+    const seats = [1, 2, 3].map(() => draw(roomId, { committeeKey: key }));
+    letBotsPlay();
+    for (const seat of seats.filter((seat) => id(seat) !== id(ARBITER))) await act(roomId, seat, "SUBMIT_CANDIDATE");
+    await act(roomId, seats.find((seat) => id(seat) === id(ARBITER))!, "ALLOCATION_SEAL", { reason: "Equidad." });
+    expect(getRoom(roomId)!.decisionSealedAt).not.toBeNull();
+    return roomId;
+  }
+
+  it("el reinicio del anfitrión («Nueva ronda») deja la sala de demo limpia, sin bots y con el reloj en 0", async () => {
+    const roomId = await sealedDemo();
+    const { hostToken, committeeKey } = getHostCredentials(roomId)!;
+    expect(resetRoom(roomId)).toBe(true);
+    const state = getRoom(roomId)!;
+    expect(state).toMatchObject({ demo: true, decisionSealedAt: null, clockStartedAt: null, allocationStatus: "PENDING" });
+    expect(state.botSeats ?? []).toEqual([]);
+    expect(stage(roomId).autopilot ?? null).toBeNull();
+    expect(getHostCredentials(roomId)).toEqual({ hostToken, committeeKey });
+    // La siguiente ronda vuelve a traer los bots con la primera persona.
+    draw(roomId);
+    expect(role(roomId, CLINIC, "role_b").bot).toBe(true);
+  });
+
+  it("tras el acta, se reinicia sola a los 2 minutos sin actividad", async () => {
+    const roomId = await sealedDemo();
+    vi.advanceTimersByTime(DEMO_RESET_IDLE_MS - 1000);
+    expect(getRoom(roomId)!.decisionSealedAt).not.toBeNull();
+    vi.advanceTimersByTime(2000);
+    expect(getRoom(roomId)).toMatchObject({ decisionSealedAt: null, clockStartedAt: null });
+  });
+
+  it("una acción después del acta vuelve a empezar la cuenta de 2 minutos", async () => {
+    const roomId = await sealedDemo();
+    vi.advanceTimersByTime(DEMO_RESET_IDLE_MS - 10_000);
+    joinRandomSeat(roomId, {});
+    vi.advanceTimersByTime(20_000);
+    expect(getRoom(roomId)!.decisionSealedAt).not.toBeNull();
+    vi.advanceTimersByTime(DEMO_RESET_IDLE_MS);
+    expect(getRoom(roomId)!.decisionSealedAt).toBeNull();
+  });
+
+  it("una sala que no es de demo no se reinicia sola tras el acta", async () => {
+    const roomId = createRoom({ mode: "cross_org" }).roomId;
+    const key = keyOf(roomId);
+    const people = {
+      a: await join(roomId, CLINIC, "role_a"),
+      b: await join(roomId, RURAL, "role_a"),
+      c: await join(roomId, ARBITER.orgId, ARBITER.roleId, key),
+    };
+    await act(roomId, people.a, "SUBMIT_CANDIDATE");
+    await act(roomId, people.b, "SUBMIT_CANDIDATE");
+    await act(roomId, people.c, "ALLOCATION_SEAL", { reason: "Equidad." });
+    vi.advanceTimersByTime(DEMO_RESET_IDLE_MS * 3);
+    expect(getRoom(roomId)!.decisionSealedAt).not.toBeNull();
+    expect(getRoom(roomId)!.botSeats ?? []).toEqual([]);
+  });
+});

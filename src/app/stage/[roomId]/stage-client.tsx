@@ -6,7 +6,8 @@ import { useParams, useRouter } from "next/navigation";
 import { ConnectionBadge } from "@/components/nexo/connection-badge";
 import { RoomHeader } from "@/components/nexo/room-header";
 import { CommandCenter } from "@/components/stage/command-center";
-import { actaUrl, claimHostCredentials, createRoom, loadHostCredentials, useRoom, type HostCredentials } from "@/lib/client/use-room";
+import { isDemoRoom } from "@/components/stage/seats";
+import { actaUrl, claimHostCredentials, createRoom, loadHostCredentials, useRoom, type CreateRoomOptions, type HostCredentials } from "@/lib/client/use-room";
 import { CROSS_ORG_SCENARIOS } from "@/lib/genome/scenarios";
 
 const FIXED_ROOMS = new Set(["demo", ...Object.values(CROSS_ORG_SCENARIOS).map((scenario) => scenario.fixedRoomId)]);
@@ -70,8 +71,10 @@ export default function StageClient() {
   // Abre una sala nueva del mismo caso, con sus propios controles y QR del Comité.
   async function openOwnRoom() {
     try {
+      // Desde una sala de demo se abre otra de demo: 3 personas y los roles administrativos automáticos.
+      const options: CreateRoomOptions = { ...(room!.scenarioId ? { scenario: room!.scenarioId } : {}), ...(isDemoRoom(room!) ? { demo: true } : {}) };
       const created = cross
-        ? await createRoom("cross_org", room!.scenarioId ? { scenario: room!.scenarioId } : {})
+        ? await createRoom("cross_org", options)
         : await createRoom("single_org", { seed: room!.orgs[0]?.orgId });
       router.push(`/stage/${encodeURIComponent(created.roomId)}`);
     } catch (error) {

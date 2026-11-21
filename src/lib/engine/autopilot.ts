@@ -59,6 +59,8 @@ export const AUTOPILOT_REASONS = {
   counter: "Ensayo automático: cubrimos hasta nuestro umbral; lo demás lo decide quien firma.",
   approve: "Ensayo automático: el caso lo justifica y la regla lo permite.",
   committee: "Ensayo automático: la regla conocida ordenó a los candidatos y no hay objeción.",
+  /** Firma del bot administrativo en una sala de demo. */
+  demoApprove: "Piloto automático (bot de la demo): dentro de lo acordado.",
 } as const;
 
 /** "Gerencia de Finanzas (Constructora Cordillera)". */
@@ -170,6 +172,46 @@ export function buildAutopilotScript(state: RoomState, options: AutopilotOptions
     });
   }
   return steps;
+}
+
+/**
+ * Asientos que juega un bot en una sala de demo: el aprobador (rol
+ * administrativo) de cada organización. Las personas juegan a quien presenta
+ * cada caso y al Comité. Así la demo avanza con 3 personas.
+ */
+export function demoBotSeats(state: RoomState): ActorRef[] {
+  if (!state.scarcity) return [];
+  return state.orgGenomes.map((genome) => ({ orgId: genome.orgId, roleId: genome.authorityRule.approverRoleId }));
+}
+
+/**
+ * Guion de los bots de una sala de demo: el aprobador de cada organización sella
+ * el límite y firma la compuerta, para que nadie tenga que entender ese paso.
+ * Mismas funciones del motor que usaría una persona. Si la propuesta no cruza el
+ * umbral (otros escenarios), no hay nada que firmar y el paso se da por hecho.
+ */
+export function buildDemoBotScript(state: RoomState): AutopilotStep[] {
+  const seats = demoBotSeats(state);
+  const seal = seats.map((seat): AutopilotStep => {
+    const genome = findGenome(state, seat.orgId)!;
+    return {
+      seat,
+      description: `${who(genome, seat.roleId)} (bot) acuerda el límite`,
+      run: (current, now) => sealRule(current, seat, { gateMode: "deterministic_hitl" }, now),
+    };
+  });
+  const sign = seats.map((seat): AutopilotStep => {
+    const genome = findGenome(state, seat.orgId)!;
+    return {
+      seat,
+      description: `${who(genome, seat.roleId)} (bot) firma`,
+      run: (current, now) => {
+        const result = recordGateDecision(current, seat, { decision: "APPROVE", reason: AUTOPILOT_REASONS.demoApprove }, now);
+        return !result.ok && result.code === "GATE_NOT_BLOCKED" ? { ok: true, state: current } : result;
+      },
+    };
+  });
+  return [...seal, ...sign];
 }
 
 /** Puestos distintos que aparecen en el guion, en orden de aparición. */

@@ -845,4 +845,34 @@ export const commandStyles = `
   .nx-ecg-beam { animation: none; -webkit-mask: none; mask: none; }
   .nx-galaxy { transition: none; }
 }
+
+/* ── Ronda 9: demo de 3 personas ──────────────────────────────────────────── */
+/* Sin «Pregúntale al caso» arriba (está en el dock), la barra deja el centro libre. */
+.gd-app .gd-top { grid-template-columns: minmax(0, 1fr) auto; }
+.gd-app .gd-top > span[aria-hidden="true"]:empty { display: none; }
+/* Las 3 personas, grandes; los asientos automáticos, pequeños y con su chip. */
+.nx-seats[data-big="true"] li { font-size: clamp(18px, 1.6vw, 26px); padding: 12px 20px 12px 15px; gap: 12px; white-space: nowrap; }
+.nx-join-grid:has(.nx-seats[data-big="true"]) { grid-template-columns: minmax(300px, 1fr) minmax(0, 1.4fr) auto; }
+.nx-bots li { white-space: nowrap; }
+.nx-seats[data-big="true"] li i { inline-size: 18px; block-size: 18px; }
+.nx-seats[data-big="true"] li svg { width: 20px; height: 20px; }
+.nx-bots { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 16px 0 0; }
+.nx-bots li { list-style: none; display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 5px 6px 5px 12px; font-size: 13px; font-weight: 700; color: var(--gd-muted); background: var(--gd-inner); border: 1px dashed var(--gd-line); }
+.nx-bots b { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 3px 8px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--gd-ink); background: var(--gd-raised); }
+.nx-bots svg { width: 13px; height: 13px; }
+/* «Nueva ronda»: el botón grande del anfitrión al cerrar el acta. */
+.gd-app .nx-new-round { min-block-size: 64px; padding-inline: 30px; font-size: clamp(18px, 1.5vw, 24px); }
+.gd-app .nx-new-round svg { width: 24px; height: 24px; }
+.gd-analytics > .nx-new-round { justify-self: start; }
+.nx-host-scenarios { margin-block-end: 12px; flex-wrap: wrap; }
+/* La frase «Falta: …» manda: el «quién» no le quita más de la mitad del ancho. */
+.nx-missing { grid-template-columns: minmax(50%, 1fr) minmax(0, auto); }
+.nx-missing-who { max-inline-size: 46ch; }
+
+/* Demo: el dock de abajo con etiquetas de una palabra, también en pantalla grande. */
+.gd-app[data-demo="true"] .gd-dock-bottom .gd-dock-text { display: none; }
+.gd-app[data-demo="true"] .gd-dock-bottom .gd-dock-short { display: inline; }
+/* Tarjeta sin caso: «Esperando caso» en lugar de un puntaje vacío. */
+.nx-card-waiting { display: flex; align-items: center; gap: 12px; min-block-size: clamp(52px, 5.4vw, 96px); font-size: clamp(24px, 2.4vw, 40px); font-weight: 800; letter-spacing: -.03em; color: var(--gd-muted); }
+.nx-card-waiting svg { width: 1em; height: 1em; flex: none; }
 `;

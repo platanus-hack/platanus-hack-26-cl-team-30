@@ -86,9 +86,9 @@ describe("salas", () => {
   it("las salas fijas existen sin crearlas, con su modo y su escenario", () => {
     expect(FIXED_ROOMS).toEqual({
       demo: { mode: "single_org" },
-      "demo-cross": { mode: "cross_org", scenario: "hospitales" },
-      "demo-construccion": { mode: "cross_org", scenario: "construccion" },
-      "demo-logistica": { mode: "cross_org", scenario: "logistica" },
+      "demo-cross": { mode: "cross_org", scenario: "hospitales", demo: true },
+      "demo-construccion": { mode: "cross_org", scenario: "construccion", demo: true },
+      "demo-logistica": { mode: "cross_org", scenario: "logistica", demo: true },
     });
     expect(isFixedRoom("demo") && isFixedRoom("demo-cross") && isFixedRoom("demo-construccion") && isFixedRoom("demo-logistica")).toBe(true);
     expect(getRoom("demo-construccion")).toMatchObject({ mode: "cross_org", scenarioId: "construccion" });

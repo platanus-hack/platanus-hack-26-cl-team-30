@@ -82,6 +82,18 @@ Palabras visibles en cada pantalla principal (`document.body.innerText`, contand
 
 Las palabras incluyen la barra superior, las pestañas y el aviso de demostración.
 
+## Toques en la sala de demo (ronda 9)
+
+Recorrido de `demo-cross` con 3 celulares (Playwright, 390 × 844) y la pantalla grande (1440 × 900), contra `npm run dev` en un notebook, el 21 de noviembre, en claro y en oscuro (mismas cifras).
+
+| Persona | Toques | Cuáles |
+| --- | --- | --- |
+| Clínica (Jefatura de Urgencias) | 2 | «Entrar a mi silla», «Presentar a Paciente A» |
+| Hospital Rural (Médico Jefe de Turno) | 2 | «Entrar a mi silla», «Presentar a Paciente B» |
+| Comité | 3 | «Entrar a mi silla», chip de razón «Equidad», «Aprobar y asignar» |
+
+Los toques que deciden algo son 3 (dos presentaciones y la aprobación); los otros 4 son las tres entradas a la silla y el chip de razón del Comité. Los bots sellaron y firmaron en menos de 4 segundos desde la primera entrada. El reloj de la pantalla grande marcó 00:00 antes de que entrara alguien y «Decidido en 00:21» al cerrar (antes contaba desde que se creó la sala). `scripts/e2e.mjs` comprueba los mismos 3 toques en su recorrido «sala de demo».
+
 ## Lo que no está medido
 
 - Cuadros por segundo de la pantalla grande en un equipo distinto del notebook M4 (por ejemplo, el que se conecte al proyector).

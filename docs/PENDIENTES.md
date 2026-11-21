@@ -67,3 +67,10 @@ Actualizado el 21 de noviembre de 2026.
 - **Silla del celular sin probar en teléfonos reales:** se probó con Playwright en 390 × 844 (claro y oscuro). Falta un ensayo con iPhone y Android para revisar el área segura y el teclado sobre la razón del Comité.
 - **Secretos y Sala se desplazan un poco** (hasta unos 160 px en 844 px de alto): tienen más filas que un turno. Los turnos no se desplazan.
 
+## Agregado en la ronda 9 (demo de 3 personas, 21 de noviembre, noche)
+
+- **Resuelto: teléfonos abiertos tras un reinicio.** En las salas de demo ya no recuperan su silla: vuelven a la tarjeta de sorteo con «Empezó una ronda nueva» (`shouldRecoverSeat`, `tests/demo-phone.test.ts`).
+- **Resuelto: pestaña «Sala» en la demo.** Muestra los 4 pasos de la demo (Unirse, Casos, Comité, Acta), sin «Acordar límites» ni «Firmar» (`demoStep`).
+- **Ensayo con personas reales:** el recorrido de 3 personas se probó con Playwright y con `scripts/e2e.mjs`, no con teléfonos reales en la sede.
+- **Servidor de desarrollo después de `next build`:** al levantar `next dev` justo después de un `next build` en la misma carpeta, la página del celular entró en un bucle de recargas («Fast Refresh rebuilding» en cada conexión) y cada recarga pedía un sorteo. Se arregló borrando `.next/dev` y reiniciando `next dev`. No afecta al deploy (`next start`), pero conviene no ensayar la demo sobre un `next dev` que convivió con un build.
+

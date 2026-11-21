@@ -24,7 +24,7 @@
 import { EventEmitter } from "node:events";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { mutateGenomeFromPrompt, runRoleAgentTurn } from "../../agents";
-import { AUTOPILOT_DEFAULT_STEP_MS, buildAutopilotScript, scriptSeats, stepOutcome, type AutopilotStep } from "../engine/autopilot";
+import { AUTOPILOT_DEFAULT_STEP_MS, buildAutopilotScript, buildDemoBotScript, demoBotSeats, scriptSeats, stepOutcome, type AutopilotStep } from "../engine/autopilot";
 import * as engine from "../engine/deterministic";
 import { OrgGenomeSchema, type AutopilotView, type OrgGenome, type ProjectedRoomState, type RoomMode, type RoomState, type Viewer } from "../genome/schema";
 import { CROSS_ORG_SCENARIOS, DEFAULT_CROSS_ORG_SCENARIO, type CrossOrgScenarioId } from "../genome/scenarios";
@@ -35,7 +35,8 @@ import { ActionSchema, RandomSeatRequestSchema, type ActionError, type ActionErr
 // --- Almacén ----------------------------------------------------------------
 
 /** Con qué se abrió la sala: sirve para reiniciarla exactamente donde empezó. */
-type RoomOrigin = { mode: RoomMode; seed?: SeedGenomeId; genome?: OrgGenome; scenario?: CrossOrgScenarioId };
+/** Con qué se abrió la sala. demo: sala de demo de 3 personas (solo entre organizaciones). */
+type RoomOrigin = { mode: RoomMode; seed?: SeedGenomeId; genome?: OrgGenome; scenario?: CrossOrgScenarioId; demo?: boolean };
 
 type AutopilotRun = {
   running: boolean;
@@ -61,6 +62,8 @@ type RoomRecord = {
   lastActiveAt: number;
   /** Llamadas al modelo en curso: "mutate" o "agent:orgId:roleId". */
   busy: Set<string>;
+  /** Sala de demo con el acta cerrada: reinicio automático tras DEMO_RESET_IDLE_MS sin actividad. */
+  resetTimer?: ReturnType<typeof setTimeout> | null;
 };
 
 type Store = {
@@ -82,7 +85,8 @@ store.bus.setMaxListeners(0);
  */
 export const FIXED_ROOMS: Readonly<Record<string, RoomOrigin>> = {
   demo: { mode: "single_org" },
-  ...Object.fromEntries(Object.values(CROSS_ORG_SCENARIOS).map((info) => [info.fixedRoomId, { mode: "cross_org", scenario: info.id } satisfies RoomOrigin])),
+  // Las salas fijas entre organizaciones son salas de demo: 3 personas y bots en los roles administrativos.
+  ...Object.fromEntries(Object.values(CROSS_ORG_SCENARIOS).map((info) => [info.fixedRoomId, { mode: "cross_org", scenario: info.id, demo: true } satisfies RoomOrigin])),
 };
 
 export function isFixedRoom(roomId: string): boolean {
@@ -102,6 +106,10 @@ export const maxRooms = () => envInt("NEXO_MAX_ROOMS", 200);
 export const ROOM_IDLE_TTL_MS = 2 * 60 * 60 * 1000;
 /** Una sala fija usada que queda sin conexiones ni actividad este tiempo vuelve a su semilla. */
 export const FIXED_ROOM_IDLE_RESET_MS = 15 * 60 * 1000;
+/** Sala de demo con el acta cerrada: se reinicia sola tras este tiempo sin actividad. */
+export const DEMO_RESET_IDLE_MS = 2 * 60 * 1000;
+/** Intervalo entre los pasos de los bots de una sala de demo. Cortos: no deben hacer esperar a nadie. */
+export const DEMO_BOT_STEP_MS = 900;
 export const MAX_CONNECTIONS_PER_ROOM = 200;
 export const MAX_CONNECTIONS_TOTAL = 1000;
 const SWEEP_INTERVAL_MS = 30_000;
@@ -147,6 +155,7 @@ export function sweepRooms(now: number = Date.now()): number {
     const expired = isFixedRoom(roomId) ? record.state.version > 0 && idle >= FIXED_ROOM_IDLE_RESET_MS : idle >= ROOM_IDLE_TTL_MS;
     if (expired) {
       stopTimer(record);
+      clearResetTimer(record);
       store.rooms.delete(roomId);
       removed += 1;
     }
@@ -196,6 +205,8 @@ export type CreateRoomInput = {
   genome?: OrgGenome;
   /** Escenario entre organizaciones. Solo en cross_org. Por defecto, los hospitales. */
   scenario?: CrossOrgScenarioId;
+  /** Sala de demo: 3 asientos humanos y bots en los roles administrativos. Solo en cross_org. */
+  demo?: boolean;
   /** Reloj del servidor. Por defecto, ahora. */
   now?: number;
 };
@@ -210,7 +221,9 @@ function initialState(id: string, origin: RoomOrigin, now: number): RoomState {
     origin.mode === "cross_org"
       ? getInitialCrossOrgRoom(id, { ...options, scenario: origin.scenario ?? DEFAULT_CROSS_ORG_SCENARIO })
       : getInitialSingleOrgRoom(id, origin.genome ? structuredClone(origin.genome) : origin.seed, options);
-  return engine.openRoom(initial, now);
+  const opened = engine.openRoom(initial, now);
+  // El reloj de espera arranca con la primera persona que entra (markRoleJoined).
+  return { ...opened, clockStartedAt: null, ...(origin.mode === "cross_org" && origin.demo ? { demo: true } : {}) };
 }
 
 /**
@@ -224,7 +237,9 @@ export function createRoom(input: CreateRoomInput = {}): RoomState {
   makeRoomFor(id);
   const mode = input.mode ?? "single_org";
   const origin: RoomOrigin =
-    mode === "cross_org" ? { mode, scenario: input.scenario ?? DEFAULT_CROSS_ORG_SCENARIO } : { mode, ...(input.genome ? { genome: structuredClone(input.genome) } : { seed: input.seed }) };
+    mode === "cross_org"
+      ? { mode, scenario: input.scenario ?? DEFAULT_CROSS_ORG_SCENARIO, ...(input.demo ? { demo: true } : {}) }
+      : { mode, ...(input.genome ? { genome: structuredClone(input.genome) } : { seed: input.seed }) };
   const state = initialState(id, origin, input.now ?? Date.now());
   store.rooms.set(id, {
     state,
@@ -246,7 +261,7 @@ function lookup(roomId: string): RoomRecord | undefined {
   if (existing) return existing;
   if (!isFixedRoom(roomId)) return undefined;
   const origin = FIXED_ROOMS[roomId];
-  createRoom({ id: roomId, mode: origin.mode, scenario: origin.scenario });
+  createRoom({ id: roomId, mode: origin.mode, scenario: origin.scenario, demo: origin.demo });
   return store.rooms.get(roomId);
 }
 
@@ -266,6 +281,7 @@ export function resetRoom(roomId: string, now: number = Date.now()): boolean {
   const record = lookup(roomId);
   if (!record) return false;
   stopTimer(record);
+  clearResetTimer(record);
   record.autopilot = null;
   record.tokens.clear();
   record.busy.clear();
@@ -280,6 +296,7 @@ export function discardRoom(roomId: string): boolean {
   const record = store.rooms.get(roomId);
   if (!record) return false;
   stopTimer(record);
+  clearResetTimer(record);
   store.rooms.delete(roomId);
   emit(roomId);
   return true;
@@ -462,6 +479,7 @@ function settle(roomId: string, record: RoomRecord, result: engine.EngineResult,
     record.state = nextState;
     emit(roomId);
   }
+  scheduleDemoReset(roomId, record);
   if (!result.ok) return reject(result.status, result.code, result.message);
   return { status: 200, body: { ok: true, ...extra } };
 }
@@ -492,7 +510,9 @@ function join(roomId: string, record: RoomRecord, actor: engine.ActorRef, token:
   }
   const fresh = newToken();
   record.tokens.set(key, fresh);
-  return settle(roomId, record, engine.markRoleJoined(record.state, actor, now), { token: fresh, reconnected: false });
+  const response = settle(roomId, record, engine.markRoleJoined(record.state, actor, now), { token: fresh, reconnected: false });
+  if (response.status === 200) startDemoBots(roomId, record, now);
+  return response;
 }
 
 // --- Sorteo de silla ---------------------------------------------------------
@@ -505,6 +525,14 @@ function join(roomId: string, record: RoomRecord, actor: engine.ActorRef, token:
  * organizaciones no se sortean: no tienen turno en ese recorrido.
  */
 function drawableSeats(state: RoomState, withCommittee: boolean): engine.ActorRef[] {
+  const arbiter = state.scarcity?.arbiter;
+  // Sala de demo: solo quien presenta cada caso y, con la clave, el Comité. Lo demás lo juegan bots.
+  if (state.demo && state.scarcity && arbiter) {
+    return [
+      ...state.scarcity.candidates.map((candidate) => ({ orgId: candidate.orgId, roleId: candidate.proposerRoleId })),
+      ...(withCommittee ? [{ orgId: arbiter.orgId, roleId: arbiter.roleId }] : []),
+    ];
+  }
   const seats: engine.ActorRef[] = [];
   for (const genome of state.orgGenomes) {
     for (const role of genome.roles) {
@@ -512,7 +540,6 @@ function drawableSeats(state: RoomState, withCommittee: boolean): engine.ActorRe
       if (isCommitteeSeat(state, actor) ? withCommittee : !role.isQrOptional) seats.push(actor);
     }
   }
-  const arbiter = state.scarcity?.arbiter;
   if (arbiter && withCommittee && !seats.some((seat) => seat.orgId === arbiter.orgId && seat.roleId === arbiter.roleId)) {
     seats.push({ orgId: arbiter.orgId, roleId: arbiter.roleId });
   }
@@ -562,6 +589,8 @@ export function joinRandomSeat(roomId: string, rawBody: unknown, now: number = D
   }
   record.state = next;
   emit(roomId);
+  startDemoBots(roomId, record, now);
+  scheduleDemoReset(roomId, record);
   return { status: 200, body: { ok: true, token: fresh, reconnected: false, seat } };
 }
 
@@ -841,6 +870,56 @@ export function stopAutopilot(roomId: string, now: number = Date.now()): HostRes
     emit(roomId);
   }
   return { status: 200, body: { ok: true, running: false } };
+}
+
+// --- Sala de demo ---------------------------------------------------------------------------
+
+/**
+ * Bots de una sala de demo. Al entrar la primera persona, el piloto automático
+ * toma el asiento del aprobador (rol administrativo) de cada organización, sella
+ * el límite y firma: las personas solo presentan sus casos y el Comité decide.
+ * Los bots quedan marcados en el estado (botSeats, que se proyecta como role.bot)
+ * y en la bitácora con { bot: true }. Corre una vez por ronda: tras un reinicio
+ * vuelve a empezar con la próxima persona.
+ */
+function startDemoBots(roomId: string, record: RoomRecord, now: number) {
+  if (!record.state.demo || record.autopilot || record.state.decisionSealedAt !== null) return;
+  const botSeats = demoBotSeats(record.state).filter((seat) => !record.tokens.has(tokenKey(seat)));
+  if (botSeats.length === 0) return;
+  const script = buildDemoBotScript(record.state).filter((step) => botSeats.some((seat) => seat.orgId === step.seat.orgId && seat.roleId === step.seat.roleId));
+  let state = engine.recordAutopilotEvent(record.state, { phase: "start", demo: true, steps: script.length, stepMs: DEMO_BOT_STEP_MS, botSeats: botSeats.map(tokenKey), simulated: true }, now);
+  for (const seat of botSeats) {
+    const joined = engine.markRoleJoined(state, seat, now, { bot: true });
+    if (joined.ok) state = joined.state;
+  }
+  record.state = state;
+  record.autopilot = { running: true, script, step: 0, lastStep: null, botSeats, timer: null };
+  emit(roomId);
+  scheduleNextStep(roomId, record, DEMO_BOT_STEP_MS);
+}
+
+function clearResetTimer(record: RoomRecord) {
+  if (record.resetTimer) clearTimeout(record.resetTimer);
+  record.resetTimer = null;
+}
+
+/**
+ * Sala de demo con el acta cerrada: se reinicia sola tras DEMO_RESET_IDLE_MS sin
+ * actividad, para que la próxima ronda empiece limpia aunque nadie apriete
+ * «Nueva ronda». Cada acción vuelve a empezar la cuenta. Las conexiones abiertas
+ * (pantalla grande, teléfonos) no cuentan como actividad.
+ */
+function scheduleDemoReset(roomId: string, record: RoomRecord, delayMs = DEMO_RESET_IDLE_MS) {
+  clearResetTimer(record);
+  if (!record.state.demo || record.state.decisionSealedAt === null) return;
+  record.resetTimer = setTimeout(() => {
+    record.resetTimer = null;
+    if (store.rooms.get(roomId) !== record || !record.state.demo || record.state.decisionSealedAt === null) return;
+    const idle = Date.now() - record.lastActiveAt;
+    if (idle >= DEMO_RESET_IDLE_MS) resetRoom(roomId);
+    else scheduleDemoReset(roomId, record, DEMO_RESET_IDLE_MS - idle);
+  }, delayMs);
+  record.resetTimer.unref?.();
 }
 
 // --- Sala nueva desde una frase -----------------------------------------------------------

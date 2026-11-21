@@ -3,7 +3,8 @@
 // Piezas del centro de mando con las clases del panel de vidrio (.gd-*). Son
 // componentes de presentación: reciben datos ya calculados desde la sala.
 
-import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { RotateCcw } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export function Panel({ title, subtitle, action, className = "", children }: { title: string; subtitle?: string; action?: ReactNode; className?: string; children: ReactNode }) {
@@ -31,7 +32,7 @@ export function State({ state, icon: Icon, children }: { state: "calm" | "sign" 
   );
 }
 
-export type ViewId = "mando" | "ranking" | "organizaciones" | "acta";
+export type ViewId = "mando" | "ranking" | "organizaciones" | "acta" | "preguntar";
 export type ViewInfo = { id: ViewId; label: string; short: string; icon: LucideIcon };
 
 /** Dock del panel base (lateral y flotante abajo) con su indicador deslizante. */
@@ -121,5 +122,24 @@ export function Dialog({ title, children, close, light = false }: { title: strin
         {children}
       </section>
     </dialog>
+  );
+}
+
+/** «Nueva ronda»: el mismo reinicio del anfitrión. La sala conserva su id, sus claves y su modo. */
+export function NewRoundButton({ onNewRound }: { onNewRound: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      className="gd-primary nx-new-round"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        await onNewRound();
+        setBusy(false);
+      }}
+    >
+      <RotateCcw aria-hidden="true" /> {busy ? "Reiniciando…" : "Nueva ronda"}
+    </button>
   );
 }

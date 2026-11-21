@@ -87,6 +87,16 @@ async function postAction(roomId: string, body: Record<string, unknown>, path: "
   }
 }
 
+/**
+ * Si una pestaña que perdió su silla (el token dejó de valer, por ejemplo tras
+ * un reinicio) debe recuperarla sola. En una sala de demo no: tras «Nueva ronda»
+ * o el reinicio automático, el siguiente grupo tiene que poder sortear sillas,
+ * así que los teléfonos viejos vuelven a la tarjeta de sorteo.
+ */
+export function shouldRecoverSeat(view: Pick<ProjectedRoomState, "demo">): boolean {
+  return view.demo !== true;
+}
+
 export type CreateRoomOptions = {
   /** Organización semilla (solo single_org). */
   seed?: string;
@@ -94,6 +104,8 @@ export type CreateRoomOptions = {
   scenario?: string;
   /** Frase que describe la organización: la sala nace ya mutada (solo single_org). */
   description?: string;
+  /** Sala de demo: 3 asientos humanos y bots en los roles administrativos (solo cross_org). */
+  demo?: boolean;
 };
 
 export type CreatedRoom = { roomId: string; source?: string; latencyMs?: number };
@@ -432,16 +444,26 @@ export function useRoom(roomId: string, { spectator = false }: Options = {}) {
   );
 
   // El servidor entrega la vista "stage" cuando el token no es el vigente (por
-  // ejemplo, tras un reinicio). Se intenta recuperar el rol una vez por token.
+  // ejemplo, tras un reinicio). Se intenta recuperar el rol una vez por token,
+  // salvo en una sala de demo: ahí la silla queda libre para el siguiente grupo.
   const downgraded = !!session && freshRoom?.viewer === "stage";
+  const recover = freshRoom ? shouldRecoverSeat(freshRoom) : true;
   useEffect(() => {
     if (!downgraded || !session || recoveredToken.current === session.token) return;
     // Con un cambio de silla en curso (sorteo u otro rol), la vista "stage" es la
     // de la silla que se acaba de soltar: recuperarla la volvería a ocupar.
     if (joining.current.size > 0) return;
     recoveredToken.current = session.token;
+    if (!recover) {
+      // Fuera del efecto: el cambio de sesión vuelve a dibujar la pantalla de sorteo.
+      queueMicrotask(() => {
+        setSession(null);
+        setNotice("Empezó una ronda nueva. Sortea tu silla.");
+      });
+      return;
+    }
     void join(session.orgId, session.roleId);
-  }, [downgraded, session, join]);
+  }, [downgraded, session, join, recover, setSession]);
 
   return { room, status, unreachable, problem: status === "connected" ? null : problem, session, notice, setNotice, join, joinRandom, leave, act };
 }

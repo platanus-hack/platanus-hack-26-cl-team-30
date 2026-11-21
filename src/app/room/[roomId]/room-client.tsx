@@ -59,7 +59,10 @@ function linkNamesRole(): boolean {
 export default function RoomClient() {
   const { roomId } = useParams<{ roomId: string }>();
   const { room, status, unreachable, problem, session, notice, join, joinRandom, leave, act } = useRoom(roomId);
-  const [tab, setTab] = useState<SeatTab>("turn");
+  // La pestaña se recuerda por silla (token): una silla nueva empieza en «Tu turno».
+  const [tabState, setTabState] = useState<{ token: string | null; tab: SeatTab }>({ token: null, tab: "turn" });
+  const tab: SeatTab = tabState.token === (session?.token ?? null) ? tabState.tab : "turn";
+  const setTab = (next: SeatTab) => setTabState({ token: session?.token ?? null, tab: next });
   const [enteredSeat, setEnteredSeat] = useState<string | null>(() => (typeof window === "undefined" ? null : loadEntered(roomId)));
   // Sorteo de silla: quien llega con el QR único de la sala (sin rol en el enlace
   // y sin silla guardada) recibe una al azar. "failed": no quedaban sillas libres.
@@ -146,7 +149,9 @@ export default function RoomClient() {
   const myOrg = findOrg(room, me.orgId);
   const myRole = myOrg?.roles.find((role) => role.id === me.roleId);
   const arbiter = isArbiter(room);
-  const seat = `${me.orgId}/${me.roleId}`;
+  // La tarjeta «Te tocó» se muestra una vez por silla recibida: cada sorteo o
+  // ronda nueva trae otro token, así que vuelve a aparecer aunque toque la misma silla.
+  const seat = session?.token ?? `${me.orgId}/${me.roleId}`;
   const who = { title: roleLabel(room, me.orgId, me.roleId), org: arbiter ? "Entre organizaciones" : myOrg?.orgName, accent: myRole?.accentColor ?? ("violet" as const) };
 
   function leaveSeat() {

@@ -11,6 +11,20 @@ Formato de cada entrada:
 
 ---
 
+## La pantalla grande lee de la sala qué asientos juega un bot y si es de demo
+
+- **Decisión:** el estado proyectado trae `demo` (la sala es de demo: 3 personas) y, por asiento, `bot` (`role.bot` y `scarcity.arbiter.bot`: lo tiene un bot del piloto automático, y cuenta como conectado toda la ronda). La pantalla grande los lee en `stageSeats` e `isDemoRoom` (`src/components/stage/seats.ts`). Si `bot` no viene, usa `autopilot.botSeats` mientras el ensayo corre.
+- **Alternativa descartada:** deducirlo en el navegador: por el id de la sala (`demo-*`) o porque el ensayo juega a quienes aprueban.
+- **Por qué:** quién es una persona y quién es un bot lo sabe el servidor, que es quien sienta a los bots. Si el navegador lo adivinara, una sala propia de demo o un ensayo a medias se verían mal, y la pantalla podría mostrar como persona a un bot.
+- **Costo:** dos campos más en cada mensaje SSE. Un servidor anterior a este cambio no manda `demo`, y la pantalla lo trata como sala completa.
+
+## La demo es de 3 personas y 4 pasos; los modos completos siguen
+
+- **Decisión:** en una sala de demo, la pantalla grande muestra solo 3 asientos de personas, grandes («Clínica · Urgencias», «Hospital Rural · Turno», «Comité»), y los aprobadores, pequeños y con el chip «automático». Los pasos son Unirse → Casos → Comité → Acta: «Límites» desaparece porque los límites y las firmas internas los hace el piloto automático, y la frase de abajo nunca los pide. «Unirse» termina cuando entran los dos que presentan. Al cerrar el acta, el anfitrión tiene un botón grande «Nueva ronda» (el mismo reinicio de siempre, `DELETE /api/rooms/:id`).
+- **Alternativa descartada:** simplificar todas las salas, o esconder los aprobadores sin decir que son bots.
+- **Por qué:** una persona que no conoce la demo no entendía el paso «Acuerden el límite» ni por qué hacían falta 5 personas. Con 3 personas y 3 toques se entiende sola. Mostrar a los bots, con su chip, evita presentar como persona lo que hace el piloto automático.
+- **Costo:** en la demo no se ve el choque de autoridad dentro de cada hospital. Sigue en las salas completas (las que no son de demo) y en la bitácora.
+
 ## La galaxia de la pantalla grande se dibuja con los asientos reales, en canvas 2D
 
 - **Decisión:** `src/components/stage/galaxy.tsx` porta el prototipo de Nahum (`docs/diseno/nahum/resultado_orbital_live.html`) a un componente React con canvas 2D y sin dependencias. Cada asiento que el SSE marca como conectado (`stageSeats`, `src/components/stage/seats.ts`) enciende un nodo, una órbita de su color y su región de la esfera. Es un solo canvas detrás del contenido: protagonista en el paso «Unirse» y fondo tenue después.
@@ -263,4 +277,17 @@ Formato de cada entrada:
 - **Decisión:** el teléfono muestra una tarjeta por turno, un botón abajo y tres pestañas (`src/components/seat/`). Los órganos que se apilaban (caso, niebla, contador, tablero, agente) se borraron; el grafo y el choque de autoridad quedan plegados en «Sala».
 - **Por qué:** el mentor dijo que la pantalla «bombardea con texto». La pantalla del Comité pasó de 184 a 66 palabras visibles y ningún turno necesita desplazarse en 390 × 844.
 - **Descartado:** recortar el texto de los órganos existentes. Cada uno repetía su contexto y juntos seguían sin caber en una pantalla.
+
+## Marca de los asientos bot y de la sala de demo
+
+- **Decisión:** el estado de la sala guarda los asientos que juega un bot en `RoomState.botSeats` (lista de `{ orgId, roleId }`). Lo escribe el motor: `markRoleJoined` con `{ bot: true }` agrega el asiento, y una persona que entra a ese asiento (o `markRoleLeft`) lo quita. La vista que viaja por el SSE lo proyecta por asiento: `orgs[].roles[].bot` y `scarcity.arbiter.bot` (boolean). Un asiento bot cuenta como `connected: true` toda la ronda. La sala de demo se marca con `RoomState.demo`, que viaja como `room.demo` (boolean). La pantalla grande lee esos tres campos; `room.autopilot` (paso actual, total, `botSeats`) sigue disponible para mostrar el avance del piloto.
+- **Por qué:** la marca vive en el estado y no solo en el piloto automático porque el piloto termina sus pasos en unos segundos, y los bots deben seguir viéndose como bots (y conectados) hasta el acta. Al estar en el motor, sirve igual para la sala de demo y para el ensayo automático del anfitrión, y queda en la bitácora con `bot: true`.
+- **Descartado:** marcar los bots solo con `autopilot.botSeats`. Desaparecía la marca cuando el piloto se detenía y no distinguía un asiento que después tomó una persona.
+
+## Demo de 3 personas con bots en los roles administrativos
+
+- **Decisión:** en las salas de demo, las personas solo presentan los casos y el Comité decide; el límite y la firma de cada organización los hacen bots del piloto automático, que arrancan al entrar la primera persona. El reloj de espera cuenta desde esa primera persona, y la sala se reinicia con «Nueva ronda» o sola 2 minutos después del acta.
+- **Por qué:** Ramón pidió que la demo la pueda hacer gente que no la conoce. Probándola como novato, Sebastián encontró que hacían falta 5 personas, que el paso de límite y firma no se entendía y que el reloj de la sala fija marcaba casi 2 horas (contaba desde que se creó la sala).
+- **Descartado:** borrar el paso de límite y firma. Es la regla de autoridad del suelo y sigue completo en las salas normales y en la sala de una clínica; en la demo lo juegan bots a la vista.
+- **Tras una ronda, los teléfonos viejos no recuperan su silla.** Decisión de Sebastián: prioridad a que el siguiente grupo pueda jugar. Fuera de la demo, una pestaña que pierde su token (por ejemplo, porque el servidor se reinició) vuelve a tomar su silla sola; en una sala de demo no (`shouldRecoverSeat` en `src/lib/client/use-room.ts`): tras «Nueva ronda» o el reinicio automático, el teléfono vuelve a «Elige tu silla» con «Sortear mi rol» y el aviso «Empezó una ronda nueva». Descartado: recuperar la silla y liberarla a los 45 s sin señal, porque un teléfono con la página abierta nunca la soltaba.
 

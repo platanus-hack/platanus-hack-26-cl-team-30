@@ -13,7 +13,7 @@ import type { Act } from "@/lib/client/use-room";
 import type { ProjectedOrg, ProjectedRole, ProjectedRoomState, Telemetry } from "@/lib/genome/schema";
 import type { ActionOk } from "@/lib/store/actions";
 import { Why } from "./parts";
-import { seats } from "./screen";
+import { demoStep, seats } from "./screen";
 import { SeatMain } from "./seat-shell";
 
 type Props = {
@@ -33,7 +33,8 @@ type Props = {
  * queda plegado al final.
  */
 export function RoomView({ room, me, roomId, act, acta, committee, onLeave }: Props) {
-  const step = roomStep(room);
+  // En la sala de demo, los 4 pasos de la demo; si no, los pasos completos de la sala.
+  const step = room.demo ? demoStep(room) : roomStep(room);
   const groups = seats(room);
   const all = groups.flatMap((group) => group.seats);
   const myOrg = findOrg(room, me.orgId);
@@ -74,6 +75,10 @@ export function RoomView({ room, me, roomId, act, acta, committee, onLeave }: Pr
                     <strong>{seat.title}</strong>
                     {mine ? (
                       <span className="st-badge">Tú</span>
+                    ) : seat.bot ? (
+                      <span className="st-badge" data-tone="plain">
+                        <Bot aria-hidden /> Bot
+                      </span>
                     ) : seat.connected ? (
                       <span className="st-badge">
                         <CircleCheck aria-hidden /> Conectado

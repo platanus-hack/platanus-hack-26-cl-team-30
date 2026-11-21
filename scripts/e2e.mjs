@@ -17,6 +17,10 @@
 //   sorteo      QR único: POST /api/rooms/:id/seat entrega una silla libre al azar,
 //               «sortear otro rol» cambia de silla y libera la anterior, el Comité
 //               solo entra con su clave y, sin sillas libres, responde 409.
+//   demo        sala de demo (3 personas, 3 toques): el sorteo reparte solo quien
+//               presenta en cada organización y el Comité; al entrar la primera
+//               persona, bots sellan el límite y firman; el reloj parte en 0;
+//               «Nueva ronda» (reinicio del anfitrión) la deja limpia.
 //   frase       POST /api/rooms con description crea una sala nueva ya mutada.
 //               Intenta el modelo (máximo 15 s) y acepta la semilla de respaldo:
 //               el resultado no depende del modelo, pero contra el deploy gasta una
@@ -1201,6 +1205,99 @@ async function seatDrawJourney() {
   }
 }
 
+// --- Sala de demo: 3 personas, 3 toques ------------------------------------------------
+
+async function demoJourney() {
+  title("sala de demo: 3 personas y 3 toques, los roles administrativos son bots");
+  let roomId = null;
+  let stage = null;
+  const people = [];
+  try {
+    roomId = await createRoom("cross_org", { demo: true });
+    stage = new Participant(roomId, "pantalla general");
+    const key = hosts.get(roomId).committeeKey;
+    const roleOf = (state, orgId, roleId) => orgOf(state, orgId)?.roles.find((role) => role.id === roleId);
+
+    await step("la sala dice que es de demo, el reloj marca 0 y no hay bots hasta que entra alguien", async () => {
+      const state = await stage.listen();
+      check(state.demo === true, `La vista debía traer demo: true y trajo ${JSON.stringify(state.demo)}`);
+      check(state.stakes.elapsedMs === 0, `Sin nadie adentro el reloj debía marcar 0 y marcó ${state.stakes.elapsedMs} ms`);
+      check(state.orgs.every((org) => org.roles.every((role) => role.bot !== true)), "No debía haber bots antes de que entre la primera persona");
+    });
+
+    const seats = [];
+    await step("el sorteo reparte solo a quien presenta en cada organización; sin la clave del Comité, 409", async () => {
+      for (let i = 0; i < 2; i++) {
+        const res = await drawSeat(roomId);
+        expectOk(res);
+        seats.push({ ...res.data.seat, token: res.data.token });
+      }
+      const ids = seats.map(seatId);
+      const presenters = stage.state.scarcity.candidates.map((candidate) => `${candidate.orgId}/${candidate.proposerRoleId}`);
+      check([...ids].sort().join() === [...presenters].sort().join(), `Debían tocar ${presenters.join(", ")} y tocaron ${ids.join(", ")}`);
+      expectError(await drawSeat(roomId), 409, "NO_FREE_SEAT");
+    });
+
+    await step("con la clave del QR, el Comité es el tercer asiento", async () => {
+      const res = await drawSeat(roomId, { committeeKey: key });
+      expectOk(res);
+      const arbiter = stage.state.scarcity.arbiter;
+      check(seatId(res.data.seat) === seatId(arbiter), `Debía tocar el Comité y tocó ${describeResponse(res)}`);
+      seats.push({ ...res.data.seat, token: res.data.token });
+    });
+
+    for (const seat of seats) {
+      const person = new Participant(roomId, seatId(seat), seat.orgId, seat.roleId);
+      person.token = seat.token;
+      await person.listen();
+      people.push(person);
+    }
+
+    await step("al entrar la primera persona, los roles administrativos son bots y sellan el límite y firman solos", async () => {
+      const bots = stage.state.orgs.map((org) => ({ orgId: org.orgId, roleId: org.authorityRule.approverRoleId }));
+      await stage.waitFor((state) => bots.every((seat) => roleOf(state, seat.orgId, seat.roleId)?.bot === true && roleOf(state, seat.orgId, seat.roleId)?.connected === true), "los aprobadores aparecen como bots conectados", 10_000);
+      await stage.waitFor((state) => state.orgs.every((org) => !org.conflict.hasConflict && org.gate.outcome === "approved"), "los bots sellan el límite y firman", 15_000);
+      check(stage.state.stakes.elapsedMs > 0, "Con gente adentro el reloj debía avanzar");
+      return `${bots.length} bots`;
+    });
+
+    let touches = 0;
+    await step("cada hospital presenta a su paciente con un toque (sin pasar por el límite ni la firma)", async () => {
+      for (const person of people.filter((entry) => entry.orgId !== stage.state.scarcity.arbiter.orgId)) {
+        expectOk(await person.act("SUBMIT_CANDIDATE"));
+        touches += 1;
+      }
+      await allSee([stage, ...people], (state) => state.allocation?.status === "PROPOSED", "los dos casos presentados y la asignación propuesta");
+    });
+
+    await step("el Comité aprueba con razón (un toque) y todas las pantallas ven el acta cerrada", async () => {
+      const committee = people.find((person) => person.orgId === stage.state.scarcity.arbiter.orgId);
+      expectOk(await committee.act("ALLOCATION_SEAL", PAYLOADS.allocationSeal("Mayor necesidad sin cubrir.")));
+      touches += 1;
+      await allSee([stage, ...people], (state) => state.allocation?.status === "SEALED" && state.stakes.status === "CONTAINED", "asignación sellada");
+      const acta = await request(baseUrl, "GET", `/api/rooms/${roomId}/acta`);
+      check(acta.status === 200 && acta.data.allocationStatus === "SEALED", `El acta debía quedar sellada: ${describeResponse(acta)}`);
+      check(touches === 3, `La demo debía tomar 3 toques y tomó ${touches}`);
+      return `${touches} toques`;
+    });
+
+    await step("«Nueva ronda»: el reinicio del anfitrión deja la sala de demo limpia, sin bots y con el reloj en 0", async () => {
+      const res = await request(baseUrl, "DELETE", `/api/rooms/${roomId}`, undefined, hostHeaders(roomId));
+      check(res.status === 200, `DELETE con x-host-token debía responder 200: ${describeResponse(res)}`);
+      await stage.waitFor(
+        (state) => state.demo === true && state.allocation?.status === "PENDING" && state.stakes.elapsedMs === 0 && state.orgs.every((org) => org.roles.every((role) => role.bot !== true)),
+        "sala de demo limpia",
+      );
+      const again = await drawSeat(roomId);
+      expectOk(again);
+    });
+  } finally {
+    stage?.close();
+    for (const person of people) person.close();
+    await discardRoom(roomId);
+  }
+}
+
 // --- Salas fijas -------------------------------------------------------------------
 
 async function fixedRooms() {
@@ -1235,6 +1332,7 @@ async function main() {
   if (!ONLY) await otherOrgJourney();
   if (!ONLY) await scenarioJourney("construccion");
   if (!ONLY) await seatDrawJourney();
+  if (!ONLY) await demoJourney();
   if (!ONLY) await mutatedRoomJourney();
 
   console.log(`\nResultado: ${passed} pasos OK, ${failures.length} con FALLA.`);

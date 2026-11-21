@@ -300,6 +300,16 @@ export const RoomStateSchema = z.object({
   auditLog: z.array(AuditEventSchema),
   telemetry: TelemetrySchema,
   caseOpenedAt: z.number(),
+  /**
+   * Desde cuándo corre el reloj de espera: cuando entra la primera persona (un
+   * bot no lo arranca). null: nadie ha entrado y el reloj marca 0. Si falta
+   * (estados armados a mano), el reloj corre desde caseOpenedAt.
+   */
+  clockStartedAt: z.number().nullable().optional(),
+  /** Sala de demo: 3 asientos humanos y los roles administrativos los juega el piloto automático. */
+  demo: z.boolean().optional(),
+  /** Asientos que tiene un bot del piloto automático. Si entra una persona a uno, deja de serlo. */
+  botSeats: z.array(z.object({ orgId: z.string(), roleId: z.string() })).optional(),
   decisionSealedAt: z.number().nullable(),
   /** Sube en cada cambio. Agregado al plan. */
   version: z.number().int().min(0),
@@ -419,7 +429,8 @@ export const StakesViewSchema = z.object({
   deadlineLabel: z.string().nullable(),
 });
 
-export const ProjectedRoleSchema = RoleDefinitionSchema.extend({ connected: z.boolean() });
+/** bot: el asiento lo tiene un bot del piloto automático (cuenta como conectado). Lo lee la pantalla grande. */
+export const ProjectedRoleSchema = RoleDefinitionSchema.extend({ connected: z.boolean(), bot: z.boolean().optional() });
 
 export const ProjectedOrgSchema = OrgGenomeBaseSchema.omit({ roles: true, fields: true }).extend({
   roles: z.array(ProjectedRoleSchema),
@@ -433,7 +444,7 @@ export const ProjectedScarcitySchema = z.object({
   resource: z.string(),
   rule: AllocationRuleSchema,
   candidates: z.array(ProjectedCandidateSchema),
-  arbiter: ArbiterSchema.extend({ connected: z.boolean() }),
+  arbiter: ArbiterSchema.extend({ connected: z.boolean(), bot: z.boolean().optional() }),
   deadlineLabel: z.string(),
   stakesLabel: z.string(),
 });
@@ -457,6 +468,8 @@ export const ProjectedRoomStateSchema = z.object({
   mode: RoomModeSchema,
   /** Escenario entre organizaciones de la sala, si lo tiene. */
   scenarioId: z.string().optional(),
+  /** true en una sala de demo (3 asientos humanos, los administrativos son bots). */
+  demo: z.boolean().optional(),
   /** Ensayo automático en curso o terminado. Falta o es null si nunca se usó. */
   autopilot: AutopilotViewSchema.nullable().optional(),
   viewer: ViewerSchema,

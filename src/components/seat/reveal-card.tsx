@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ArrowRight, Dices, LoaderCircle, Lock, LockOpen } from "lucide-react";
 import { findOrg, isArbiter, roleLabel, type RoleViewer } from "@/components/organs/format";
 import type { ProjectedRoomState } from "@/lib/genome/schema";
-import { revealChips } from "./screen";
+import { mission as missionFor, revealChips } from "./screen";
 import { SeatActions, SeatMain } from "./seat-shell";
 
 type Props = {
@@ -27,8 +27,8 @@ export function RevealCard({ room, me, onEnter, onChange, changeLabel = "Elegir 
   const arbiter = isArbiter(room);
   const chips = revealChips(room, me);
   const tag = role?.shortTag ?? room.scarcity?.arbiter.shortTag ?? "";
-  // La misión del rol viene del genoma; la del Comité entre organizaciones es fija.
-  const mission = role?.objective ?? "Apruebas o vetas la asignación, con tu razón.";
+  // Una frase sin jerga: en la demo, presentar el caso o elegir; si no, la del genoma.
+  const mission = missionFor(room, me);
 
   async function change() {
     if (!onChange) return;

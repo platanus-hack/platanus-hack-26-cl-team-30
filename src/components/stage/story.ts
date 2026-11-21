@@ -4,7 +4,7 @@
 
 import type { ProjectedOrg, ProjectedRoomState } from "@/lib/genome/schema";
 import { formatScore, formatValue } from "@/components/organs/format";
-import { shortLabel, stageSeats } from "./seats";
+import { isDemoRoom, shortLabel, stageSeats } from "./seats";
 
 export type StoryStep = { id: string; label: string };
 export type StoryProgress = { steps: StoryStep[]; index: number; done: boolean };
@@ -12,6 +12,13 @@ export type StoryProgress = { steps: StoryStep[]; index: number; done: boolean }
 const CROSS_STEPS: StoryStep[] = [
   { id: "join", label: "Unirse" },
   { id: "limits", label: "Límites" },
+  { id: "cases", label: "Casos" },
+  { id: "committee", label: "Comité" },
+  { id: "acta", label: "Acta" },
+];
+// Sala de demo: los límites y las firmas internas los hace el piloto automático, así que no son un paso.
+const DEMO_STEPS: StoryStep[] = [
+  { id: "join", label: "Unirse" },
   { id: "cases", label: "Casos" },
   { id: "committee", label: "Comité" },
   { id: "acta", label: "Acta" },
@@ -27,6 +34,8 @@ const roleTitle = (org: ProjectedOrg, roleId: string | null | undefined) => org.
 
 // Lo que ya es trabajo sobre el caso: si pasó algo de esto, la sala dejó atrás el paso «Unirse».
 const WORK: ReadonlySet<string> = new Set(["RULE_SEALED", "HITL_APPROVED", "HITL_VETOED", "COUNTER_PROPOSED", "CANDIDATE_SUBMITTED", "ALLOCATION_PROPOSED", "ALLOCATION_SEALED", "AGENT_PROPOSED", "AUTOPILOT"]);
+// En la demo los bots trabajan desde el principio: solo cuenta lo que hacen las personas.
+const DEMO_WORK: ReadonlySet<string> = new Set(["CANDIDATE_SUBMITTED", "ALLOCATION_PROPOSED", "ALLOCATION_SEALED"]);
 
 /**
  * La sala ya partió: están sentados todos los que trabajan el caso (el Comité
@@ -34,15 +43,22 @@ const WORK: ReadonlySet<string> = new Set(["RULE_SEALED", "HITL_APPROVED", "HITL
  * pantalla grande muestra el paso «Unirse» con la galaxia.
  */
 export function roomStarted(room: ProjectedRoomState): boolean {
-  const players = stageSeats(room).filter((seat) => seat.kind !== "arbiter");
-  return (players.length > 0 && players.every((seat) => seat.connected)) || room.auditLog.some((event) => WORK.has(event.type));
+  const demo = isDemoRoom(room);
+  const players = stageSeats(room).filter((seat) => seat.kind !== "arbiter" && seat.human);
+  const work = demo ? DEMO_WORK : WORK;
+  return (players.length > 0 && players.every((seat) => seat.connected)) || room.auditLog.some((event) => work.has(event.type) && !(demo && event.detail?.bot === true));
 }
 
 /** Paso en que va la sala. Unirse mientras falta gente; Acta cuando la decisión quedó sellada. */
 export function storyProgress(room: ProjectedRoomState): StoryProgress {
   const cross = room.mode === "cross_org" && !!room.allocation;
-  const steps = cross ? CROSS_STEPS : SINGLE_STEPS;
   const anyone = roomStarted(room);
+  if (cross && isDemoRoom(room)) {
+    const status = room.allocation!.status;
+    const index = status === "SEALED" ? 3 : status === "PROPOSED" ? 2 : anyone ? 1 : 0;
+    return { steps: DEMO_STEPS, index, done: index === 3 };
+  }
+  const steps = cross ? CROSS_STEPS : SINGLE_STEPS;
   const conflict = room.orgs.some((org) => org.conflict.hasConflict);
   let index: number;
   if (cross) {
@@ -64,7 +80,9 @@ export function storyProgress(room: ProjectedRoomState): StoryProgress {
 /** Franja del recurso: la cantidad y el nombre en grande, el plazo y si sigue esperando. */
 export function storyResource(room: ProjectedRoomState): { quantity: string; name: string; detail: string } {
   if (room.mode === "cross_org" && room.scarcity) {
-    const name = room.scarcity.resource.replace(/\s*\(.*\)\s*$/, "");
+    const full = room.scarcity.resource.replace(/\s*\(.*\)\s*$/, "");
+    // En la demo, el recurso en una o dos palabras: «Cama UCI».
+    const name = isDemoRoom(room) ? shortLabel(full) : full;
     return { quantity: String(room.scarcity.rule.resourceQuantity), name, detail: room.scarcity.stakesLabel };
   }
   const org = room.orgs[0];
@@ -95,6 +113,8 @@ const lockedLabels = (labels: string[]) => [...new Set(labels.map(shortLabel))].
 export function storyCards(room: ProjectedRoomState): StoryCard[] {
   const allocation = room.allocation;
   const scarcity = room.scarcity;
+  // En la demo basta un candado por tarjeta: el costo, que es la idea central. El resto está en «Organizaciones».
+  const demo = isDemoRoom(room);
   if (allocation && scarcity) {
     return scarcity.candidates.map((candidate) => {
       const org = room.orgs.find((entry) => entry.orgId === candidate.orgId);
@@ -117,13 +137,13 @@ export function storyCards(room: ProjectedRoomState): StoryCard[] {
               : { tone: "plain", text: "Sin presentar" };
       return {
         id: candidate.caseId,
-        org: org?.orgName ?? candidate.orgId,
+        org: (demo && org ? shortLabel(org.orgName) : org?.orgName) ?? candidate.orgId,
         title: candidate.patientLabel,
         score: ranked ? formatScore(ranked.score) : null,
         proposed,
         winner,
         state,
-        locked,
+        locked: demo ? locked.slice(0, 1) : locked,
         why: proposed && allocation.tieBreakApplied ? "Casi empatados: va primero quien tiene más necesidad sin cubrir." : undefined,
       };
     });
@@ -162,17 +182,21 @@ export function storyMissing(room: ProjectedRoomState): { lead: "Falta" | "Listo
   if (allocation && scarcity) {
     if (allocation.status === "SEALED") {
       const winner = allocation.ranking.find((entry) => entry.caseId === allocation.winnerCaseId);
-      return { lead: "Listo", text: `${orgOf(winner?.orgId)?.orgName ?? winner?.patientLabel ?? "El caso"} recibe el recurso`, who: "Acta lista", whoConnected: null };
+      const name = orgOf(winner?.orgId)?.orgName;
+      const shown = name && isDemoRoom(room) ? shortLabel(name) : name;
+      return { lead: "Listo", text: `${shown ?? winner?.patientLabel ?? "El caso"} recibe el recurso`, who: "Acta lista", whoConnected: null };
     }
     if (allocation.status === "PROPOSED") {
-      return { lead: "Falta", text: "el Comité decide", who: scarcity.arbiter.title, whoConnected: scarcity.arbiter.connected };
+      return { lead: "Falta", text: "el Comité decide", who: isDemoRoom(room) ? "Comité" : scarcity.arbiter.title, whoConnected: scarcity.arbiter.connected };
     }
   }
+  const demo = isDemoRoom(room);
   if (!roomStarted(room)) {
-    const seats = stageSeats(room);
+    const seats = stageSeats(room).filter((seat) => seat.human);
     return { lead: "Falta", text: "que entren todos", who: `${seats.filter((seat) => seat.connected).length}/${seats.length} conectados`, whoConnected: null };
   }
-  for (const org of room.orgs) {
+  // En la demo, los límites y las firmas internas las hace el piloto automático: no se piden en pantalla.
+  for (const org of demo ? [] : room.orgs) {
     if (org.conflict.hasConflict) {
       const rule = org.authorityRule;
       const proposer = org.roles.find((role) => role.id === rule.proposerRoleId);
@@ -185,7 +209,7 @@ export function storyMissing(room: ProjectedRoomState): { lead: "Falta" | "Listo
       };
     }
   }
-  for (const org of room.orgs) {
+  for (const org of demo ? [] : room.orgs) {
     if (org.gate.status === "BLOCKED_HITL_REQUIRED" && !(allocation && scarcity)) {
       const role = org.roles.find((entry) => entry.id === org.gate.pendingApproverRoleId);
       return { lead: "Falta", text: "una firma", who: `${role?.title ?? "Una persona"} · ${org.orgName}`, whoConnected: role?.connected ?? null };
@@ -195,8 +219,11 @@ export function storyMissing(room: ProjectedRoomState): { lead: "Falta" | "Listo
     const pending = scarcity.candidates.filter((candidate) => allocation.pendingCaseIds.includes(candidate.caseId));
     if (pending.length > 0) {
       const names = pending.map((candidate) => orgOf(candidate.orgId)?.orgName ?? candidate.orgId);
+      // En la demo se nombra a cada persona como en la pantalla «Unirse»: «Clínica · Urgencias».
+      const shorts = new Map(stageSeats(room).map((seat) => [seat.id, seat.short]));
       const proposers = pending.map((candidate) => {
         const org = orgOf(candidate.orgId);
+        if (demo) return shorts.get(`${candidate.orgId}/${candidate.proposerRoleId}`) ?? candidate.orgId;
         return org ? `${roleTitle(org, candidate.proposerRoleId)} · ${org.orgName}` : candidate.orgId;
       });
       return {

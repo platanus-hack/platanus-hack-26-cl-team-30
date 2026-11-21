@@ -80,6 +80,15 @@ Falta: el Comité decide — aprobar o vetar con razón      ← una sola frase,
 - Siguen los QR para unirse y el dock: Centro de mando / Ranking / Organizaciones / Acta.
 - No es un tablero de métricas: sin gráficos de ingresos ni tablas en la vista principal.
 
+### Sala de demo: 3 personas
+
+En las salas de demo (`demo` en el estado de la sala) la pantalla grande se simplifica para que alguien que no conoce Nexo pueda conducirla:
+
+- Pasos: Unirse → Casos → Comité → Acta. «Límites» no aparece: los límites y las firmas de cada hospital los hace el piloto automático.
+- En «Unirse» van grandes solo las 3 personas: «Clínica · Urgencias», «Hospital Rural · Turno» y «Comité». Los roles que juega el piloto automático van pequeños, con borde punteado y el chip «automático».
+- La barra de arriba no tiene «Pregúntale al caso» (está en el dock) y la vista principal no muestra el selector de escenario (está en «Controles del presentador», en Acta).
+- Al cerrar el acta, el anfitrión ve un botón grande «Nueva ronda».
+
 ### Paso «Unirse»: la galaxia
 
 Mientras falta gente, la pantalla grande no muestra la Historia sino esto:

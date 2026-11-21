@@ -45,7 +45,7 @@ export function Nav() {
           </a>
           <Link href="/stage/demo-cross" className="btn btn-primary min-h-10! px-4! py-2! text-[0.9375rem]!">
             <MonitorPlay className="size-4" aria-hidden />
-            Ver el ejemplo
+            Ver la demo
           </Link>
         </div>
       </div>

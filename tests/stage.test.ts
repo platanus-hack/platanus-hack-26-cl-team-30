@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { markRoleJoined, openRoom, projectStateForOrgAndRole, sealRule, type ActorRef, type EngineResult } from "../src/lib/engine/deterministic";
 import type { RoomState, Telemetry } from "../src/lib/genome/schema";
 import { getInitialCrossOrgRoom, getInitialSingleOrgRoom } from "../src/lib/genome/seeds";
-import { shortLabel, stageSeats } from "../src/components/stage/seats";
+import { isDemoRoom, shortLabel, stageSeats } from "../src/components/stage/seats";
 import { roomStarted, storyCards, storyMissing, storyProgress } from "../src/components/stage/story";
 
 const T0 = 1_800_000_000_000;
@@ -83,5 +83,37 @@ describe("textos cortos", () => {
     expect(shortLabel("Costo de cobertura UCI")).toBe("Costo");
     expect(shortLabel("Camas UCI disponibles")).toBe("Camas UCI");
     expect(shortLabel("Gravedad clínica")).toBe("Gravedad clínica");
+  });
+});
+
+describe("sala de demo: 3 personas", () => {
+  // El almacén marca `demo` en las salas fijas entre organizaciones; el motor lo proyecta tal cual.
+  const demo = openRoom({ ...getInitialCrossOrgRoom("demo-cross", { now: T0, telemetry: TELEMETRY }), demo: true }, T0);
+  const PROPOSERS = [CROSS_PLAYERS[0], CROSS_PLAYERS[2]];
+
+  it("se reconoce por la marca del servidor", () => {
+    expect(isDemoRoom(stage(demo))).toBe(true);
+    expect(isDemoRoom({ ...stage(demo), demo: false })).toBe(false);
+    expect(isDemoRoom(stage(openRoom(getInitialCrossOrgRoom("s6", { now: T0, telemetry: TELEMETRY }), T0)))).toBe(false);
+  });
+
+  it("muestra 3 asientos de personas y los aprobadores como automáticos", () => {
+    const seats = stageSeats(stage(demo));
+    expect(seats.filter((seat) => seat.human).map((seat) => seat.short)).toEqual(["Clínica · Urgencias", "Hospital Rural · Turno", "Comité"]);
+    expect(seats.filter((seat) => !seat.human).every((seat) => seat.bot && seat.kind === "approver")).toBe(true);
+  });
+
+  it("tiene 4 pasos, sin «Límites»", () => {
+    expect(storyProgress(stage(demo)).steps.map((step) => step.label)).toEqual(["Unirse", "Casos", "Comité", "Acta"]);
+  });
+
+  it("sale de «Unirse» cuando entran los dos que presentan, sin esperar a los automáticos", () => {
+    const one = stage(join(demo, PROPOSERS[0]));
+    expect(storyProgress(one).index).toBe(0);
+    expect(storyMissing(one).who).toBe("1/3 conectados");
+    const both = stage(join(demo, ...PROPOSERS));
+    expect(storyProgress(both).index).toBe(1);
+    // No pide acordar límites ni firmas internas: eso lo hace el piloto automático.
+    expect(storyMissing(both).text).toBe("cada organización presenta su caso");
   });
 });

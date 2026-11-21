@@ -96,14 +96,15 @@ export function Hero() {
           <p data-follow className="lede mt-7 max-w-[34rem] text-muted-foreground">
             Deciden juntas a quién le toca, con regla conocida y firma.
           </p>
-          <div data-follow className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          {/* Una sola acción principal. La otra es un enlace simple, para que no compitan. */}
+          <div data-follow className="mt-9 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-6">
             <Link href="/stage/demo-cross" className="btn btn-primary btn-lg">
               <MonitorPlay className="size-5" aria-hidden />
-              Ver el ejemplo
+              Ver la demo
             </Link>
-            <a href="#probar" className="btn btn-line btn-lg">
-              <Sparkles className="size-5" aria-hidden />
-              Probar mi caso
+            <a href="#probar" className="inline-flex min-h-11 items-center gap-2 font-semibold text-foreground underline decoration-border underline-offset-4 hover:decoration-brand">
+              <Sparkles className="size-4" aria-hidden />
+              o prueba tu caso
             </a>
           </div>
         </div>
