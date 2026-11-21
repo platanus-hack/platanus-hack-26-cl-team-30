@@ -25,8 +25,12 @@ const actor = {
   token: z.string().max(128).optional(),
 };
 
-/** Tomar un rol. Devuelve el token. Con el token vigente sirve para reconectarse. */
-export const JoinRoleActionSchema = z.object({ type: z.literal("JOIN_ROLE"), ...actor });
+/**
+ * Tomar un rol. Devuelve el token. Con el token vigente sirve para reconectarse.
+ * El puesto del Comité exige además committeeKey: la clave que va dentro del QR
+ * del Comité (sin ella, 403 COMMITTEE_KEY_REQUIRED).
+ */
+export const JoinRoleActionSchema = z.object({ type: z.literal("JOIN_ROLE"), ...actor, committeeKey: z.string().max(64).optional() });
 
 /** Liberar el rol e invalidar su token. */
 export const LeaveRoleActionSchema = z.object({ type: z.literal("LEAVE_ROLE"), ...actor });
@@ -171,12 +175,15 @@ export const ACTION_TYPES = ActionSchema.options.map((option) => option.shape.ty
  * Códigos de error de la API de salas.
  *   400 BAD_REQUEST (el body no cumple ActionSchema) · REASON_REQUIRED · INVALID_VALUE
  *   401 INVALID_TOKEN (falta el token o no es el vigente del rol)
- *   403 RBAC_DENIED (el rol no tiene permiso; queda en la bitácora)
+ *   403 RBAC_DENIED (el rol no tiene permiso; queda en la bitácora) ·
+ *       COMMITTEE_KEY_REQUIRED (Comité sin la clave del QR) · HOST_ONLY (control de anfitrión sin su token)
  *   404 ROOM_NOT_FOUND · ROLE_NOT_FOUND · FIELD_NOT_FOUND · CANDIDATE_NOT_FOUND
  *   409 ROLE_TAKEN · WRONG_MODE · RULE_NOT_SEALED · GATE_NOT_BLOCKED ·
  *       DECISION_SEALED · ALLOCATION_NOT_READY · FIXED_ROOM (las salas de demo no se mutan) ·
  *       BUSY (ya hay una llamada al modelo en curso para ese rol o esa sala)
- *   503 ROOM_LIMIT · TOO_MANY_CONNECTIONS (topes del servidor; reintentar más tarde)
+ *   429 RATE_LIMITED (demasiadas solicitudes del mismo cliente; ver Retry-After)
+ *   503 ROOM_LIMIT · TOO_MANY_CONNECTIONS (topes del servidor; reintentar más tarde) ·
+ *       STORAGE_UNAVAILABLE (Supabase o su tabla no están)
  */
 export type ActionErrorCode =
   | EngineErrorCode
@@ -186,7 +193,11 @@ export type ActionErrorCode =
   | "ROLE_TAKEN"
   | "FIXED_ROOM"
   | "ROOM_IN_USE" // 409: mutar una sala que ya tiene personas conectadas
-  | "BUSY" // 409: ya hay una llamada al modelo en curso para este rol o esta sala
+  | "BUSY" // 409: ya hay una llamada al modelo en curso para este rol o esta sala, o un ensayo automático corriendo
+  | "COMMITTEE_KEY_REQUIRED" // 403: tomar el puesto del Comité sin la clave del QR
+  | "HOST_ONLY" // 403: control de la pantalla grande sin el token de anfitrión
+  | "RATE_LIMITED" // 429: demasiadas solicitudes seguidas del mismo cliente
+  | "STORAGE_UNAVAILABLE" // 503: Supabase o la tabla no están disponibles
   | "ROOM_LIMIT" // 503: el servidor llegó al tope de salas y ninguna se puede liberar
   | "TOO_MANY_CONNECTIONS"; // 503: tope de conexiones SSE
 

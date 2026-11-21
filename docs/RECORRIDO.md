@@ -9,11 +9,11 @@ La idea en una línea: un solo estado por sala vive en el servidor, un motor de 
 | # | Archivo | Por qué importa | Función clave |
 | --- | --- | --- | --- |
 | 1 | `src/lib/genome/schema.ts` | El contrato de datos. Separa el estado del servidor, que tiene los secretos (`RoomStateSchema`), de lo único que viaja al navegador, sin ellos (`ProjectedRoomStateSchema`). Cada campo declara qué organizaciones y qué roles lo ven | `OrgGenomeSchema` (con sus validaciones de coherencia) |
-| 2 | `src/lib/genome/seeds.ts` | Los datos simulados de la demo: la clínica, el hospital rural, una distribuidora y la cama escasa. Se validan al cargar el módulo | `getInitialCrossOrgRoom` |
+| 2 | `src/lib/genome/seeds.ts` | Los datos simulados de la demo: tres escenarios entre organizaciones (hospitales y una cama, constructoras y una grúa, distribuidoras y un camión) y una distribuidora suelta. Se validan al cargar el módulo | `getInitialCrossOrgRoom` |
 | 3 | `src/lib/engine/deterministic.ts` (permisos) | Dónde se decide quién ve qué. Es la única salida de estado hacia un cliente: lo que un viewer no puede ver se elimina aquí y no viaja | `projectStateForOrgAndRole`, que usa `canViewField` y `canViewCoverageCost` |
 | 4 | `src/lib/engine/deterministic.ts` (reglas) | Las reglas, todas sin modelo y como funciones puras: choque de autoridad, compuerta, asignación con desempate de equidad, decisión del Comité, contador y acta | `resolveAllocation` y `recordCommitteeDecision` |
 | 5 | `src/lib/store/actions.ts` | Las 11 acciones que acepta el servidor, con su forma exacta y sus códigos de error | `ActionSchema` |
-| 6 | `src/lib/store/rooms.ts` | El almacén: salas en memoria, token por rol, salas fijas `demo` y `demo-cross`, topes de memoria y aviso de cambios. No decide reglas: valida, comprueba la identidad y delega en el motor | `applyAction` (y `resolveViewer` para el token) |
+| 6 | `src/lib/store/rooms.ts` | El almacén: salas en memoria, token por rol, token de anfitrión y clave del Comité, salas fijas (`demo`, `demo-cross`, `demo-construccion`, `demo-logistica`), reinicio, ensayo automático, topes de memoria y aviso de cambios. No decide reglas: valida, comprueba la identidad y delega en el motor | `applyAction` (y `resolveViewer` para el token, `startAutopilot` para el ensayo) |
 | 7 | `src/app/api/rooms/[roomId]/events/route.ts` | El tiempo real. Cada conexión SSE vuelve a resolver quién mira y envía su propia versión de la sala en cada cambio, y una vez por segundo mientras el contador corre | `GET` (su función interna `send`) |
 | 8 | `src/agents/role-agent.ts` | El agente de cada rol. Recibe la misma vista filtrada que el navegador de esa persona, así que hereda sus permisos. Propone; no decide | `runRoleAgentTurn` |
 | 9 | `src/lib/llm.ts` | La única puerta a un modelo: Claude o un modelo local, cola de llamadas, JSON validado y telemetría que dice si el modelo es local o de nube | `chatJson` y `getTelemetry` |
@@ -45,6 +45,9 @@ El agente de rol entra por la misma puerta: `RUN_ROLE_AGENT` llega a `applyActio
 | `src/lib/client/use-room.ts` (`useRoom`) | El único lugar de la interfaz que habla con la API: abre el SSE, guarda el token y envía acciones |
 | `src/app/room/[roomId]/room-client.tsx` y `src/app/stage/[roomId]/stage-client.tsx` | La estación de un rol y la pantalla para proyectar |
 | `src/components/organs/` | Los siete órganos de interfaz. Dibujan el estado proyectado; no calculan ni ocultan nada |
-| `scripts/e2e.mjs` | Prueba de punta a punta por HTTP: varios participantes independientes, cada uno con su SSE, recorren las dos salas |
+| `scripts/e2e.mjs` | Prueba de punta a punta por HTTP: varios participantes independientes, cada uno con su SSE, recorren las salas de una y de dos organizaciones, un escenario de construcción ensayado con el piloto automático y una sala creada desde una frase |
+| `src/lib/engine/autopilot.ts` | El ensayo automático: el guion de la demo como datos, con las mismas funciones del motor |
+| `src/lib/store/rate-limit.ts`, `src/lib/store/host.ts` | Límite de peticiones por cliente y controles de anfitrión |
+| `src/integrations/committee-channel.ts` | Cómo el Comité decide por WhatsApp o por voz con las mismas acciones que la web |
 | `docs/DECISIONES.md` | Por qué se eligió cada cosa y qué se descartó |
 | `docs/PREGUNTAS.md` | Preguntas probables del jurado con respuestas cortas |

@@ -24,11 +24,12 @@ export function isLocalHost(hostname) {
 /**
  * Petición HTTP que nunca lanza por un status de error: devuelve
  * { status, ok, data, text } para que quien llama pueda comprobar 401, 403, 409...
+ * headers se agrega a la petición (por ejemplo, x-host-token).
  */
-export async function request(baseUrl, method, path, body) {
+export async function request(baseUrl, method, path, body, headers = {}) {
   const res = await fetch(baseUrl + path, {
     method,
-    headers: body === undefined ? {} : { "Content-Type": "application/json" },
+    headers: { ...(body === undefined ? {} : { "Content-Type": "application/json" }), ...headers },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await res.text();

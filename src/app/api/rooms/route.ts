@@ -1,29 +1,69 @@
-import { RoomModeSchema } from "@/lib/genome/schema";
-import { isSeedGenomeId, SEED_GENOME_IDS } from "@/lib/genome/seeds";
+import { z } from "zod";
+import { CROSS_ORG_SCENARIO_IDS } from "@/lib/genome/scenarios";
+import { SEED_GENOME_IDS, type SeedGenomeId } from "@/lib/genome/seeds";
 import { readJsonBody } from "@/lib/store/http";
-import { createRoom, RoomLimitError } from "@/lib/store/rooms";
+import { globallyLimited, rateLimited } from "@/lib/store/rate-limit";
+import { createMutatedRoom, createRoom, getHostCredentials, RoomLimitError } from "@/lib/store/rooms";
 
-// POST /api/rooms  body { mode: "single_org" | "cross_org", seed?: string }  ->  { roomId }
-// Crea una sala desde una semilla. Sin body crea una sala single_org con la clínica.
-// "seed" elige la organización en single_org; cross_org siempre usa los dos hospitales.
-// Hay un tope de salas en memoria: al llegar a él sale la sala inactiva más
-// antigua; si todas tienen gente conectada, responde 503 ROOM_LIMIT.
+const CreateSchema = z.discriminatedUnion("mode", [
+  z.object({
+    mode: z.literal("single_org"),
+    /** Organización semilla. Se ignora si viene description. */
+    seed: z.enum(SEED_GENOME_IDS as [SeedGenomeId, ...SeedGenomeId[]]).optional(),
+    /** Frase que describe la organización: la sala nueva nace ya mutada. */
+    description: z.string().trim().min(1).max(600).optional(),
+  }),
+  z.object({
+    mode: z.literal("cross_org"),
+    scenario: z.enum(CROSS_ORG_SCENARIO_IDS).optional(),
+  }),
+]);
+
+// POST /api/rooms
+//   { mode: "single_org", seed? }                      -> sala de una organización desde una semilla
+//   { mode: "single_org", description }                -> sala NUEVA ya mutada desde una frase (modelo,
+//                                                          máx. 15 s; si no, la semilla más parecida)
+//   { mode: "cross_org", scenario? }                   -> dos organizaciones y un recurso escaso:
+//                                                          "hospitales" (por defecto), "construccion", "logistica"
+// Responde { roomId, hostToken, committeeKey, mode, scenario?, source?, latencyMs?, orgName? }.
+// hostToken habilita los controles de la pantalla grande (encabezado x-host-token);
+// committeeKey va dentro del QR del Comité. Se entregan solo aquí: guardarlos.
+// Sin body crea una sala single_org con la clínica.
+// 400 BAD_REQUEST · 429 RATE_LIMITED · 503 ROOM_LIMIT (tope de salas con todas en uso).
 export async function POST(request: Request) {
+  const limited = rateLimited(request, "createRoom");
+  if (limited) return limited;
+
   const body = await readJsonBody(request);
   if (!body.ok) return Response.json({ error: body.error, code: "BAD_REQUEST" }, { status: 400 });
-  const { mode: rawMode, seed } = (typeof body.value === "object" && body.value !== null ? body.value : {}) as { mode?: unknown; seed?: unknown };
-
-  const mode = RoomModeSchema.safeParse(rawMode ?? "single_org");
-  if (!mode.success) {
-    return Response.json({ error: 'mode debe ser "single_org" o "cross_org"', code: "BAD_REQUEST" }, { status: 400 });
+  const raw = typeof body.value === "object" && body.value !== null ? body.value : {};
+  const parsed = CreateSchema.safeParse({ mode: "single_org", ...raw });
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const where = issue?.path.length ? ` (${issue.path.join(".")})` : "";
+    return Response.json(
+      { error: `Datos inválidos${where}. mode: "single_org" | "cross_org"; seed: ${SEED_GENOME_IDS.join(", ")}; scenario: ${CROSS_ORG_SCENARIO_IDS.join(", ")}`, code: "BAD_REQUEST" },
+      { status: 400 },
+    );
   }
-  if (seed !== undefined && !isSeedGenomeId(seed)) {
-    return Response.json({ error: `seed debe ser una de: ${SEED_GENOME_IDS.join(", ")}`, code: "BAD_REQUEST" }, { status: 400 });
-  }
+  const input = parsed.data;
 
   try {
-    const room = createRoom({ mode: mode.data, seed: mode.data === "single_org" ? seed : undefined });
-    return Response.json({ roomId: room.roomId });
+    if (input.mode === "single_org" && input.description) {
+      // Mutar llama al modelo: límite por cliente más estricto y tope global.
+      const mutateLimited = rateLimited(request, "mutate") ?? globallyLimited("mutate");
+      if (mutateLimited) return mutateLimited;
+      const room = await createMutatedRoom(input.description);
+      return Response.json({ ...room, ...getHostCredentials(room.roomId), mode: "single_org" });
+    }
+    const room =
+      input.mode === "cross_org" ? createRoom({ mode: "cross_org", scenario: input.scenario }) : createRoom({ mode: "single_org", seed: input.seed });
+    return Response.json({
+      roomId: room.roomId,
+      ...getHostCredentials(room.roomId),
+      mode: room.mode,
+      ...(room.scenarioId ? { scenario: room.scenarioId } : {}),
+    });
   } catch (error) {
     if (error instanceof RoomLimitError) {
       return Response.json({ error: error.message, code: "ROOM_LIMIT" }, { status: 503, headers: { "Retry-After": "60" } });

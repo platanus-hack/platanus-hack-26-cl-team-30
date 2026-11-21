@@ -510,12 +510,16 @@ export function computeSharedStakesCounter(state: RoomState, nowTs: number): Sta
   const timeToDecisionMs = sealed ? elapsedMs : null;
 
   if (state.scarcity) {
-    // Cada candidato es una persona que espera el mismo recurso.
+    // Cada candidato es un caso que espera el mismo recurso. Las vidas en riesgo
+    // salen de los casos de cada organización (liveCase.livesAtRisk): en los
+    // hospitales hay una por caso; en una obra o una carga, ninguna.
     const waitingCases = sealed ? 0 : state.scarcity.candidates.length;
+    const candidateOrgs = new Set(state.scarcity.candidates.map((candidate) => candidate.orgId));
+    const lives = state.orgGenomes.filter((genome) => candidateOrgs.has(genome.orgId)).reduce((sum, genome) => sum + (genome.liveCase.livesAtRisk ?? 0), 0);
     return {
       status: sealed ? "CONTAINED" : "BLEEDING",
       waitingCases,
-      livesAtRisk: waitingCases,
+      livesAtRisk: sealed ? 0 : lives,
       elapsedMs,
       timeToDecisionMs,
       stakesLabel: state.scarcity.stakesLabel,
@@ -644,6 +648,7 @@ export function projectStateForOrgAndRole(state: RoomState, viewer: Viewer, nowT
     roomId: state.roomId,
     version: state.version,
     mode: state.mode,
+    ...(state.scenarioId !== undefined ? { scenarioId: state.scenarioId } : {}),
     viewer: safeViewer,
     serverNowTs: nowTs,
     orgs,
@@ -775,18 +780,38 @@ export function openRoom(state: RoomState, nowTs: number): RoomState {
 }
 
 /** Marca un rol como presente. El Comité (rol por QR o árbitro) queda como QR_JOINED. */
-export function markRoleJoined(state: RoomState, actor: ActorRef, nowTs: number): EngineResult {
+/**
+ * Marca un rol como presente. El Comité (rol por QR o árbitro) queda como
+ * QR_JOINED. extra se agrega al detalle del evento: el ensayo automático marca
+ * { bot: true } para que la bitácora diga que no fue una persona.
+ */
+export function markRoleJoined(state: RoomState, actor: ActorRef, nowTs: number, extra: Record<string, unknown> = {}): EngineResult {
   if (!isKnownActor(state, actor)) return fail(404, "ROLE_NOT_FOUND", `El rol ${actor.roleId} no existe en ${actor.orgId}`);
   const viaQr = isArbiter(state, actor) || findRole(state, actor)?.role.isQrOptional === true;
   const players = state.connectedPlayers.filter((player) => !(player.orgId === actor.orgId && player.roleId === actor.roleId));
   const next = { ...state, connectedPlayers: [...players, { orgId: actor.orgId, roleId: actor.roleId, heartbeatMs: nowTs }] };
-  return { ok: true, state: commit(state, next, [{ type: viaQr ? "QR_JOINED" : "ROLE_JOINED", orgId: actor.orgId, roleId: actor.roleId, detail: { title: actorTitle(state, actor) } }], nowTs) };
+  return { ok: true, state: commit(state, next, [{ type: viaQr ? "QR_JOINED" : "ROLE_JOINED", orgId: actor.orgId, roleId: actor.roleId, detail: { title: actorTitle(state, actor), ...extra } }], nowTs) };
 }
 
-export function markRoleLeft(state: RoomState, actor: ActorRef, nowTs: number): EngineResult {
+/** Marca un rol como ausente. extra se agrega al detalle (por ejemplo, { revokedByHost: true }). */
+export function markRoleLeft(state: RoomState, actor: ActorRef, nowTs: number, extra: Record<string, unknown> = {}): EngineResult {
   if (!isKnownActor(state, actor)) return fail(404, "ROLE_NOT_FOUND", `El rol ${actor.roleId} no existe en ${actor.orgId}`);
   const next = { ...state, connectedPlayers: state.connectedPlayers.filter((player) => !(player.orgId === actor.orgId && player.roleId === actor.roleId)) };
-  return { ok: true, state: commit(state, next, [{ type: "ROLE_LEFT", orgId: actor.orgId, roleId: actor.roleId, detail: { title: actorTitle(state, actor) } }], nowTs) };
+  return { ok: true, state: commit(state, next, [{ type: "ROLE_LEFT", orgId: actor.orgId, roleId: actor.roleId, detail: { title: actorTitle(state, actor), ...extra } }], nowTs) };
+}
+
+/** Deja en la bitácora un hito del ensayo automático (inicio, paso o fin). No cambia nada más. */
+export function recordAutopilotEvent(state: RoomState, detail: Record<string, unknown>, nowTs: number): RoomState {
+  return commit(state, state, [{ type: "AUTOPILOT", detail }], nowTs);
+}
+
+/** Mantiene vivas en la lista de presentes a las sillas que maneja un bot del ensayo. */
+export function refreshPresence(state: RoomState, seats: ActorRef[], nowTs: number): RoomState {
+  const keys = new Set(seats.map((seat) => `${seat.orgId}:${seat.roleId}`));
+  return {
+    ...state,
+    connectedPlayers: state.connectedPlayers.map((player) => (keys.has(`${player.orgId}:${player.roleId}`) ? { ...player, heartbeatMs: nowTs } : player)),
+  };
 }
 
 /** Deja en la bitácora un intento de actuar sin identidad válida. No revela nada más. */

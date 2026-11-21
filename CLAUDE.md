@@ -38,7 +38,9 @@ El código vive en este repo: contrato de datos en `src/lib/genome/`, reglas en 
 ## Stack
 
 - Next.js (App Router, `src/`), TypeScript, Tailwind y shadcn/ui. Componentes nuevos con `npx shadcn@latest add <nombre>`.
-- Sin base de datos: las salas viven en la memoria del servidor (`src/lib/store/rooms.ts`). Ver `docs/DECISIONES.md`.
+- Las salas viven en la memoria del servidor (`src/lib/store/rooms.ts`), sin base de datos. Ver `docs/DECISIONES.md`.
+- Supabase solo para el formulario de acceso y las entrevistas de la portada (`src/lib/supabase/`, tablas en `supabase/migrations/`). La clave `SUPABASE_SERVICE_ROLE_KEY` es solo de servidor: nunca en un componente de cliente ni con prefijo `NEXT_PUBLIC_`. Sin Supabase la portada sigue funcionando.
+- Canales externos del Comité, opcionales: WhatsApp con Kapso y voz con ElevenLabs (`src/integrations/`). Usan las mismas acciones que la web.
 - Zod para validar todo lo que entra (`src/lib/genome/schema.ts`, `src/lib/store/actions.ts`).
 - Deploy público en Render (`render.yaml`), desde un repo personal espejo.
 
@@ -48,6 +50,7 @@ Toda llamada a un modelo pasa por `src/lib/llm.ts`. No llamar a un proveedor dir
 
 - El Spark es un NVIDIA DGX Spark de 128 GB con Ollama en el puerto 11434. Es ARM64: no instalar ni compilar cosas en él sin revisar que exista build para esa arquitectura.
 - El deploy público no puede llegar al Spark por IP local. Para la demo desplegada se usa Claude.
+- Excepción documentada: el asistente de voz del Comité es un agente de ElevenLabs y su modelo de conversación corre dentro de ElevenLabs. No decide nada; solo consulta el caso y registra la decisión que dicta la persona, por dos herramientas de nuestro servidor (ver `docs/DECISIONES.md`).
 
 ## Comandos
 

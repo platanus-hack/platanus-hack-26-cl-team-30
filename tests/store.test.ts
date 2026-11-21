@@ -18,6 +18,7 @@ import {
   applyAction,
   createRoom,
   getActa,
+  getHostCredentials,
   getRoom,
   isFixedRoom,
   isStakesRunning,
@@ -36,9 +37,14 @@ const ARBITER = { orgId: "comite_red", roleId: "role_c" };
 
 type Seat = { orgId: string; roleId: string; token: string };
 
-/** Toma un rol y devuelve sus credenciales. */
+/**
+ * Toma un rol y devuelve sus credenciales. Presenta la clave del QR del Comité,
+ * como haría quien lo escanea; las pruebas del rechazo sin clave están en
+ * tests/security.test.ts.
+ */
 async function join(roomId: string, orgId: string, roleId: string, now = T0): Promise<Seat> {
-  const res = await applyAction(roomId, { type: "JOIN_ROLE", orgId, roleId }, now);
+  const committeeKey = getHostCredentials(roomId)?.committeeKey;
+  const res = await applyAction(roomId, { type: "JOIN_ROLE", orgId, roleId, committeeKey }, now);
   if (res.status !== 200 || !res.body.token) throw new Error(`JOIN_ROLE falló: ${JSON.stringify(res)}`);
   return { orgId, roleId, token: res.body.token };
 }
@@ -77,9 +83,16 @@ describe("salas", () => {
     expect(() => createRoom({ id: room.roomId })).toThrow();
   });
 
-  it('las salas fijas "demo" y "demo-cross" existen sin crearlas, con su modo', () => {
-    expect(FIXED_ROOMS).toEqual({ demo: "single_org", "demo-cross": "cross_org" });
-    expect(isFixedRoom("demo") && isFixedRoom("demo-cross")).toBe(true);
+  it("las salas fijas existen sin crearlas, con su modo y su escenario", () => {
+    expect(FIXED_ROOMS).toEqual({
+      demo: { mode: "single_org" },
+      "demo-cross": { mode: "cross_org", scenario: "hospitales" },
+      "demo-construccion": { mode: "cross_org", scenario: "construccion" },
+      "demo-logistica": { mode: "cross_org", scenario: "logistica" },
+    });
+    expect(isFixedRoom("demo") && isFixedRoom("demo-cross") && isFixedRoom("demo-construccion") && isFixedRoom("demo-logistica")).toBe(true);
+    expect(getRoom("demo-construccion")).toMatchObject({ mode: "cross_org", scenarioId: "construccion" });
+    expect(getRoom("demo-logistica")!.orgGenomes.map((genome) => genome.orgId)).toEqual(["distribuidora_centro", "distribuidora_costa"]);
     expect(isFixedRoom("otra")).toBe(false);
     expect(getRoom("demo")).toMatchObject({ roomId: "demo", mode: "single_org" });
     expect(getRoom("demo-cross")).toMatchObject({ roomId: "demo-cross", mode: "cross_org" });
@@ -103,13 +116,20 @@ describe("salas", () => {
     resetRoom("demo");
   });
 
-  it("reiniciar una sala común la borra; una que no existe devuelve false", () => {
-    const roomId = single();
+  it("reiniciar una sala común la devuelve a su caso inicial con el mismo id y las mismas claves; una que no existe devuelve false", async () => {
+    const roomId = cross();
+    const credentials = getHostCredentials(roomId);
+    const seat = await join(roomId, CLINIC, "role_a");
+    await act(roomId, seat, "UPDATE_AUTHORITY_SLIDER", { value: 70 });
     expect(resetRoom(roomId)).toBe(true);
-    expect(getRoom(roomId)).toBeUndefined();
-    expect(projectRoom(roomId, "stage")).toBeUndefined();
-    expect(getActa(roomId)).toBeUndefined();
-    expect(resetRoom(roomId)).toBe(false);
+    const fresh = getRoom(roomId)!;
+    expect(fresh).toMatchObject({ roomId, mode: "cross_org", connectedPlayers: [], decisions: [] });
+    expect(fresh.orgGenomes[0].authorityRule.proposerLimit).toBe(100);
+    expect(getHostCredentials(roomId)).toEqual(credentials);
+    expect(resolveViewer(roomId, seat)).toBe("stage");
+    expect(getActa(roomId)).toBeDefined();
+    expect(resetRoom("sala-que-no-existe")).toBe(false);
+    expect(projectRoom("sala-que-no-existe", "stage")).toBeUndefined();
   });
 });
 

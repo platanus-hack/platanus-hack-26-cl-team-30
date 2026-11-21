@@ -22,3 +22,35 @@ services:
       # Secreto: se completa en el panel de Render, nunca en el repo.
       - key: ANTHROPIC_API_KEY
         sync: false
+      # Límite de peticiones por IP del cliente (último salto de X-Forwarded-For).
+      # Sin verificar en Render si ese salto es la IP real; en el peor caso todos comparten un límite.
+      - key: TRUST_PROXY
+        value: "1"
+      # Secretos y datos del proyecto: se completan en el panel de Render, nunca en el repo.
+      - key: NEXO_ADMIN_KEY
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      # Canales externos del Comité (WhatsApp con Kapso y voz con ElevenLabs). Opcionales.
+      - key: KAPSO_API_KEY
+        sync: false
+      - key: KAPSO_PHONE_NUMBER_ID
+        sync: false
+      - key: KAPSO_WEBHOOK_SECRET
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_AGENT_ID
+        sync: false
+      - key: ELEVENLABS_PHONE_NUMBER_ID
+        sync: false
+      - key: NEXO_COMMITTEE_PHONE
+        sync: false
+      - key: NEXO_PUBLIC_BASE_URL
+        sync: false
+      - key: NEXO_CHANNEL_SECRET
+        sync: false

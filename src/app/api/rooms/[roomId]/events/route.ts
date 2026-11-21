@@ -1,3 +1,4 @@
+import { rateLimited } from "@/lib/store/rate-limit";
 import { getRoom, isStakesRunning, openConnection, projectRoom, resolveViewer, subscribe, touchPresence, type Credentials } from "@/lib/store/rooms";
 
 /** Cada cuántos segundos se envía la sala aunque nada haya cambiado. Mantiene viva la conexión. */
@@ -8,8 +9,11 @@ const KEEPALIVE_SECONDS = 15;
 // filtrado en el servidor para quien mira. Sin token válido, o sin orgId o
 // roleId, la conexión recibe la vista "stage" (solo lo que todos pueden ver).
 // Se envía un mensaje cada vez que la sala cambia y, mientras el contador de lo
-// que está en juego sigue corriendo, al menos uno por segundo.
+// que está en juego sigue corriendo, al menos uno por segundo. Cada mensaje trae
+// también el estado del ensayo automático (autopilot), si se usó.
 export async function GET(request: Request, { params }: { params: Promise<{ roomId: string }> }) {
+  const limited = rateLimited(request, "events");
+  if (limited) return limited;
   const { roomId } = await params;
   if (!getRoom(roomId)) return Response.json({ error: "La sala no existe", code: "ROOM_NOT_FOUND" }, { status: 404 });
 

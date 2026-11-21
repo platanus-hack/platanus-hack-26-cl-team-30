@@ -349,7 +349,11 @@ function findLeakedSecret(genome: OrgGenome): string | null {
 const SEED_KEYWORDS: Record<SeedGenomeId, string[]> = {
   clinica_andes: ["clinic", "uci", "cama", "pacient", "urgenci", "salud", "medic", "triaje", "isapre", "cobertura", "hospital", "enfermer"],
   hospital_rural: ["rural", "public", "deriva", "traslad", "posta", "cesfam", "consultorio", "ambulanc", "municip", "hospital"],
-  dist_tech: ["distribu", "venta", "vende", "comerci", "descuent", "margen", "pedido", "stock", "b2b", "retail", "tienda", "mayorist", "finanz", "cliente", "precio", "bodega", "logistic", "empresa", "fabrica", "startup"],
+  dist_tech: ["distribu", "venta", "vende", "comerci", "descuent", "margen", "pedido", "stock", "b2b", "retail", "tienda", "mayorist", "finanz", "cliente", "precio", "empresa", "fabrica", "startup"],
+  constructora_norte: ["construc", "obra", "grua", "losa", "hormig", "edific", "inmobiliar", "faena", "arquitect", "maquinari"],
+  constructora_sur: ["contratist", "izaje", "montaje", "multa", "licitac", "puente", "camino", "vialidad"],
+  distribuidora_centro: ["camion", "flete", "despacho", "ruta", "transport", "logistic", "perecible", "aliment", "supermerc", "reparto"],
+  distribuidora_costa: ["refriger", "cadena de frio", "farmac", "vacuna", "insumo", "bodega", "courier"],
 };
 
 /** Semilla cuyas palabras clave aparecen más en la descripción. Sin coincidencias, la semilla por defecto. */

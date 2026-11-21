@@ -3,9 +3,15 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { AuditConsole } from "@/components/nexo/audit-console";
+import { ChevronDown, LogOut, MonitorPlay } from "lucide-react";
 import { ConnectionBadge } from "@/components/nexo/connection-badge";
+import { roomStep, seatTurn } from "@/components/nexo/guide";
+import { RoleHeaderChip } from "@/components/nexo/role-chip";
+import { RoleHeaderPlaceholder, RoomHeader } from "@/components/nexo/room-header";
 import { RolePicker } from "@/components/nexo/role-picker";
+import { Stepper } from "@/components/nexo/stepper";
+import { TurnCard } from "@/components/nexo/turn-card";
+import { VoiceAssistant, committeeKeyStorageKey } from "@/components/nexo/voice-assistant";
 import { AllocationBoardOrgan } from "@/components/organs/allocation-board-organ";
 import { AllocationConflictOrgan } from "@/components/organs/allocation-conflict-organ";
 import { DynamicCaseCardOrgan } from "@/components/organs/dynamic-case-card-organ";
@@ -14,7 +20,6 @@ import { findOrg, isArbiter, isRoleViewer, orgLabel, roleLabel } from "@/compone
 import { LivingGraphOrgan } from "@/components/organs/living-graph-organ";
 import { RoleAgentPanelOrgan } from "@/components/organs/role-agent-panel-organ";
 import { SharedStakesCounterOrgan } from "@/components/organs/shared-stakes-counter-organ";
-import { Button } from "@/components/ui/button";
 import { actaUrl, useRoom } from "@/lib/client/use-room";
 import type { HumanDecision, ProjectedOrg, ProjectedRoomState } from "@/lib/genome/schema";
 
@@ -24,45 +29,56 @@ function lastGateDecision(room: ProjectedRoomState, org: ProjectedOrg): HumanDec
   return own.at(-1) ?? null;
 }
 
-// Estación de un jugador: entra con una organización y un rol (por botón o por
-// el enlace del código QR, ?orgId=&roleId=) y ve solo lo que el servidor le
-// envía a ese rol. Cada acción pasa por useRoom().act y la valida el servidor.
+// Estación de un jugador, pensada para el teléfono. Arriba, lo único que le toca
+// hacer ahora; el resto queda plegado en «Ver más». No muestra la bitácora: la
+// bitácora es para el acta y para la consola de auditoría de la pantalla grande.
 export default function RoomClient() {
   const { roomId } = useParams<{ roomId: string }>();
   const { room, status, unreachable, problem, session, notice, join, leave, act } = useRoom(roomId);
 
-  // Entrada por código QR: el enlace trae la organización y el rol.
+  // Entrada por código QR: el enlace trae la organización, el rol y, para el Comité, su clave.
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
     const orgId = query.get("orgId");
     const roleId = query.get("roleId");
-    if (orgId && roleId && !(session?.orgId === orgId && session.roleId === roleId)) void join(orgId, roleId);
+    const key = query.get("key") ?? undefined;
+    if (key) {
+      try {
+        window.sessionStorage.setItem(committeeKeyStorageKey(roomId), key);
+      } catch {
+        // Sin almacenamiento la voz pedirá volver a escanear el código.
+      }
+    }
+    if (orgId && roleId && !(session?.orgId === orgId && session.roleId === roleId)) void join(orgId, roleId, key);
     // Solo al cargar: después manda lo que la persona elija en pantalla.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!room) {
     return (
-      <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-3 p-6">
-        {unreachable ? (
-          <>
-            <h1 className="text-xl font-semibold">No encontramos la sala «{roomId}»</h1>
-            <p className="text-sm text-muted-foreground">Las salas viven en la memoria del servidor: si se reinició, la sala ya no existe. Crea una nueva o usa una de las salas fijas.</p>
-            <Link className="text-sm font-semibold underline underline-offset-4" href="/">
-              Volver al inicio
-            </Link>
-          </>
-        ) : (
-          <p className="flex items-center gap-3 text-sm text-muted-foreground">
-            Conectando con la sala <ConnectionBadge status={status} />
-          </p>
-        )}
-        {problem && (
-          <p role="alert" className="rounded-md border border-clash/50 bg-clash-soft px-3 py-2 text-sm">
-            {problem}
-          </p>
-        )}
-      </main>
+      <>
+        <RoomHeader subtitle={`Sala ${roomId}`}>
+          <ConnectionBadge status={status} />
+        </RoomHeader>
+        <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-3 p-6">
+          {unreachable ? (
+            <>
+              <h1 className="h-sub">No encontramos esta sala</h1>
+              <p className="text-muted-foreground">Las salas viven en la memoria del servidor: si se reinició, la sala ya no existe. Pide un código nuevo o vuelve a la portada.</p>
+              <Link className="btn btn-primary mt-2 self-start" href="/">
+                Volver a la portada
+              </Link>
+            </>
+          ) : (
+            <p className="text-muted-foreground">Conectando con la sala…</p>
+          )}
+          {problem && (
+            <p role="alert" className="small rounded-xl bg-clash-soft px-3 py-2 text-clash">
+              {problem}
+            </p>
+          )}
+        </main>
+      </>
     );
   }
 
@@ -71,137 +87,101 @@ export default function RoomClient() {
   const myRole = myOrg?.roles.find((role) => role.id === me?.roleId);
   const arbiter = isArbiter(room);
   const acta = { md: actaUrl(roomId, "md"), json: actaUrl(roomId, "json") };
-  const myCandidate = me ? (room.scarcity?.candidates.find((candidate) => candidate.orgId === me.orgId) ?? null) : null;
-  const canSubmit = !!me && !!myCandidate && myCandidate.proposerRoleId === me.roleId && !myCandidate.submitted;
-
-  const board = room.scarcity && room.allocation && (
-    <AllocationBoardOrgan
-      allocation={room.allocation}
-      scarcity={room.scarcity}
-      orgName={(orgId) => orgLabel(room, orgId)}
-      submittable={canSubmit ? myCandidate : null}
-      onSubmitCandidate={(caseId) => act("SUBMIT_CANDIDATE", { caseId })}
-      isArbiter={arbiter}
-      onSeal={(reason) => act("ALLOCATION_SEAL", { reason })}
-      onVeto={(reason) => act("COMMITTEE_VETO", { reason })}
-      decisions={room.decisions}
-      acta={acta}
-    />
-  );
-
-  const fog = (
-    <FogOfWarPanelOrgan
-      orgs={room.orgs}
-      viewer={room.viewer}
-      onBreach={me ? (targetOrgId, fieldKey) => act("TEST_RBAC_BREACH", { targetOrgId, fieldKey }) : undefined}
-      onToggleSecret={myOrg ? (fieldKey) => act("TOGGLE_FIELD_SECRET", { fieldKey }) : undefined}
-    />
-  );
-
-  const caseCard = (org: ProjectedOrg) => {
-    const decision = lastGateDecision(room, org);
-    return (
-      <DynamicCaseCardOrgan
-        key={org.orgId}
-        org={org}
-        candidate={room.scarcity?.candidates.find((candidate) => candidate.orgId === org.orgId) ?? null}
-        decision={decision}
-        decisionRoleTitle={decision ? roleLabel(room, decision.byOrgId, decision.byRoleId) : undefined}
-        canDecide={!!me && me.orgId === org.orgId && org.gate.deciderRoleIds.includes(me.roleId)}
-        onDecision={(kind, reason, counterValue) => act("HITL_DECISION", { decision: kind, reason, counterValue })}
-      />
-    );
-  };
+  const turn = seatTurn(room);
+  // El Comité: el árbitro entre organizaciones o, en una sola organización, el rol que entra por QR.
+  const isCommitteeSeat = arbiter || myRole?.isQrOptional === true;
+  const step = roomStep(room);
+  const subtitle = room.mode === "cross_org" && room.scarcity ? room.scarcity.resource : (room.orgs[0]?.orgName ?? `Sala ${roomId}`);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-3 sm:p-5">
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="min-w-0">
-          <p className="text-sm text-muted-foreground">
-            <Link href="/" className="font-semibold text-foreground font-stretch-[112%]">
-              Nexo
-            </Link>{" "}
-            sala {room.roomId}
+    <>
+      <RoomHeader subtitle={subtitle}>
+        {me ? <RoleHeaderChip title={roleLabel(room, me.orgId, me.roleId)} org={arbiter ? undefined : myOrg?.orgName} /> : <RoleHeaderPlaceholder />}
+        <ConnectionBadge status={status} />
+      </RoomHeader>
+
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-4 py-5 sm:px-6">
+        {(notice || problem) && (
+          <p role="alert" className="small rounded-xl bg-clash-soft px-3 py-2 text-clash">
+            {notice ?? problem}
           </p>
-          <h1 className="text-2xl leading-tight font-semibold font-stretch-[108%]">
-            {me ? roleLabel(room, me.orgId, me.roleId) : session ? "Entrando a tu rol…" : "Elige tu organización y tu rol"}
-          </h1>
-          {me && myOrg && <p className="text-sm text-muted-foreground">{myOrg.orgName}</p>}
-          {arbiter && <p className="text-sm text-muted-foreground">No perteneces a ninguna de las organizaciones: arbitras entre ellas.</p>}
-        </div>
-        <div className="flex items-center gap-2">
-          <ConnectionBadge status={status} />
+        )}
+
+        <Stepper step={step} />
+        <SharedStakesCounterOrgan stakes={room.stakes} />
+
+        {!me && (
+          <>
+            <div>
+              <h1 className="h-sub">{session ? "Entrando a tu rol…" : "¿Con qué rol entras?"}</h1>
+              {!session && <p className="mt-1 text-muted-foreground">Elige tu organización y tu rol. Verás solo lo que ese rol puede ver.</p>}
+            </div>
+            {!session && <RolePicker room={room} onJoin={join} />}
+          </>
+        )}
+
+        {me && turn && <TurnCard room={room} turn={turn} act={act} acta={acta} />}
+
+        {me && isCommitteeSeat && turn?.kind !== "done" && <VoiceAssistant roomId={roomId} />}
+
+        {me && (
+          <details className="group panel">
+            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 font-semibold">
+              Ver más: el caso, los datos, el agente y el grafo
+              <ChevronDown className="size-5 shrink-0 transition-transform group-open:rotate-180" aria-hidden />
+            </summary>
+            <div className="space-y-4 px-3 pb-4 sm:px-5">
+              {myOrg && (
+                <DynamicCaseCardOrgan
+                  org={myOrg}
+                  candidate={room.scarcity?.candidates.find((candidate) => candidate.orgId === myOrg.orgId) ?? null}
+                  decision={lastGateDecision(room, myOrg)}
+                  decisionRoleTitle={(() => {
+                    const decision = lastGateDecision(room, myOrg);
+                    return decision ? roleLabel(room, decision.byOrgId, decision.byRoleId) : undefined;
+                  })()}
+                />
+              )}
+              {arbiter &&
+                room.orgs.map((org) => (
+                  <DynamicCaseCardOrgan key={org.orgId} org={org} candidate={room.scarcity?.candidates.find((candidate) => candidate.orgId === org.orgId) ?? null} />
+                ))}
+              {room.scarcity && room.allocation && !arbiter && (
+                <AllocationBoardOrgan allocation={room.allocation} scarcity={room.scarcity} orgName={(orgId) => orgLabel(room, orgId)} decisions={room.decisions} />
+              )}
+              <FogOfWarPanelOrgan
+                orgs={room.orgs}
+                viewer={room.viewer}
+                onBreach={(targetOrgId, fieldKey) => act("TEST_RBAC_BREACH", { targetOrgId, fieldKey })}
+                onToggleSecret={myOrg ? (fieldKey) => act("TOGGLE_FIELD_SECRET", { fieldKey }) : undefined}
+              />
+              {myOrg && (
+                <AllocationConflictOrgan
+                  org={myOrg}
+                  viewerRoleId={me.roleId}
+                  onSlider={(value) => act("UPDATE_AUTHORITY_SLIDER", { value })}
+                  onSeal={(payload) => act("SEAL_RULE", payload)}
+                />
+              )}
+              {myOrg && myRole && <RoleAgentPanelOrgan role={myRole} org={myOrg} telemetry={room.telemetry} onRun={() => act("RUN_ROLE_AGENT", {})} />}
+              <LivingGraphOrgan room={room} />
+            </div>
+          </details>
+        )}
+
+        <p className="flex flex-wrap gap-x-5 gap-y-2 pt-2 text-sm">
+          <Link className="inline-flex min-h-10 items-center gap-1.5 font-medium text-muted-foreground underline underline-offset-4" href={`/stage/${encodeURIComponent(roomId)}`}>
+            <MonitorPlay className="size-4" aria-hidden />
+            Ver la pantalla grande
+          </Link>
           {me && (
-            <Button variant="outline" className="min-h-9 px-3" onClick={() => void leave()}>
-              Dejar el rol
-            </Button>
+            <button type="button" className="inline-flex min-h-10 items-center gap-1.5 font-medium text-muted-foreground underline underline-offset-4" onClick={() => void leave()}>
+              <LogOut className="size-4" aria-hidden />
+              Salir de este rol
+            </button>
           )}
-        </div>
-      </header>
-
-      {problem && (
-        <p role="alert" className="rounded-md border border-clash/50 bg-clash-soft px-3 py-2 text-sm">
-          {problem}
         </p>
-      )}
-
-      {notice && (
-        <p role="alert" className="rounded-md border border-bleed/50 bg-bleed-soft px-3 py-2 text-sm text-bleed">
-          {notice}
-        </p>
-      )}
-
-      <SharedStakesCounterOrgan stakes={room.stakes} />
-
-      {!me && (
-        <>
-          {!session && <RolePicker room={room} onJoin={join} />}
-          <p className="text-sm text-muted-foreground">
-            ¿Solo quieres mirar?{" "}
-            <Link className="font-semibold text-foreground underline underline-offset-4" href={`/stage/${encodeURIComponent(roomId)}`}>
-              Abre la pantalla general
-            </Link>
-            .
-          </p>
-        </>
-      )}
-
-      {/* Comité árbitro: primero su decisión, después el contexto. */}
-      {me && arbiter && (
-        <div className="grid items-start gap-4 lg:grid-cols-2">
-          <div className="space-y-4">
-            {board}
-            {room.orgs.map(caseCard)}
-          </div>
-          <div className="space-y-4">
-            {fog}
-            <LivingGraphOrgan room={room} />
-            <AuditConsole room={room} acta={acta} />
-          </div>
-        </div>
-      )}
-
-      {/* Rol de una organización. */}
-      {me && myOrg && myRole && (
-        <div className="grid items-start gap-4 lg:grid-cols-2">
-          <div className="space-y-4">
-            {caseCard(myOrg)}
-            <AllocationConflictOrgan
-              org={myOrg}
-              viewerRoleId={me.roleId}
-              onSlider={(value) => act("UPDATE_AUTHORITY_SLIDER", { value })}
-              onSeal={(payload) => act("SEAL_RULE", payload)}
-            />
-            {board}
-          </div>
-          <div className="space-y-4">
-            {fog}
-            <RoleAgentPanelOrgan role={myRole} org={myOrg} telemetry={room.telemetry} onRun={() => act("RUN_ROLE_AGENT", {})} />
-            <LivingGraphOrgan room={room} />
-            <AuditConsole room={room} acta={acta} />
-          </div>
-        </div>
-      )}
-    </main>
+      </main>
+    </>
   );
 }

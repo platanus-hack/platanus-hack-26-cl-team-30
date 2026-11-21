@@ -11,6 +11,83 @@ Formato de cada entrada:
 
 ---
 
+## Los canales externos del Comité usan las mismas acciones que la web
+
+- **Decisión:** el Comité puede decidir por WhatsApp (Kapso) o por voz (ElevenLabs), pero ambos canales toman el puesto con `JOIN_ROLE` y la clave del Comité, y deciden con `ALLOCATION_SEAL` o `COMMITTEE_VETO` con razón (`src/integrations/committee-channel.ts`). El resumen que reciben se arma con la vista del Comité (`projectRoom`).
+- **Alternativa descartada:** una ruta propia por canal que escribiera la decisión directamente en la sala.
+- **Por qué:** así no hay un segundo camino hacia el estado: permisos, razón obligatoria, decisiones definitivas, bitácora y acta son los mismos, y un canal externo no puede recibir un dato reservado porque solo ve lo que ve el Comité.
+- **Costo:** cada canal mantiene una sesión en memoria (30 minutos) con el token del puesto. Si una persona ya tiene el puesto desde la web, el canal no lo toma.
+
+## El webhook de WhatsApp se verifica con firma y las herramientas de voz con un secreto compartido
+
+- **Decisión:** `POST /api/integrations/kapso/webhook` verifica la firma HMAC del cuerpo crudo (`X-Webhook-Signature`) antes de leerlo y solo acepta mensajes del número asociado a la sesión. `POST /api/integrations/voice/tool` exige el secreto `NEXO_CHANNEL_SECRET` en `x-nexo-secret`, que ElevenLabs envía en cada llamada a la herramienta.
+- **Alternativa descartada:** rutas abiertas que confíen en que nadie conoce la URL.
+- **Por qué:** esas dos rutas pueden registrar la decisión del Comité. Sin firma o secreto, cualquiera que adivine la URL podría decidir por él.
+- **Costo:** hay que configurar el mismo secreto en Kapso o en ElevenLabs y en el servidor. Estas rutas no tienen límite de peticiones propio.
+
+## El asistente de voz corre dentro de ElevenLabs: única excepción a la capa de modelos
+
+- **Decisión:** el asistente de voz del Comité es un agente de ElevenLabs (`ensureCommitteeAgent` en `src/integrations/elevenlabs.ts`). Su modelo de conversación corre en ElevenLabs y no pasa por `src/lib/llm.ts`.
+- **Alternativa descartada:** armar la voz nosotros (reconocimiento de voz, modelo por `llm.ts` y síntesis) o no tener voz.
+- **Por qué:** una conversación telefónica en tiempo real necesita turnos, interrupciones y llamadas por Twilio que ElevenLabs ya resuelve. El riesgo se acota: el asistente no decide ni ve nada propio; solo tiene dos herramientas de nuestro servidor, una que devuelve el resumen del Comité y otra que registra la decisión que dicta la persona con su razón.
+- **Costo:** ese modelo no aparece en nuestra telemetría y no se elige con `LLM_MODEL`. Lo que la persona dice en la llamada pasa por ElevenLabs.
+
+## Clave del Comité dentro de su QR
+
+- **Decisión:** al crear una sala se genera una clave (`committeeKey`) que va dentro del enlace del QR del Comité. `JOIN_ROLE` al puesto del árbitro (o del Comité de la clínica en `single_org`) la exige; sin ella responde 403 `COMMITTEE_KEY_REQUIRED` y lo deja en la bitácora. Adaptado de la versión de Ramón (commit `b22928c`).
+- **Alternativa descartada:** que el Comité fuera un rol libre como los demás.
+- **Por qué:** el Comité es quien firma. Con el puesto libre, cualquiera que conociera el id de la sala podía tomarlo antes que el jurado.
+- **Costo:** quien tenga una foto del QR puede entrar mientras el puesto esté libre. Es una clave de sala, no una cuenta.
+
+## Token de anfitrión para los controles de la pantalla grande
+
+- **Decisión:** quien crea la sala recibe un `hostToken`. Reiniciar, ensayo automático, liberar un puesto, mutar y avisar al Comité por sus canales lo exigen (`x-host-token`); la clave `NEXO_ADMIN_KEY` también sirve. Las salas fijas, que nadie creó, solo entregan sus controles con esa clave o fuera de producción. Adaptado de la versión de Ramón (commit `b22928c`).
+- **Alternativa descartada:** la clave de administración opcional para `DELETE`, como estaba antes.
+- **Por qué:** el deploy no definía la clave, así que cualquiera podía reiniciar `demo-cross` en plena presentación.
+- **Costo:** para presentar en el deploy hay que crear una sala nueva (o configurar `NEXO_ADMIN_KEY`). Si el navegador de quien presenta pierde su almacenamiento, pierde los controles de esa sala.
+
+## Reiniciar devuelve la sala al inicio y conserva sus claves
+
+- **Decisión:** `DELETE /api/rooms/:id` vuelve al caso con que se abrió la sala (semilla, escenario o genoma mutado), detiene el ensayo y revoca los tokens de los puestos, pero conserva el id, el token de anfitrión y la clave del Comité.
+- **Alternativa descartada:** borrar la sala, como hacía antes con las salas comunes.
+- **Por qué:** para ensayar varias veces seguidas con la misma pantalla y el mismo QR impreso. Las salas inactivas igual se borran solas.
+- **Costo:** quien tenga el QR puede volver a entrar como Comité después de un reinicio.
+
+## Límite de peticiones en memoria, con la IP solo si hay un proxy de confianza
+
+- **Decisión:** ventana fija por cliente y tipo de petición, más un tope global para lo que llama al modelo (`src/lib/store/rate-limit.ts`). La IP se lee de `X-Forwarded-For` (último salto) solo con `TRUST_PROXY=1`. Adaptado de la versión de Ramón (commit `fbe8a4f`).
+- **Alternativa descartada:** leer siempre `X-Forwarded-For`, o un servicio externo de límites.
+- **Por qué:** ese encabezado lo puede escribir cualquiera; sin un proxy que lo sobrescriba, cada petición podría inventar una IP nueva. En memoria basta para un solo proceso, igual que las salas.
+- **Costo:** sin `TRUST_PROXY` todos comparten el mismo límite. No está verificado que en Render el último salto sea la IP real del cliente.
+
+## Ensayo automático con las mismas funciones del motor, sin modelo
+
+- **Decisión:** el ensayo (`src/lib/engine/autopilot.ts`) es el guion de la demo como datos. Cada paso llama a la función del motor que usaría una persona, desde el puesto que corresponde. Los bots solo toman puestos libres y todo queda marcado (`AUTOPILOT`, `bot: true`). Es control de anfitrión. Adaptado del `autopilot.ts` de Ramón.
+- **Alternativa descartada:** un ensayo que escribiera el estado final directamente, o que usara el agente con el modelo.
+- **Por qué:** así el ensayo prueba las reglas de verdad y es reproducible, sin gastar llamadas. Marcarlo evita presentar como decisión humana algo que hizo un bot.
+- **Costo:** los pasos de agente se omiten. Si una persona tiene un puesto, su paso se salta y el guion puede no llegar al final hasta que esa persona actúe.
+
+## Escenarios de otros rubros como semillas, no como mutación
+
+- **Decisión:** construcción y logística son escenarios entre organizaciones completos en `src/lib/genome/seeds.ts`, validados con los mismos esquemas y las mismas pruebas que los hospitales, cada uno con su sala fija.
+- **Alternativa descartada:** mostrar otros rubros solo con la mutación por frase.
+- **Por qué:** la generalidad del producto no puede depender de que el modelo responda bien en vivo. En construcción, además, el desempate de equidad sí da vuelta el resultado (gana la obra con menor puntaje y más necesidad).
+- **Costo:** los escenarios son fijos: todos de dos organizaciones y con los mismos pesos de la fórmula.
+
+## La frase crea una sala nueva, con 15 segundos para el modelo
+
+- **Decisión:** `POST /api/rooms` con `{ mode: "single_org", description }` crea una sala nueva ya mutada. Si el modelo tarda más de 15 s, falla o el genoma no pasa el esquema, se usa la semilla más parecida y `source` lo dice.
+- **Alternativa descartada:** mutar la sala en uso (`POST /mutate`), que choca con 409 `ROOM_IN_USE` en cuanto alguien entra.
+- **Por qué:** una sala nueva nunca pisa la sesión de otras personas, y el plazo evita que la portada quede esperando.
+- **Costo:** cada frase deja una sala más en memoria (se borra sola tras 2 horas sin uso). Mutar tiene su propio límite: 6 por minuto por cliente y 20 en todo el servidor.
+
+## Supabase por su API REST, solo desde el servidor y con degradación
+
+- **Decisión:** el formulario de acceso y la entrevista usan la API REST de Supabase con `fetch` (`src/lib/supabase/server.ts`), con la clave `service_role` solo en el servidor (`import "server-only"`). Las tablas tienen RLS activado y ninguna política. Si falta la configuración, la tabla o la red, el formulario responde 503 `STORAGE_UNAVAILABLE` y la entrevista `null`.
+- **Alternativa descartada:** el SDK `@supabase/supabase-js`, o leer y escribir desde el navegador con la clave anon.
+- **Por qué:** son dos operaciones; `fetch` evita una dependencia. Desde el navegador habría que abrir políticas RLS a cualquiera. La portada no puede romperse porque falte una tabla.
+- **Costo:** sin tipos generados de la base. Las salas siguen sin base de datos.
+
 ## El modelo escribe un genoma JSON validado, no la interfaz
 
 - **Decisión:** para adaptar Nexo a otra organización, el modelo escribe solo un objeto JSON con contenido (nombres de roles, datos, caso). El código fija la estructura (`normalizeGenome` en `src/agents/mutate-genome.ts`) y `OrgGenomeSchema` (`src/lib/genome/schema.ts`) decide si se usa. La interfaz son siete órganos fijos en `src/components/organs/` que dibujan cualquier genoma válido.

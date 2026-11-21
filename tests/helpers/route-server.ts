@@ -28,6 +28,11 @@ const ROUTES: { pattern: RegExp; file: string }[] = [
   { pattern: /^\/api\/rooms\/([^/]+)\/action$/, file: "rooms/[roomId]/action/route.ts" },
   { pattern: /^\/api\/rooms\/([^/]+)\/mutate$/, file: "rooms/[roomId]/mutate/route.ts" },
   { pattern: /^\/api\/rooms\/([^/]+)\/acta$/, file: "rooms/[roomId]/acta/route.ts" },
+  { pattern: /^\/api\/rooms\/([^/]+)\/autopilot$/, file: "rooms/[roomId]/autopilot/route.ts" },
+  { pattern: /^\/api\/rooms\/([^/]+)\/host$/, file: "rooms/[roomId]/host/route.ts" },
+  { pattern: /^\/api\/rooms\/([^/]+)\/revoke$/, file: "rooms/[roomId]/revoke/route.ts" },
+  { pattern: /^\/api\/access-requests$/, file: "access-requests/route.ts" },
+  { pattern: /^\/api\/interviews$/, file: "interviews/route.ts" },
 ];
 
 /** Rutas del contrato cuyo archivo todavía no existe. */

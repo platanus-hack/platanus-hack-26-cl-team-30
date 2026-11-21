@@ -4,7 +4,13 @@
 // semilla queda mal escrita, el servidor falla al iniciar y no en plena demo.
 //
 // DATOS SIMULADOS: todas las cifras son de un caso de ejemplo. No son datos de
-// pacientes ni estadísticas reales, y esto no es una herramienta clínica.
+// pacientes, obras ni empresas reales, ni estadísticas, y esto no es una
+// herramienta clínica.
+//
+// Escenarios entre organizaciones (catálogo en scenarios.ts): hospitales (el
+// ejemplo principal), construcción y logística. Todos usan el mismo esqueleto:
+// dos organizaciones con tres roles, un dato reservado "coverage_cost" que solo
+// ve quien cuida el presupuesto, y un recurso escaso con un Comité árbitro.
 //
 // Los textos públicos (stakesLabel, summary) no mencionan valores secretos: el
 // plan original ponía el costo de cobertura en stakesLabel, lo que lo filtraba a
@@ -21,6 +27,7 @@ import {
   type Telemetry,
 } from "./schema";
 import { isLocalHost } from "../llm";
+import { DEFAULT_CROSS_ORG_SCENARIO, type CrossOrgScenarioId } from "./scenarios";
 
 // --- Semilla 1: clínica (suelo de la demo) -----------------------------------
 
@@ -474,15 +481,589 @@ const distTechInput: OrgGenomeInput = {
   },
 };
 
+// --- Escenario "construccion": dos constructoras y una grúa -------------------
+//
+// Mismo esqueleto que los hospitales con otro rubro. Cada constructora tiene
+// quien quiere actuar ya (terreno), quien cuida el presupuesto (finanzas) y una
+// gerencia que firma las excepciones. El costo de arriendo es el dato reservado.
+
+const constructoraNorteInput: OrgGenomeInput = {
+  orgId: "constructora_norte",
+  orgName: "Constructora Cordillera",
+  industry: "Construcción",
+  orgStyle: "Obras por proyecto con control de presupuesto central",
+  roles: [
+    {
+      id: "role_a",
+      orgId: "constructora_norte",
+      title: "Jefatura de Obra",
+      shortTag: "OBRA",
+      accentColor: "emerald",
+      agentName: "Agente Obra",
+      agentPersona: "Ordena las faenas y pide los equipos que la obra necesita. No ve costos de arriendo ni presupuesto.",
+      objective: "Terminar el montaje de la losa antes del hormigonado del jueves.",
+      painPoint: "Pide la grúa por teléfono y nadie confirma a tiempo.",
+      reliabilityP: 0.9,
+      isQrOptional: false,
+    },
+    {
+      id: "role_b",
+      orgId: "constructora_norte",
+      title: "Gerencia de Finanzas",
+      shortTag: "FINANZAS",
+      accentColor: "amber",
+      agentName: "Agente Presupuesto",
+      agentPersona: "Cruza el costo de cada equipo con el presupuesto de la obra. Protege el costo de arriendo.",
+      objective: "No pasarse del presupuesto de equipos sin firma del Directorio.",
+      painPoint: "Se entera del arriendo cuando llega la factura.",
+      reliabilityP: 0.92,
+      isQrOptional: false,
+    },
+    {
+      id: "role_c",
+      orgId: "constructora_norte",
+      title: "Directorio",
+      shortTag: "DIRECTORIO",
+      accentColor: "violet",
+      agentName: "Agente Gobierno",
+      agentPersona: "Aprueba o rechaza los gastos que cruzan el umbral, con una razón que queda registrada.",
+      objective: "Que cada gasto fuera de presupuesto quede justificado.",
+      painPoint: "Firma después de los hechos, sin ver la urgencia de la obra.",
+      reliabilityP: 0.95,
+      isQrOptional: true,
+    },
+  ],
+  fields: [
+    {
+      key: "stop_risk",
+      label: "Riesgo si la obra se detiene",
+      value: "Alto",
+      ownerOrgId: "constructora_norte",
+      ownerRoleId: "role_a",
+      visibleToOrgIds: ["constructora_norte"],
+      visibleToRoleIds: ["role_a"],
+      classification: "secret",
+    },
+    {
+      key: "coverage_cost",
+      label: "Costo de arriendo de la grúa",
+      value: 4800000,
+      unit: "CLP",
+      ownerOrgId: "constructora_norte",
+      ownerRoleId: "role_b",
+      visibleToOrgIds: ["constructora_norte"],
+      visibleToRoleIds: ["role_b"],
+      classification: "secret",
+    },
+    {
+      key: "equipment_budget_left",
+      label: "Presupuesto de equipos disponible",
+      value: 6100000,
+      unit: "CLP",
+      ownerOrgId: "constructora_norte",
+      ownerRoleId: "role_b",
+      visibleToOrgIds: ["constructora_norte"],
+      visibleToRoleIds: ["role_b", "role_c"],
+      classification: "restricted",
+    },
+    {
+      key: "pour_window",
+      label: "Hormigonado programado",
+      value: "Jueves 08:00",
+      ownerOrgId: "constructora_norte",
+      ownerRoleId: "role_a",
+      visibleToOrgIds: ["constructora_norte"],
+      visibleToRoleIds: ["role_a", "role_b", "role_c"],
+      classification: "public",
+    },
+  ],
+  authorityRule: {
+    id: "rule_equipment_budget",
+    metricKey: "equipment_budget_pct",
+    metricLabel: "Presupuesto de equipos usado sin firma del Directorio",
+    unit: "%",
+    min: 0,
+    max: 100,
+    proposerRoleId: "role_a",
+    proposerLimit: 100,
+    approverRoleId: "role_b",
+    approverLimit: 55,
+    sealedThreshold: null,
+    gateMode: "deterministic_hitl",
+  },
+  liveCase: {
+    title: "Montaje de losa: hace falta la grúa el jueves",
+    summary: "La obra quiere la grúa ya; Finanzas exige firma si el arriendo se come más de la mitad del presupuesto.",
+    triggeredMetricKey: "equipment_budget_pct",
+    proposedValue: 80,
+    stepCountN: 9,
+    stakesLabel: "1 losa sin terminar · cuadrilla esperando · hormigonado jueves 08:00",
+  },
+};
+
+const constructoraSurInput: OrgGenomeInput = {
+  orgId: "constructora_sur",
+  orgName: "Constructora Litoral Sur",
+  industry: "Construcción",
+  orgStyle: "Contratista con multas por atraso en cada contrato",
+  roles: [
+    {
+      id: "role_a",
+      orgId: "constructora_sur",
+      title: "Jefatura de Terreno",
+      shortTag: "TERRENO",
+      accentColor: "emerald",
+      agentName: "Agente Terreno",
+      agentPersona: "Coordina el montaje y pide los equipos que faltan. No ve costos de arriendo ni multas.",
+      objective: "Izar la estructura antes de que corra la multa del contrato.",
+      painPoint: "Compite por la misma grúa con otra obra y gana quien llama primero.",
+      reliabilityP: 0.89,
+      isQrOptional: false,
+    },
+    {
+      id: "role_b",
+      orgId: "constructora_sur",
+      title: "Administración de Contratos",
+      shortTag: "CONTRATOS",
+      accentColor: "amber",
+      agentName: "Agente Contratos",
+      agentPersona: "Compara el costo del arriendo con las multas del contrato. Protege el costo de arriendo.",
+      objective: "No comprometer el presupuesto del contrato sin respaldo de la Gerencia.",
+      painPoint: "Aprueba a ciegas porque no ve cuánto se atrasa la obra.",
+      reliabilityP: 0.91,
+      isQrOptional: false,
+    },
+    {
+      id: "role_c",
+      orgId: "constructora_sur",
+      title: "Gerencia General",
+      shortTag: "GERENCIA",
+      accentColor: "violet",
+      agentName: "Agente Auditoría",
+      agentPersona: "Aprueba o rechaza los gastos que cruzan el umbral, con una razón que queda registrada.",
+      objective: "Cumplir el contrato sin gastos sin justificar.",
+      painPoint: "Se entera de las multas cuando ya están cobradas.",
+      reliabilityP: 0.94,
+      isQrOptional: true,
+    },
+  ],
+  fields: [
+    {
+      key: "stop_risk",
+      label: "Riesgo si el montaje se detiene",
+      value: "Moderado",
+      ownerOrgId: "constructora_sur",
+      ownerRoleId: "role_a",
+      visibleToOrgIds: ["constructora_sur"],
+      visibleToRoleIds: ["role_a"],
+      classification: "secret",
+    },
+    {
+      key: "coverage_cost",
+      label: "Costo de arriendo de la grúa",
+      value: 3900000,
+      unit: "CLP",
+      ownerOrgId: "constructora_sur",
+      ownerRoleId: "role_b",
+      visibleToOrgIds: ["constructora_sur"],
+      visibleToRoleIds: ["role_b"],
+      classification: "secret",
+    },
+    {
+      key: "daily_penalty",
+      label: "Multa diaria por atraso",
+      value: 1250000,
+      unit: "CLP",
+      ownerOrgId: "constructora_sur",
+      ownerRoleId: "role_b",
+      visibleToOrgIds: ["constructora_sur"],
+      visibleToRoleIds: ["role_b", "role_c"],
+      classification: "restricted",
+    },
+    {
+      key: "lift_window",
+      label: "Izaje programado",
+      value: "Jueves 14:00",
+      ownerOrgId: "constructora_sur",
+      ownerRoleId: "role_a",
+      visibleToOrgIds: ["constructora_sur"],
+      visibleToRoleIds: ["role_a", "role_b", "role_c"],
+      classification: "public",
+    },
+  ],
+  authorityRule: {
+    id: "rule_contract_budget",
+    metricKey: "contract_budget_pct",
+    metricLabel: "Presupuesto del contrato usado sin firma de Gerencia",
+    unit: "%",
+    min: 0,
+    max: 100,
+    proposerRoleId: "role_a",
+    proposerLimit: 100,
+    approverRoleId: "role_b",
+    approverLimit: 45,
+    sealedThreshold: null,
+    gateMode: "deterministic_hitl",
+  },
+  liveCase: {
+    title: "Izaje de estructura: la grúa o la multa",
+    summary: "Terreno quiere la grúa el jueves; Contratos exige firma si el arriendo pasa del umbral.",
+    triggeredMetricKey: "contract_budget_pct",
+    proposedValue: 75,
+    stepCountN: 10,
+    stakesLabel: "1 estructura sin izar · multa por atraso corriendo · izaje jueves 14:00",
+  },
+};
+
+// Puntajes: Obra A 0,51 y Obra B 0,50. La diferencia (0,01) es menor que
+// tieEpsilon, así que decide la equidad: Obra B tiene más necesidad sin cubrir y
+// gana aunque su puntaje sea menor. Aquí el desempate sí cambia el resultado.
+const construccionScarcityInput = {
+  resource: "Grúa torre compartida (jueves)",
+  rule: {
+    id: "alloc_tower_crane",
+    resourceLabel: "Grúa torre #1",
+    resourceQuantity: 1 as const,
+    weights: { severity: 0.5, timeCriticality: 0.3, delayRisk: 0.2 },
+    tieEpsilon: 0.02,
+    equityTieBreak: "worst_unmet_need" as const,
+    committeeVeto: true as const,
+  },
+  candidates: [
+    {
+      orgId: "constructora_norte",
+      caseId: "O1",
+      patientLabel: "Obra A",
+      clinicalSeverityScore: 0.8,
+      timeCriticality: 0.7,
+      delayRiskScore: 0.5,
+      unmetNeedScore: 0.4,
+      coverageCost: 4800000,
+      coverageCostVisibleToOrgs: ["constructora_norte"],
+      proposerRoleId: "role_a",
+    },
+    {
+      orgId: "constructora_sur",
+      caseId: "O2",
+      patientLabel: "Obra B",
+      clinicalSeverityScore: 0.7,
+      timeCriticality: 0.9,
+      delayRiskScore: 0.6,
+      unmetNeedScore: 0.85,
+      coverageCost: 3900000,
+      coverageCostVisibleToOrgs: ["constructora_sur"],
+      proposerRoleId: "role_a",
+    },
+  ],
+  arbiter: {
+    orgId: "comite_obras",
+    roleId: "role_c" as const,
+    title: "Comité de Coordinación de Obras",
+    shortTag: "COMITE",
+  },
+  deadlineLabel: "La grúa queda libre el jueves a las 08:00",
+  stakesLabel: "1 grúa · 2 constructoras · 2 obras esperando",
+};
+
+// --- Escenario "logistica": dos distribuidoras y un camión ---------------------
+
+const distribuidoraCentroInput: OrgGenomeInput = {
+  orgId: "distribuidora_centro",
+  orgName: "Distribuidora Centro Alimentos",
+  industry: "Distribución de alimentos",
+  orgStyle: "Despachos diarios con presupuesto de fletes mensual",
+  roles: [
+    {
+      id: "role_a",
+      orgId: "distribuidora_centro",
+      title: "Jefatura de Despacho",
+      shortTag: "DESPACHO",
+      accentColor: "emerald",
+      agentName: "Agente Despacho",
+      agentPersona: "Arma las rutas y pide el transporte que hace falta. No ve el costo de los fletes.",
+      objective: "Sacar la mercadería perecible antes de que se pierda.",
+      painPoint: "Consigue camión llamando a varios proveedores el mismo día.",
+      reliabilityP: 0.9,
+      isQrOptional: false,
+    },
+    {
+      id: "role_b",
+      orgId: "distribuidora_centro",
+      title: "Gerencia de Finanzas",
+      shortTag: "FINANZAS",
+      accentColor: "amber",
+      agentName: "Agente Fletes",
+      agentPersona: "Compara cada flete con el presupuesto del mes. Protege el costo del flete.",
+      objective: "No pasarse del presupuesto de fletes sin firma de la Gerencia General.",
+      painPoint: "Aprueba fletes caros sin saber qué se pierde si no salen.",
+      reliabilityP: 0.92,
+      isQrOptional: false,
+    },
+    {
+      id: "role_c",
+      orgId: "distribuidora_centro",
+      title: "Gerencia General",
+      shortTag: "GERENCIA",
+      accentColor: "violet",
+      agentName: "Agente Gobierno",
+      agentPersona: "Aprueba o rechaza los fletes que cruzan el umbral, con una razón que queda registrada.",
+      objective: "Que ningún flete fuera de presupuesto salga sin justificar.",
+      painPoint: "Revisa los fletes a fin de mes, cuando ya no hay nada que hacer.",
+      reliabilityP: 0.95,
+      isQrOptional: true,
+    },
+  ],
+  fields: [
+    {
+      key: "perishable_load",
+      label: "Mercadería perecible en bodega",
+      value: "4 toneladas",
+      ownerOrgId: "distribuidora_centro",
+      ownerRoleId: "role_a",
+      visibleToOrgIds: ["distribuidora_centro"],
+      visibleToRoleIds: ["role_a"],
+      classification: "secret",
+    },
+    {
+      key: "coverage_cost",
+      label: "Costo del flete",
+      value: 850000,
+      unit: "CLP",
+      ownerOrgId: "distribuidora_centro",
+      ownerRoleId: "role_b",
+      visibleToOrgIds: ["distribuidora_centro"],
+      visibleToRoleIds: ["role_b"],
+      classification: "secret",
+    },
+    {
+      key: "freight_budget_left",
+      label: "Presupuesto de fletes disponible",
+      value: 1400000,
+      unit: "CLP",
+      ownerOrgId: "distribuidora_centro",
+      ownerRoleId: "role_b",
+      visibleToOrgIds: ["distribuidora_centro"],
+      visibleToRoleIds: ["role_b", "role_c"],
+      classification: "restricted",
+    },
+    {
+      key: "truck_departure",
+      label: "Salida del camión",
+      value: "Martes 06:00",
+      ownerOrgId: "distribuidora_centro",
+      ownerRoleId: "role_a",
+      visibleToOrgIds: ["distribuidora_centro"],
+      visibleToRoleIds: ["role_a", "role_b", "role_c"],
+      classification: "public",
+    },
+  ],
+  authorityRule: {
+    id: "rule_freight_budget_centro",
+    metricKey: "freight_budget_pct",
+    metricLabel: "Presupuesto de fletes usado sin firma de Gerencia",
+    unit: "%",
+    min: 0,
+    max: 100,
+    proposerRoleId: "role_a",
+    proposerLimit: 100,
+    approverRoleId: "role_b",
+    approverLimit: 50,
+    sealedThreshold: null,
+    gateMode: "deterministic_hitl",
+  },
+  liveCase: {
+    title: "Carga perecible: hace falta el camión el martes",
+    summary: "Despacho quiere el camión ya; Finanzas exige firma si el flete pasa de la mitad del presupuesto.",
+    triggeredMetricKey: "freight_budget_pct",
+    proposedValue: 70,
+    stepCountN: 8,
+    stakesLabel: "1 carga perecible · clientes esperando · salida martes 06:00",
+  },
+};
+
+const distribuidoraCostaInput: OrgGenomeInput = {
+  orgId: "distribuidora_costa",
+  orgName: "Distribuidora Costa Farma",
+  industry: "Distribución farmacéutica",
+  orgStyle: "Despachos con cadena de frío y control de gestión estricto",
+  roles: [
+    {
+      id: "role_a",
+      orgId: "distribuidora_costa",
+      title: "Jefatura de Bodega",
+      shortTag: "BODEGA",
+      accentColor: "emerald",
+      agentName: "Agente Bodega",
+      agentPersona: "Prepara los pedidos y pide el transporte refrigerado. No ve el costo de los fletes.",
+      objective: "Entregar los insumos refrigerados a tiempo en la costa.",
+      painPoint: "Si el camión no llega, los insumos se quedan en bodega.",
+      reliabilityP: 0.89,
+      isQrOptional: false,
+    },
+    {
+      id: "role_b",
+      orgId: "distribuidora_costa",
+      title: "Control de Gestión",
+      shortTag: "GESTION",
+      accentColor: "amber",
+      agentName: "Agente Gestión",
+      agentPersona: "Revisa cada flete contra el presupuesto. Protege el costo del flete.",
+      objective: "No comprometer el presupuesto de fletes sin firma de la Dirección.",
+      painPoint: "Bloquea fletes urgentes porque no ve qué se pierde.",
+      reliabilityP: 0.91,
+      isQrOptional: false,
+    },
+    {
+      id: "role_c",
+      orgId: "distribuidora_costa",
+      title: "Dirección",
+      shortTag: "DIRECCION",
+      accentColor: "violet",
+      agentName: "Agente Auditoría",
+      agentPersona: "Aprueba o rechaza los fletes que cruzan el umbral, con una razón que queda registrada.",
+      objective: "Que cada excepción quede justificada y registrada.",
+      painPoint: "Firma sin haber visto el caso completo.",
+      reliabilityP: 0.94,
+      isQrOptional: true,
+    },
+  ],
+  fields: [
+    {
+      key: "cold_chain_load",
+      label: "Insumos con cadena de frío",
+      value: "Vacunas y sueros",
+      ownerOrgId: "distribuidora_costa",
+      ownerRoleId: "role_a",
+      visibleToOrgIds: ["distribuidora_costa"],
+      visibleToRoleIds: ["role_a"],
+      classification: "secret",
+    },
+    {
+      key: "coverage_cost",
+      label: "Costo del flete",
+      value: 620000,
+      unit: "CLP",
+      ownerOrgId: "distribuidora_costa",
+      ownerRoleId: "role_b",
+      visibleToOrgIds: ["distribuidora_costa"],
+      visibleToRoleIds: ["role_b"],
+      classification: "secret",
+    },
+    {
+      key: "freight_budget_left",
+      label: "Presupuesto de fletes disponible",
+      value: 910000,
+      unit: "CLP",
+      ownerOrgId: "distribuidora_costa",
+      ownerRoleId: "role_b",
+      visibleToOrgIds: ["distribuidora_costa"],
+      visibleToRoleIds: ["role_b", "role_c"],
+      classification: "restricted",
+    },
+    {
+      key: "route_window",
+      label: "Ruta a la costa",
+      value: "Martes 06:00",
+      ownerOrgId: "distribuidora_costa",
+      ownerRoleId: "role_a",
+      visibleToOrgIds: ["distribuidora_costa"],
+      visibleToRoleIds: ["role_a", "role_b", "role_c"],
+      classification: "public",
+    },
+  ],
+  authorityRule: {
+    id: "rule_freight_budget_costa",
+    metricKey: "freight_budget_pct",
+    metricLabel: "Presupuesto de fletes usado sin firma de Dirección",
+    unit: "%",
+    min: 0,
+    max: 100,
+    proposerRoleId: "role_a",
+    proposerLimit: 100,
+    approverRoleId: "role_b",
+    approverLimit: 60,
+    sealedThreshold: null,
+    gateMode: "deterministic_hitl",
+  },
+  liveCase: {
+    title: "Insumos refrigerados: el camión o la pérdida",
+    summary: "Bodega quiere el camión el martes; Gestión exige firma si el flete pasa del umbral.",
+    triggeredMetricKey: "freight_budget_pct",
+    proposedValue: 85,
+    stepCountN: 9,
+    stakesLabel: "1 carga refrigerada · farmacias esperando · salida martes 06:00",
+  },
+};
+
+// Puntajes: Carga A 0,46 y Carga B 0,48. La diferencia (0,02) no es menor que
+// tieEpsilon: gana Carga B por puntaje, sin desempate. Un escenario de cada tipo.
+const logisticaScarcityInput = {
+  resource: "Camión refrigerado compartido (martes)",
+  rule: {
+    id: "alloc_cold_truck",
+    resourceLabel: "Camión refrigerado #1",
+    resourceQuantity: 1 as const,
+    weights: { severity: 0.5, timeCriticality: 0.3, delayRisk: 0.2 },
+    tieEpsilon: 0.02,
+    equityTieBreak: "worst_unmet_need" as const,
+    committeeVeto: true as const,
+  },
+  candidates: [
+    {
+      orgId: "distribuidora_centro",
+      caseId: "C1",
+      patientLabel: "Carga A",
+      clinicalSeverityScore: 0.6,
+      timeCriticality: 0.8,
+      delayRiskScore: 0.4,
+      unmetNeedScore: 0.3,
+      coverageCost: 850000,
+      coverageCostVisibleToOrgs: ["distribuidora_centro"],
+      proposerRoleId: "role_a",
+    },
+    {
+      orgId: "distribuidora_costa",
+      caseId: "C2",
+      patientLabel: "Carga B",
+      clinicalSeverityScore: 0.9,
+      timeCriticality: 0.7,
+      delayRiskScore: 0.9,
+      unmetNeedScore: 0.7,
+      coverageCost: 620000,
+      coverageCostVisibleToOrgs: ["distribuidora_costa"],
+      proposerRoleId: "role_a",
+    },
+  ],
+  arbiter: {
+    orgId: "comite_logistica",
+    roleId: "role_c" as const,
+    title: "Comité de Coordinación Logística",
+    shortTag: "COMITE",
+  },
+  deadlineLabel: "El camión sale el martes a las 06:00",
+  stakesLabel: "1 camión · 2 distribuidoras · 2 cargas esperando",
+};
+
 // --- Validación al cargar -----------------------------------------------------
 
 const GENOMES = {
   clinica_andes: OrgGenomeSchema.parse(clinicaAndesInput),
   hospital_rural: OrgGenomeSchema.parse(hospitalRuralInput),
   dist_tech: OrgGenomeSchema.parse(distTechInput),
+  constructora_norte: OrgGenomeSchema.parse(constructoraNorteInput),
+  constructora_sur: OrgGenomeSchema.parse(constructoraSurInput),
+  distribuidora_centro: OrgGenomeSchema.parse(distribuidoraCentroInput),
+  distribuidora_costa: OrgGenomeSchema.parse(distribuidoraCostaInput),
 } satisfies Record<string, OrgGenome>;
 
 const SCARCITY: SharedScarcity = SharedScarcitySchema.parse(scarcityInput);
+
+/** Cada escenario entre organizaciones: sus dos genomas, en orden, y su recurso escaso. */
+const CROSS_ORG_SCENARIO_SEEDS: Record<CrossOrgScenarioId, { genomeIds: [keyof typeof GENOMES, keyof typeof GENOMES]; scarcity: SharedScarcity }> = {
+  hospitales: { genomeIds: ["clinica_andes", "hospital_rural"], scarcity: SCARCITY },
+  construccion: { genomeIds: ["constructora_norte", "constructora_sur"], scarcity: SharedScarcitySchema.parse(construccionScarcityInput) },
+  logistica: { genomeIds: ["distribuidora_centro", "distribuidora_costa"], scarcity: SharedScarcitySchema.parse(logisticaScarcityInput) },
+};
 
 export type SeedGenomeId = keyof typeof GENOMES;
 
@@ -491,8 +1072,13 @@ export const SEED_GENOME_IDS = Object.keys(GENOMES) as SeedGenomeId[];
 /** Genoma por defecto del suelo de la demo. */
 export const DEFAULT_SEED_GENOME_ID: SeedGenomeId = "clinica_andes";
 
-/** Organizaciones de la capa inter-org, en el orden en que se muestran. */
-export const CROSS_ORG_GENOME_IDS: SeedGenomeId[] = ["clinica_andes", "hospital_rural"];
+/** Organizaciones del escenario principal (hospitales), en el orden en que se muestran. */
+export const CROSS_ORG_GENOME_IDS: SeedGenomeId[] = [...CROSS_ORG_SCENARIO_SEEDS.hospitales.genomeIds];
+
+/** Genomas de un escenario entre organizaciones, en el orden en que se muestran. */
+export function getScenarioGenomeIds(scenario: CrossOrgScenarioId = DEFAULT_CROSS_ORG_SCENARIO): SeedGenomeId[] {
+  return [...CROSS_ORG_SCENARIO_SEEDS[scenario].genomeIds];
+}
 
 export function isSeedGenomeId(value: unknown): value is SeedGenomeId {
   return typeof value === "string" && value in GENOMES;
@@ -503,9 +1089,9 @@ export function getSeedGenome(id: SeedGenomeId = DEFAULT_SEED_GENOME_ID): OrgGen
   return structuredClone(GENOMES[id]);
 }
 
-/** Copia nueva del recurso escaso de la capa inter-org. */
-export function getSeedScarcity(): SharedScarcity {
-  return structuredClone(SCARCITY);
+/** Copia nueva del recurso escaso de un escenario entre organizaciones (por defecto, los hospitales). */
+export function getSeedScarcity(scenario: CrossOrgScenarioId = DEFAULT_CROSS_ORG_SCENARIO): SharedScarcity {
+  return structuredClone(CROSS_ORG_SCENARIO_SEEDS[scenario].scarcity);
 }
 
 /**
@@ -543,6 +1129,8 @@ export type InitialRoomOptions = {
   /** Reloj del servidor al abrir el caso. Por defecto, ahora. */
   now?: number;
   telemetry?: Telemetry;
+  /** Solo en cross_org: qué escenario abrir. Por defecto, los hospitales. */
+  scenario?: CrossOrgScenarioId;
 };
 
 function baseRoom(roomId: string, options: InitialRoomOptions): Pick<
@@ -578,13 +1166,15 @@ export function getInitialSingleOrgRoom(
   });
 }
 
-/** Sala inicial de la capa inter-org: dos organizaciones y un recurso escaso. */
+/** Sala inicial entre organizaciones: dos organizaciones y un recurso escaso, del escenario pedido. */
 export function getInitialCrossOrgRoom(roomId: string, options: InitialRoomOptions = {}): RoomState {
+  const scenario = options.scenario ?? DEFAULT_CROSS_ORG_SCENARIO;
   return RoomStateSchema.parse({
     ...baseRoom(roomId, options),
     mode: "cross_org",
-    orgGenomes: CROSS_ORG_GENOME_IDS.map((id) => getSeedGenome(id)),
-    scarcity: getSeedScarcity(),
+    scenarioId: scenario,
+    orgGenomes: getScenarioGenomeIds(scenario).map((id) => getSeedGenome(id)),
+    scarcity: getSeedScarcity(scenario),
     allocationStatus: "PENDING",
   });
 }

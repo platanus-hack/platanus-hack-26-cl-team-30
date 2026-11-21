@@ -9,15 +9,15 @@ type Props = {
   className?: string;
 };
 
-// Marco común de los órganos: superficie plana con borde, sin sombra.
+// Marco común de los órganos: panel blanco sobre el fondo cálido.
 export function OrganFrame({ title, aside, children, className }: Props) {
   return (
-    <section className={cn("rounded-lg border border-border bg-card", className)}>
-      <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-b border-border px-4 py-2.5">
-        <h2 className="text-sm font-semibold font-stretch-[108%]">{title}</h2>
-        {aside && <div className="text-xs text-muted-foreground">{aside}</div>}
+    <section className={cn("panel", className)} aria-label={title}>
+      <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-5 pt-5 pb-3">
+        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+        {aside && <div className="text-sm text-muted-foreground">{aside}</div>}
       </header>
-      <div className="p-4">{children}</div>
+      <div className="px-5 pb-5">{children}</div>
     </section>
   );
 }

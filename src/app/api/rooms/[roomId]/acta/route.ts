@@ -1,9 +1,12 @@
+import { rateLimited } from "@/lib/store/rate-limit";
 import { getActa } from "@/lib/store/rooms";
 
 // GET /api/rooms/:roomId/acta?format=json|md
 // Acta de la decisión con la bitácora completa. Se arma desde la vista de
 // pantalla general, así que no contiene valores reservados de ningún rol.
 export async function GET(request: Request, { params }: { params: Promise<{ roomId: string }> }) {
+  const limited = rateLimited(request, "acta");
+  if (limited) return limited;
   const { roomId } = await params;
   const result = getActa(roomId);
   if (!result) return Response.json({ error: "La sala no existe", code: "ROOM_NOT_FOUND" }, { status: 404 });

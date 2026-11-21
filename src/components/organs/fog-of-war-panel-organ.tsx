@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import type { ProjectedField, ProjectedOrg, Viewer } from "@/lib/genome/schema";
+import { Ban, Bot, CircleCheck, Lock, Share2 } from "lucide-react";
+import type { ProjectedOrg, Viewer } from "@/lib/genome/schema";
 import { cn } from "@/lib/utils";
 import { formatTime, formatValue, isRoleViewer, type OrganResult } from "./format";
 import { OrganFrame } from "./organ-frame";
@@ -20,12 +20,6 @@ type Props = {
 };
 
 type Attempt = { at: number; result: OrganResult };
-
-const CLASSIFICATION: Record<ProjectedField["classification"], string> = {
-  public: "público",
-  restricted: "restringido",
-  secret: "secreto",
-};
 
 /**
  * Órgano 3. Lo que este rol puede ver de cada organización. Un campo oculto
@@ -56,22 +50,24 @@ export function FogOfWarPanelOrgan({ orgs, viewer, onBreach, onToggleSecret, den
   }
 
   return (
-    <OrganFrame title="Qué datos llegan a esta pantalla" aside={`${total - hidden} de ${total} campos; ${hidden} no viajaron`}>
+    <OrganFrame title={me ? "Los datos que ves" : "Lo que ve la pantalla general"} aside={`${total - hidden} de ${total} datos llegan a esta pantalla`}>
       <div className="space-y-5">
-        {dense && hidden > 0 && (
-          <p className="text-sm text-muted-foreground">Lo tachado no está escondido aquí: el servidor no lo envió (RBAC_SERVER_FILTERED). Cada rol lo ve o no desde su propia pantalla.</p>
+        {hidden > 0 && (
+          <p className="small text-muted-foreground">
+            Los datos con candado no están escondidos aquí: el servidor no los envió. {me ? "Cada rol recibe solo lo suyo." : "Cada rol los ve, o no, desde su teléfono."}
+          </p>
         )}
         {orgs.map((org) => {
           const own = me?.orgId === org.orgId;
           return (
             <div key={org.orgId}>
               {(orgs.length > 1 || me) && (
-                <h3 className="mb-1 text-sm font-semibold">
+                <h3 className="mb-2 text-sm font-semibold">
                   {org.orgName}
                   {own && <span className="font-normal text-muted-foreground"> (tu organización)</span>}
                 </h3>
               )}
-              <ul className="divide-y divide-border">
+              <ul className="space-y-1.5">
                 {org.fields.map((field) => {
                   const id = `${org.orgId}/${field.key}`;
                   const attempt = attempts[id];
@@ -79,51 +75,54 @@ export function FogOfWarPanelOrgan({ orgs, viewer, onBreach, onToggleSecret, den
                   const mine = own && me?.roleId === field.ownerRoleId;
                   const shared = !field.redacted && field.visibleToRoleIds.length > 1;
                   return (
-                    <li key={field.key} className={dense ? "py-1.5" : "py-2.5"}>
-                      <div className="flex items-start justify-between gap-x-4">
+                    <li key={field.key} className={cn("rounded-xl px-3", dense ? "py-2" : "py-2.5", field.redacted ? "shield" : "bg-muted/60")}>
+                      <div className="flex items-center justify-between gap-x-3">
                         <div className="min-w-0">
-                          <p className="text-sm">{field.label}</p>
-                          {!dense && (
-                            <p className="text-xs text-muted-foreground">
-                              {CLASSIFICATION[field.classification]}, de {owner?.title ?? field.ownerRoleId}
-                              {field.redacted && <span className="max-sm:hidden">; {org.orgId}: {field.reason}</span>}
-                            </p>
-                          )}
+                          <p className="text-sm font-medium">{field.label}</p>
+                          {!dense && <p className="text-xs text-muted-foreground">Dato de {owner?.title ?? field.ownerRoleId}</p>}
+                          {field.redacted && <p className="mt-0.5 text-xs font-semibold sm:hidden">{me ? "No disponible para tu rol" : "No viaja"}</p>}
                         </div>
                         {field.redacted ? (
-                          <span className="redaction mt-0.5 block h-4 w-20 shrink-0 sm:w-24" role="img" aria-label="Valor oculto: el servidor no lo envió" />
+                          <span className="flex shrink-0 items-center gap-1.5 text-xs font-semibold">
+                            <Lock className="size-4 sm:size-3.5" aria-hidden />
+                            <span className="max-sm:sr-only">{me ? "No disponible para tu rol" : "No viaja"}</span>
+                          </span>
                         ) : (
                           <p className="shrink-0 text-base font-semibold tabular-nums">{formatValue(field.value, field.unit)}</p>
                         )}
                       </div>
 
-                      {field.redacted && me && onBreach && (
-                        <Button variant="outline" size="sm" className="mt-1.5 min-h-9 text-xs" disabled={busy === id} onClick={() => breach(org.orgId, field.key)}>
-                          {busy === id ? "Pidiendo el dato…" : "Intentar leerlo con mi agente"}
-                        </Button>
+                      {field.redacted && me && onBreach && !attempt && (
+                        <button type="button" className="mt-1.5 inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-brand-ink underline underline-offset-4" disabled={busy === id} onClick={() => breach(org.orgId, field.key)}>
+                          <Bot className="size-4" aria-hidden />
+                          {busy === id ? "Pidiendo el dato…" : "Pedírselo a mi agente"}
+                        </button>
                       )}
                       {mine && onToggleSecret && !field.redacted && field.classification !== "public" && (
-                        <Button variant="ghost" size="sm" className="mt-1 -ml-2 min-h-9" disabled={busy === `toggle/${field.key}`} onClick={() => toggle(field.key)}>
-                          {shared ? "Reservarlo solo para mi rol" : "Compartirlo con mi organización"}
-                        </Button>
+                        <button type="button" className="mt-1 inline-flex min-h-9 items-center gap-1.5 text-sm font-medium text-brand-ink underline underline-offset-4" disabled={busy === `toggle/${field.key}`} onClick={() => toggle(field.key)}>
+                          {shared ? <Lock className="size-4" aria-hidden /> : <Share2 className="size-4" aria-hidden />}
+                          {shared ? "Dejarlo solo para mi rol" : "Compartirlo con mi organización"}
+                        </button>
                       )}
 
                       {attempt && (
-                        <p
-                          role="status"
-                          className={cn(
-                            "mt-2 rounded-md border px-3 py-2 text-sm",
-                            attempt.result.ok ? "border-calm/50 bg-calm-soft" : "border-bleed/50 bg-bleed-soft text-bleed",
-                          )}
-                        >
+                        <p role="status" className={cn("mt-2 flex items-start gap-2 rounded-lg px-3 py-2 text-sm", attempt.result.ok ? "bg-calm-soft text-calm" : "bg-bleed-soft text-bleed")}>
                           {attempt.result.ok ? (
-                            <>Lectura permitida: {String(attempt.result.data?.value ?? "")}</>
+                            <>
+                              <CircleCheck className="mt-0.5 size-4 shrink-0" aria-hidden />
+                              Puedes verlo: {String(attempt.result.data?.value ?? "")}
+                            </>
+                          ) : attempt.result.status === 403 ? (
+                            <>
+                              <Ban className="mt-0.5 size-4 shrink-0" aria-hidden />
+                              <span>
+                                <strong className="font-semibold">No disponible para tu rol.</strong> El servidor no lo entregó y el intento quedó registrado a las {formatTime(attempt.at)}.
+                              </span>
+                            </>
                           ) : (
                             <>
-                              <strong className="font-bold tabular-nums">
-                                {attempt.result.status} {attempt.result.code}
-                              </strong>{" "}
-                              a las {formatTime(attempt.at)}. {attempt.result.error} El intento quedó en la bitácora.
+                              <Ban className="mt-0.5 size-4 shrink-0" aria-hidden />
+                              {attempt.result.error ?? "No se pudo pedir el dato."}
                             </>
                           )}
                         </p>

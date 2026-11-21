@@ -19,7 +19,7 @@ import {
   type OrgGenome,
 } from "../src/lib/genome/schema";
 import {
-  CROSS_ORG_GENOME_IDS,
+  getScenarioGenomeIds,
   DEFAULT_SEED_GENOME_ID,
   SEED_GENOME_IDS,
   getInitialCrossOrgRoom,
@@ -29,6 +29,7 @@ import {
   initialTelemetry,
   isSeedGenomeId,
 } from "../src/lib/genome/seeds";
+import { CROSS_ORG_SCENARIOS, CROSS_ORG_SCENARIO_IDS } from "../src/lib/genome/scenarios";
 
 /** Identificador válido: minúsculas, números y guion bajo. Sin tildes, espacios ni mayúsculas. */
 const ID = /^[a-z0-9_]+$/;
@@ -196,10 +197,33 @@ describe("semillas de genoma", () => {
   });
 });
 
-describe("semilla del recurso escaso (capa inter-org)", () => {
-  const scarcity = getSeedScarcity();
-  const genomes = CROSS_ORG_GENOME_IDS.map((id) => getSeedGenome(id));
+// Mismas garantías para cada escenario entre organizaciones: hospitales (el
+// ejemplo principal), construcción y logística.
+describe.each(CROSS_ORG_SCENARIO_IDS)("semilla del recurso escaso del escenario %s", (scenario) => {
+  const scarcity = getSeedScarcity(scenario);
+  const genomes = getScenarioGenomeIds(scenario).map((id) => getSeedGenome(id));
   const orgIds = genomes.map((genome) => genome.orgId);
+
+  it("el catálogo y las semillas coinciden: dos organizaciones distintas y una sala fija propia", () => {
+    expect(genomes).toHaveLength(2);
+    expect(new Set(orgIds).size).toBe(2);
+    expect(CROSS_ORG_SCENARIOS[scenario].fixedRoomId).toMatch(/^demo-/);
+  });
+
+  it("cada organización tiene el dato reservado coverage_cost que solo ve quien aprueba", () => {
+    for (const genome of genomes) {
+      const field = genome.fields.find((item) => item.key === "coverage_cost");
+      expect(field, genome.orgId).toBeDefined();
+      expect(field).toMatchObject({ classification: "secret", ownerRoleId: genome.authorityRule.approverRoleId, visibleToRoleIds: [genome.authorityRule.approverRoleId], visibleToOrgIds: [genome.orgId] });
+    }
+  });
+
+  it("la sala inicial del escenario pasa RoomStateSchema y recuerda su escenario", () => {
+    const room = getInitialCrossOrgRoom(`sala-${scenario}`, { now: 1000, scenario });
+    expect(RoomStateSchema.safeParse(room).success).toBe(true);
+    expect(room).toMatchObject({ mode: "cross_org", scenarioId: scenario, allocationStatus: "PENDING" });
+    expect(room.orgGenomes.map((genome) => genome.orgId)).toEqual(orgIds);
+  });
 
   it("pasa SharedScarcitySchema", () => {
     const result = SharedScarcitySchema.safeParse(scarcity);
@@ -256,8 +280,8 @@ describe("semilla del recurso escaso (capa inter-org)", () => {
     }
   });
 
-  it("los pacientes van des-identificados", () => {
-    for (const candidate of scarcity.candidates) expect(candidate.patientLabel).toMatch(/^Paciente [A-Z]$/);
+  it("los casos van des-identificados (\"Paciente A\", \"Obra B\", \"Carga A\")", () => {
+    for (const candidate of scarcity.candidates) expect(candidate.patientLabel).toMatch(/^(Paciente|Obra|Carga) [A-Z]$/);
   });
 
   it("los pesos del puntaje son positivos y suman 1", () => {
@@ -286,10 +310,10 @@ describe("semilla del recurso escaso (capa inter-org)", () => {
   });
 
   it("getSeedScarcity entrega una copia: modificarla no altera la semilla", () => {
-    const copy = getSeedScarcity();
+    const copy = getSeedScarcity(scenario);
     copy.candidates[0].coverageCost = 1;
     copy.rule.weights.severity = 0;
-    expect(getSeedScarcity()).toEqual(scarcity);
+    expect(getSeedScarcity(scenario)).toEqual(scarcity);
   });
 });
 

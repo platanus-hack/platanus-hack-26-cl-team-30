@@ -70,6 +70,7 @@ export const AUDIT_LABEL: Record<AuditEvent["type"], string> = {
   AUTH_FAILED: "401, identidad inválida",
   CANDIDATE_SUBMITTED: "Candidato presentado",
   AGENT_PROPOSED: "Propuesta de un agente",
+  AUTOPILOT: "Ensayo automático (bots)",
 };
 
 export type RoleViewer = Exclude<Viewer, "stage">;

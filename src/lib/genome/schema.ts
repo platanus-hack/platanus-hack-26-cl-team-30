@@ -231,6 +231,9 @@ export const AuditEventTypeSchema = z.enum([
   "AUTH_FAILED",
   "CANDIDATE_SUBMITTED",
   "AGENT_PROPOSED",
+  // Ensayo automático (piloto automático): inicio, cada paso y fin. Marca que lo
+  // hicieron bots y no personas.
+  "AUTOPILOT",
 ]);
 
 export const AuditEventSchema = z.object({
@@ -285,6 +288,8 @@ export const TelemetrySchema = z.object({
 export const RoomStateSchema = z.object({
   roomId: z.string().min(1),
   mode: RoomModeSchema,
+  /** Escenario entre organizaciones con que se abrió la sala ("hospitales", "construccion", "logistica"). Solo en cross_org. */
+  scenarioId: z.string().optional(),
   orgGenomes: z.array(OrgGenomeSchema).min(1),
   scarcity: SharedScarcitySchema.nullable(),
   connectedPlayers: z.array(PlayerSchema),
@@ -434,10 +439,26 @@ export const ProjectedScarcitySchema = z.object({
 });
 
 /** Lo que recibe un cliente por SSE. Es la única forma en que sale estado del servidor. */
+/** Estado del ensayo automático de una sala. Lo agrega el almacén, no el motor. */
+export const AutopilotViewSchema = z.object({
+  running: z.boolean(),
+  /** Pasos ya ejecutados (o saltados) y total del guion. */
+  step: z.number().int().min(0),
+  total: z.number().int().min(0),
+  /** Descripción del último paso, en lenguaje simple. */
+  lastStep: z.string().nullable(),
+  /** Puestos que maneja un bot en este ensayo. */
+  botSeats: z.array(z.object({ orgId: z.string(), roleId: z.string() })),
+});
+
 export const ProjectedRoomStateSchema = z.object({
   roomId: z.string(),
   version: z.number().int(),
   mode: RoomModeSchema,
+  /** Escenario entre organizaciones de la sala, si lo tiene. */
+  scenarioId: z.string().optional(),
+  /** Ensayo automático en curso o terminado. Falta o es null si nunca se usó. */
+  autopilot: AutopilotViewSchema.nullable().optional(),
   viewer: ViewerSchema,
   /** Reloj del servidor al armar este paquete. */
   serverNowTs: z.number(),
@@ -500,3 +521,4 @@ export type ProjectedRole = z.infer<typeof ProjectedRoleSchema>;
 export type ProjectedOrg = z.infer<typeof ProjectedOrgSchema>;
 export type ProjectedScarcity = z.infer<typeof ProjectedScarcitySchema>;
 export type ProjectedRoomState = z.infer<typeof ProjectedRoomStateSchema>;
+export type AutopilotView = z.infer<typeof AutopilotViewSchema>;

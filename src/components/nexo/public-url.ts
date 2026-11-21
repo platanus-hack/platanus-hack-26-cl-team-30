@@ -17,8 +17,12 @@ export function isLocalUrl(url: string): boolean {
   }
 }
 
-/** Enlace que abre la estación de un rol. Es lo que codifica el QR. */
-export function roleJoinUrl(baseUrl: string, roomId: string, orgId: string, roleId: string): string {
+/**
+ * Enlace que abre la estación de un rol. Es lo que codifica el QR. El del Comité
+ * lleva además su clave (key): sin ella el servidor no deja tomar ese puesto.
+ */
+export function roleJoinUrl(baseUrl: string, roomId: string, orgId: string, roleId: string, committeeKey?: string): string {
   const query = new URLSearchParams({ orgId, roleId });
+  if (committeeKey) query.set("key", committeeKey);
   return `${baseUrl}/room/${encodeURIComponent(roomId)}?${query}`;
 }

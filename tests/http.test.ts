@@ -11,8 +11,11 @@
 
 import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { missingRoutes, startRouteServer, type RouteServer } from "./helpers/route-server";
+
+// Las rutas de Supabase importan "server-only", que fuera de Next lanza un error a propósito.
+vi.mock("server-only", () => ({}));
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
@@ -28,6 +31,9 @@ function runScript(args: string[]): Promise<{ code: number; output: string }> {
 let server: RouteServer;
 
 beforeAll(async () => {
+  // Sin modelo: la sala nueva desde una frase cae enseguida a la semilla de respaldo.
+  process.env.LLM_PROVIDER = "openai";
+  process.env.LLM_BASE_URL = "http://127.0.0.1:9/v1";
   server = await startRouteServer();
 });
 

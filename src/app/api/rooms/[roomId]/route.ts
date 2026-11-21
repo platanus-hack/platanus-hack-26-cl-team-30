@@ -1,28 +1,17 @@
-import { timingSafeEqual } from "node:crypto";
+import { requireHost } from "@/lib/store/host";
+import { rateLimited } from "@/lib/store/rate-limit";
 import { resetRoom } from "@/lib/store/rooms";
 
-function sameKey(given: string | null, expected: string): boolean {
-  if (!given) return false;
-  const a = Buffer.from(given);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
-// DELETE /api/rooms/:roomId
-// Reinicia una sala para volver a ensayar: "demo" y "demo-cross" vuelven a su
-// semilla; cualquier otra sala se borra. Los roles quedan libres y los tokens
-// anteriores dejan de servir.
-//
-// Protección opcional: si el servidor define NEXO_ADMIN_KEY, la petición debe
-// traer esa clave en el encabezado "x-admin-key" (si no, 401). Sin la variable,
-// cualquiera que conozca el id de la sala puede reiniciarla (ver límites en
-// docs/ARQUITECTURA.md).
+// DELETE /api/rooms/:roomId  (encabezado x-host-token, o x-admin-key)
+// Reinicia la sala: vuelve al caso con que se abrió, detiene el ensayo
+// automático y revoca los tokens de todos los puestos. Conserva el id, el token
+// de anfitrión y la clave del Comité. Solo el anfitrión (403 HOST_ONLY si no).
 export async function DELETE(request: Request, { params }: { params: Promise<{ roomId: string }> }) {
-  const adminKey = process.env.NEXO_ADMIN_KEY;
-  if (adminKey && !sameKey(request.headers.get("x-admin-key"), adminKey)) {
-    return Response.json({ error: "Falta la clave de administración o no es válida", code: "INVALID_TOKEN" }, { status: 401 });
-  }
+  const limited = rateLimited(request, "host");
+  if (limited) return limited;
   const { roomId } = await params;
-  if (!resetRoom(roomId)) return Response.json({ error: "La sala no existe", code: "ROOM_NOT_FOUND" }, { status: 404 });
+  const denied = requireHost(request, roomId);
+  if (denied) return denied;
+  resetRoom(roomId);
   return Response.json({ ok: true });
 }

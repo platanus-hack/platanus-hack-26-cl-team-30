@@ -87,18 +87,107 @@ async function postAction(roomId: string, body: Record<string, unknown>): Promis
   }
 }
 
-/** POST /api/rooms. Devuelve el id de la sala nueva. */
-export async function createRoom(mode: RoomMode, seed?: string): Promise<string> {
+export type CreateRoomOptions = {
+  /** Organización semilla (solo single_org). */
+  seed?: string;
+  /** Escenario entre organizaciones: "hospitales", "construccion", "logistica" (solo cross_org). */
+  scenario?: string;
+  /** Frase que describe la organización: la sala nace ya mutada (solo single_org). */
+  description?: string;
+};
+
+export type CreatedRoom = { roomId: string; source?: string; latencyMs?: number };
+
+/**
+ * POST /api/rooms. Devuelve la sala nueva y guarda en este navegador las
+ * credenciales del anfitrión (token de controles y clave del QR del Comité),
+ * que el servidor entrega una sola vez.
+ */
+export async function createRoom(mode: RoomMode, options: CreateRoomOptions = {}): Promise<CreatedRoom> {
   const res = await fetch("/api/rooms", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(seed ? { mode, seed } : { mode }),
+    body: JSON.stringify({ mode, ...options }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || typeof data.roomId !== "string") {
     throw new Error(friendlyError(data.code, typeof data.error === "string" ? data.error : "No se pudo crear la sala"));
   }
-  return data.roomId;
+  if (typeof data.hostToken === "string" && typeof data.committeeKey === "string") {
+    storeHostCredentials(data.roomId, { hostToken: data.hostToken, committeeKey: data.committeeKey });
+  }
+  return { roomId: data.roomId, source: data.source, latencyMs: data.latencyMs };
+}
+
+// --- Anfitrión -----------------------------------------------------------------
+// Quien crea la sala recibe un token para los controles de la pantalla grande y la
+// clave que va dentro del QR del Comité. Se guardan en localStorage para que la
+// pantalla grande los encuentre aunque se abra en otra pestaña del mismo equipo.
+
+export type HostCredentials = { hostToken: string; committeeKey: string };
+
+const hostKey = (roomId: string) => `nexo:${roomId}:host`;
+
+function storeHostCredentials(roomId: string, credentials: HostCredentials): void {
+  try {
+    window.localStorage.setItem(hostKey(roomId), JSON.stringify(credentials));
+  } catch {
+    // Almacenamiento bloqueado: la pantalla grande no tendrá controles ni QR del Comité.
+  }
+}
+
+export function loadHostCredentials(roomId: string): HostCredentials | null {
+  try {
+    const raw = window.localStorage.getItem(hostKey(roomId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<HostCredentials>;
+    return typeof parsed.hostToken === "string" && typeof parsed.committeeKey === "string"
+      ? { hostToken: parsed.hostToken, committeeKey: parsed.committeeKey }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Pide los controles de una sala fija (POST /api/rooms/:id/host). En desarrollo
+ * se entregan; en el deploy hace falta la clave de administración, así que
+ * responde null y la pantalla ofrece abrir una sala propia.
+ */
+export async function claimHostCredentials(roomId: string): Promise<HostCredentials | null> {
+  try {
+    const res = await fetch(`/api/rooms/${encodeURIComponent(roomId)}/host`, { method: "POST" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (typeof data.hostToken !== "string" || typeof data.committeeKey !== "string") return null;
+    const credentials = { hostToken: data.hostToken, committeeKey: data.committeeKey };
+    storeHostCredentials(roomId, credentials);
+    return credentials;
+  } catch {
+    return null;
+  }
+}
+
+/** Control de la pantalla grande con el token de anfitrión (reiniciar, ensayo automático). */
+export async function hostRequest(
+  roomId: string,
+  credentials: HostCredentials,
+  path: "" | "/autopilot",
+  method: "POST" | "DELETE",
+  body?: Record<string, unknown>,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch(`/api/rooms/${encodeURIComponent(roomId)}${path}`, {
+      method,
+      headers: { "Content-Type": "application/json", "x-host-token": credentials.hostToken },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (res.ok) return { ok: true };
+    const data = await res.json().catch(() => ({}));
+    return { ok: false, error: friendlyError(data.code, typeof data.error === "string" ? data.error : `El servidor respondió ${res.status}`) };
+  } catch {
+    return { ok: false, error: "No se pudo llegar al servidor." };
+  }
 }
 
 export type MutateResult = { ok: boolean; source?: string; latencyMs?: number; error?: string };
@@ -249,18 +338,30 @@ export function useRoom(roomId: string, { spectator = false }: Options = {}) {
   const joining = useRef(new Map<string, Promise<ActResult>>());
 
   const joinOnce = useCallback(
-    async (orgId: string, roleId: string): Promise<ActResult> => {
+    async (orgId: string, roleId: string, committeeKey?: string): Promise<ActResult> => {
       const previous = sessionRef.current;
       const sameRole = previous?.orgId === orgId && previous.roleId === roleId;
       // Cambiar de rol libera el anterior para que otra persona pueda tomarlo.
       if (previous && !sameRole) await postAction(roomId, { type: "LEAVE_ROLE", ...previous });
-      const result = await postAction(roomId, { type: "JOIN_ROLE", orgId, roleId, ...(sameRole ? { token: previous.token } : {}) });
+      const result = await postAction(roomId, {
+        type: "JOIN_ROLE",
+        orgId,
+        roleId,
+        ...(sameRole ? { token: previous.token } : {}),
+        ...(committeeKey ? { committeeKey } : {}),
+      });
       if (result.ok && result.data.token) {
         setSession({ orgId, roleId, token: result.data.token });
         setNotice(null);
       } else if (!result.ok) {
         if (previous) setSession(null);
-        setNotice(result.code === "ROLE_TAKEN" ? "Ese rol ya lo tiene otra persona. Elige uno libre." : result.error);
+        setNotice(
+          result.code === "ROLE_TAKEN"
+            ? "Ese rol ya lo tiene otra persona. Elige uno libre."
+            : result.code === "COMMITTEE_KEY_REQUIRED"
+              ? "Al Comité se entra escaneando el código QR de la pantalla grande."
+              : result.error,
+        );
       }
       return result;
     },
@@ -268,11 +369,11 @@ export function useRoom(roomId: string, { spectator = false }: Options = {}) {
   );
 
   const join = useCallback(
-    (orgId: string, roleId: string): Promise<ActResult> => {
+    (orgId: string, roleId: string, committeeKey?: string): Promise<ActResult> => {
       const key = `${orgId}/${roleId}`;
       const pending = joining.current.get(key);
       if (pending) return pending;
-      const request = joinOnce(orgId, roleId).finally(() => joining.current.delete(key));
+      const request = joinOnce(orgId, roleId, committeeKey).finally(() => joining.current.delete(key));
       joining.current.set(key, request);
       return request;
     },
