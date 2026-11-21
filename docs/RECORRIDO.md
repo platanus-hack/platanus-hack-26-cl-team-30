@@ -1,6 +1,6 @@
 # Recorrido guiado
 
-Diez archivos, en orden, para entender Nexo sin leer todo el repo. Cada uno trae la función que conviene abrir primero. El detalle completo está en `docs/ARQUITECTURA.md`.
+Diez archivos, en orden, para entender Sculptor sin leer todo el repo. Cada uno trae la función que conviene abrir primero. El detalle completo está en `docs/ARQUITECTURA.md`.
 
 La idea en una línea: un solo estado por sala vive en el servidor, un motor de reglas sin modelo lo cambia, y cada persona recibe por SSE una versión filtrada para su organización y su rol.
 

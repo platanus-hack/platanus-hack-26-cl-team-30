@@ -125,7 +125,7 @@ Formato de cada entrada:
 
 ## El modelo escribe un genoma JSON validado, no la interfaz
 
-- **Decisión:** para adaptar Nexo a otra organización, el modelo escribe solo un objeto JSON con contenido (nombres de roles, datos, caso). El código fija la estructura (`normalizeGenome` en `src/agents/mutate-genome.ts`) y `OrgGenomeSchema` (`src/lib/genome/schema.ts`) decide si se usa. La interfaz (la silla del celular en `src/components/seat/` y la pantalla grande en `src/components/stage/`) es código fijo que dibuja cualquier genoma válido.
+- **Decisión:** para adaptar Sculptor a otra organización, el modelo escribe solo un objeto JSON con contenido (nombres de roles, datos, caso). El código fija la estructura (`normalizeGenome` en `src/agents/mutate-genome.ts`) y `OrgGenomeSchema` (`src/lib/genome/schema.ts`) decide si se usa. La interfaz (la silla del celular en `src/components/seat/` y la pantalla grande en `src/components/stage/`) es código fijo que dibuja cualquier genoma válido.
 - **Alternativa descartada:** que el modelo genere HTML o JSX a la medida de cada organización.
 - **Por qué:** una interfaz generada puede romperse en vivo o saltarse los permisos. Un JSON se puede validar campo por campo antes de que toque la sala, y si no pasa se usa una semilla (`source: "fallback_seed"`). La sala nunca queda sin organización.
 - **Costo:** toda organización se expresa con la misma forma: hasta 3 roles, entre 4 y 8 campos, una regla de autoridad y un caso. Lo que no cabe en esa forma no se puede representar.

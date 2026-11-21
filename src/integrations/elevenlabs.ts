@@ -53,7 +53,7 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (text ? JSON.parse(text) : {}) as T;
 }
 
-const PROMPT = `Eres el asistente de voz del Comité de Nexo, un sistema donde varias organizaciones deciden juntas sobre un recurso escaso sin mostrarse sus datos reservados.
+const PROMPT = `Eres el asistente de voz del Comité de Sculptor, un sistema donde varias organizaciones deciden juntas sobre un recurso escaso sin mostrarse sus datos reservados.
 Hablas en español de Chile, con frases cortas, tono calmado y respetuoso. Te diriges a quien preside el Comité.
 
 Tu trabajo, en este orden:
@@ -129,11 +129,11 @@ export async function ensureCommitteeAgent(): Promise<string> {
   const created = await call<{ agent_id: string }>("/convai/agents/create", {
     method: "POST",
     body: JSON.stringify({
-      name: "Nexo · Asistente del Comité",
+      name: "Sculptor · Asistente del Comité",
       conversation_config: {
         agent: {
           language: "es",
-          first_message: "Hola, le habla el asistente del Comité de Nexo. Hay un caso que necesita su decisión. Deme un segundo y se lo explico.",
+          first_message: "Hola, le habla el asistente del Comité de Sculptor. Hay un caso que necesita su decisión. Deme un segundo y se lo explico.",
           prompt: {
             prompt: PROMPT,
             tools: toolDefinitions(config.baseUrl, config.secret),

@@ -8,7 +8,7 @@ Actualizado el 21 de noviembre de 2026.
 
 | # | Pendiente | Qué hay que hacer |
 | --- | --- | --- |
-| a | **"Nexo" es un nombre provisional.** Está en `platanus-hack-project.jsonc`, `README.md`, `project-description.md`, `CLAUDE.md`, `docs/` y en la interfaz (`src/app/layout.tsx`, `src/app/page.tsx`). | Confirmarlo o elegir otro. Si cambia, reemplazarlo en todos esos lugares. |
+| a | **Resuelto: el producto se llama Sculptor** (ronda 10, antes «Nexo»). Se cambió todo lo visible. Siguen con el nombre viejo, a propósito, los identificadores internos: variables `NEXO_*`, encabezados `x-nexo-secret` y `x-nexo-session`, ids de botón `nexo:approve`/`nexo:veto`, claves de almacenamiento `nexo:*`, la carpeta `src/components/nexo/`, el repo y la URL del deploy. Cambiarlos rompería Render y los webhooks. | Equipo | Si la plantilla de WhatsApp ya aprobada se llama `nexo_comite_caso`, `KAPSO_TEMPLATE_NAME` debe seguir con ese nombre hasta que Meta apruebe `sculptor_comite_caso`. |
 | b | **El logo sigue siendo el de la plantilla** (`project-logo.png`). | Subir uno propio: PNG de 1000x1000, máximo 500 KB. |
 | c | **Render está en plan gratis y se duerme** sin visitas. La primera carga tarda y, al dormirse, se pierden las salas, que viven en memoria. | Subir de plan antes de presentar (`plan` en `render.yaml` o desde el panel). |
 | d | **Dónde corre la demo en vivo.** El deploy usa Claude, así que ahí los datos sí salen a la nube. "Cero bytes a la nube" solo vale en modo local. | Decidir si la demo corre en el deploy, en local con el Spark, o ambas. En el pitch, decir "cero bytes" solo mientras se muestra el modo local. |
@@ -73,4 +73,10 @@ Actualizado el 21 de noviembre de 2026.
 - **Resuelto: pestaña «Sala» en la demo.** Muestra los 4 pasos de la demo (Unirse, Casos, Comité, Acta), sin «Acordar límites» ni «Firmar» (`demoStep`).
 - **Ensayo con personas reales:** el recorrido de 3 personas se probó con Playwright y con `scripts/e2e.mjs`, no con teléfonos reales en la sede.
 - **Servidor de desarrollo después de `next build`:** al levantar `next dev` justo después de un `next build` en la misma carpeta, la página del celular entró en un bucle de recargas («Fast Refresh rebuilding» en cada conexión) y cada recarga pedía un sorteo. Se arregló borrando `.next/dev` y reiniciando `next dev`. No afecta al deploy (`next start`), pero conviene no ensayar la demo sobre un `next dev` que convivió con un build.
+
+## Agregado en la ronda 10 (nombre Sculptor)
+
+- **Asistente de voz ya creado en ElevenLabs:** el nombre, el prompt y el saludo nuevos («asistente del Comité de Sculptor») están en `src/integrations/elevenlabs.ts`, pero solo se usan al crear el agente. Si Render tiene `ELEVENLABS_AGENT_ID`, ese agente sigue diciendo «Nexo» hasta actualizarlo en el panel de ElevenLabs (o borrar la variable para que se cree uno nuevo).
+- **Plantilla de WhatsApp:** el nombre sugerido ahora es `sculptor_comite_caso`. Hay que crearla y aprobarla en Meta; mientras tanto, `KAPSO_TEMPLATE_NAME` debe seguir con el nombre de la plantilla ya aprobada. El encabezado del mensaje interactivo ya dice «Sculptor · Decisión del Comité».
+- **Fuera del reparto de la ronda 10:** `project-description.md` y `public/pitch/index.html` todavía dicen «Nexo».
 

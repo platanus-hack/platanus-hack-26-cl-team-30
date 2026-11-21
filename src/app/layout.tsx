@@ -20,12 +20,12 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
-const title = "Nexo: decidir juntos sin mostrar los datos";
+const title = "Sculptor: decidir juntos sin mostrar los datos";
 const description =
   "Un lugar donde organizaciones que no pueden compartir su información deciden juntas a quién le toca lo que escasea: cada una ve solo lo suyo, una regla conocida ordena los casos y quien firma deja su razón.";
 
 export const metadata: Metadata = {
-  title: { default: title, template: "%s · Nexo" },
+  title: { default: title, template: "%s · Sculptor" },
   description,
   openGraph: { title, description, type: "website", locale: "es_CL" },
 };

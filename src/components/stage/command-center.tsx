@@ -150,10 +150,10 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
         <header className="gd-top">
           <div className="gd-brand">
             <span className="gd-logo" aria-hidden="true">
-              <Mark size={26} />
+              <Mark size={26} bare />
             </span>
             <div>
-              <strong>NEXO</strong>
+              <strong>SCULPTOR</strong>
             </div>
           </div>
           <span aria-hidden="true" />

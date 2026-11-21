@@ -1,4 +1,4 @@
-// Motor determinista de Nexo. Aquí viven las reglas: choque de autoridad,
+// Motor determinista de Sculptor. Aquí viven las reglas: choque de autoridad,
 // compuerta, confiabilidad p^n, asignación del recurso escaso, permisos por
 // organización y rol, contador de lo que está en juego y acta.
 //
@@ -1205,7 +1205,7 @@ export function replaceRoomGenome(state: RoomState, genome: OrgGenome, source: s
 // --- Acta ---------------------------------------------------------------------
 
 export type AuditActa = {
-  product: "Nexo";
+  product: "Sculptor";
   disclaimer: string;
   roomId: string;
   mode: RoomState["mode"];
@@ -1247,7 +1247,7 @@ export type AuditActa = {
 export function buildAuditActa(state: RoomState, nowTs: number): AuditActa {
   const view = projectStateForOrgAndRole(state, "stage", nowTs);
   return {
-    product: "Nexo",
+    product: "Sculptor",
     disclaimer: ACTA_DISCLAIMER,
     roomId: state.roomId,
     mode: state.mode,

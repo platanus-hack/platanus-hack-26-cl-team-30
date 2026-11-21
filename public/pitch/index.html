@@ -1,152 +1,3074 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Nexo · Pitch</title>
-<!--
-  Deck del pitch (3:30). Adaptado del prototipo de Nahum
-  (docs/diseno/nahum/pitch_platanus_interactivo.html) con el nombre Nexo, la
-  paleta oficial (docs/DISENO.md) y la mitad de las palabras. Las cifras son las
-  del motor (src/lib/engine/deterministic.ts) con las semillas de
-  src/lib/genome/seeds.ts, y las de docs/MEDICIONES.md. Flechas o clic para avanzar.
--->
-<style>
-  :root {
-    --ivory: #fffdf8; --mint: #cfeae3; --mint-soft: #eaf5f1; --sage: #4f7c6d; --euca: #6faf9b;
-    --ink: #24403a; --ink-soft: #4d6860; --line: #d7e6e0; --clay-ink: #8f5743; --clay-soft: #f6e9e3;
-    --wait: #b91c1c; --wait-soft: #fbe9e6; --done: #15803d; --done-soft: #e2f3e7;
-    --bg: var(--mint-soft); --card: var(--ivory); --text: var(--ink); --muted: var(--ink-soft); --now: var(--sage);
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg: #151515; --card: #222220; --text: #fffdf8; --muted: #b4b4ac; --line: rgb(255 253 248 / 13%);
-      --wait: #fca5a5; --wait-soft: #3a2220; --done: #86efac; --done-soft: #1d3324; --now: #e1ff00; --clay-soft: #3a2b24; --clay-ink: #e0a891; --mint-soft: #24302c; }
-  }
-  :root[data-theme="dark"] { --bg: #151515; --card: #222220; --text: #fffdf8; --muted: #b4b4ac; --line: rgb(255 253 248 / 13%);
-    --wait: #fca5a5; --wait-soft: #3a2220; --done: #86efac; --done-soft: #1d3324; --now: #e1ff00; --clay-soft: #3a2b24; --clay-ink: #e0a891; --mint-soft: #24302c; }
-  * { box-sizing: border-box; margin: 0; }
-  html, body { height: 100%; }
-  body { background: var(--bg); color: var(--text); font-family: Manrope, "Helvetica Neue", Arial, system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
-  .deck { position: relative; height: 100svh; }
-  .slide { position: absolute; inset: 0; display: none; flex-direction: column; justify-content: center; gap: clamp(18px, 3vh, 36px);
-    padding: clamp(56px, 8vh, 96px) clamp(16px, 7vw, 120px) clamp(64px, 9vh, 104px); }
-  .slide.on { display: flex; }
-  .brand { position: fixed; top: clamp(14px, 2.5vh, 28px); left: clamp(16px, 4vw, 48px); display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: .14em; font-size: 15px; z-index: 2; }
-  .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--wait); }
-  .done .dot, body.sealed .dot { background: var(--done); }
-  .idx { position: fixed; right: clamp(16px, 4vw, 48px); bottom: clamp(14px, 2.5vh, 28px); font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); z-index: 2; }
-  .foot { position: fixed; left: clamp(16px, 4vw, 48px); bottom: clamp(14px, 2.5vh, 28px); font-size: 12px; color: var(--muted); z-index: 2; max-width: 60%; }
-  h1 { font-size: clamp(40px, 7vw, 108px); line-height: .98; letter-spacing: -.045em; font-weight: 800; max-width: 14ch; }
-  h2 { font-size: clamp(32px, 5vw, 76px); line-height: 1; letter-spacing: -.04em; font-weight: 800; max-width: 16ch; }
-  .sub { font-size: clamp(18px, 2vw, 30px); color: var(--muted); font-weight: 600; max-width: 34ch; }
-  .wait { color: var(--wait); } .ok { color: var(--done); } .now { color: var(--now); }
-  .row { display: flex; flex-wrap: wrap; gap: clamp(12px, 2vw, 28px); align-items: stretch; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 28px; padding: clamp(16px, 2vw, 30px); flex: 1 1 240px; min-width: 0; }
-  .big { font-size: clamp(56px, 9vw, 150px); font-weight: 800; letter-spacing: -.06em; line-height: .9; font-variant-numeric: tabular-nums; }
-  .mid { font-size: clamp(36px, 5vw, 80px); font-weight: 800; letter-spacing: -.05em; line-height: .95; font-variant-numeric: tabular-nums; }
-  .label { font-size: clamp(14px, 1.3vw, 20px); font-weight: 700; color: var(--muted); margin-top: 8px; }
-  .lock { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; color: var(--muted); font-size: clamp(14px, 1.3vw, 20px); }
-  .lock i { width: 70px; height: 14px; border-radius: 4px; background: repeating-linear-gradient(-52deg, color-mix(in srgb, var(--text) 60%, transparent) 0 3px, transparent 3px 7px); }
-  .pill { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 8px 16px; font-weight: 800; font-size: clamp(14px, 1.3vw, 20px); }
-  .pill.wait { background: var(--wait-soft); } .pill.ok { background: var(--done-soft); } .pill.clay { background: var(--clay-soft); color: var(--clay-ink); }
-  .ecg { width: 100%; height: 52px; }
-  .ecg path { fill: none; stroke-width: 2.6; stroke-linejoin: round; stroke-linecap: round; }
-  .scroll { animation: scroll 1.8s linear infinite; }
-  @keyframes scroll { to { transform: translateX(-160px); } }
-  .qr { width: clamp(180px, 26vh, 300px); aspect-ratio: 1; border-radius: 20px; overflow: hidden; flex: none; }
-  .qr svg { width: 100%; height: 100%; display: block; }
-  details { font-size: clamp(14px, 1.2vw, 18px); color: var(--muted); max-width: 60ch; }
-  summary { cursor: pointer; font-weight: 800; color: var(--text); display: inline-flex; min-height: 44px; align-items: center; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); list-style: none; }
-  summary::-webkit-details-marker { display: none; }
-  details p { margin-top: 8px; }
-  code { font-family: ui-monospace, Menlo, monospace; }
-  nav { position: fixed; inset: 0; display: grid; grid-template-columns: 1fr 2fr; z-index: 1; }
-  nav button { background: none; border: 0; cursor: pointer; }
-  .slide > * { position: relative; z-index: 3; }
-  @media (prefers-reduced-motion: reduce) { .scroll { animation: none; } }
-  @media (max-width: 640px) { .foot { display: none; } }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sculptor · Pitch</title>
+  <!--
+    Deck del pitch (3:30). Basado en el diseño v2 de Nahum
+    (docs/diseno/nahum/v2/pitch_platanus_interactivo.html), con estas correcciones:
+    cifras reales (pruebas: npm test; conexiones: docs/MEDICIONES.md; puntajes y
+    p^n: el motor con las semillas), sin «0 bytes nube» (el deploy usa Claude),
+    sin la compuerta de límite (la demo es de 3 personas), menos jerga en los
+    titulares y el QR hacia /stage/demo-cross. Solo carga fuentes de Google; el QR
+    se genera aquí mismo, sin otros servidores. Flechas o espacio para avanzar.
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    /* =========================================================================
+       SCULPTOR · KEYNOTE DESIGN SYSTEM (NOCTURNAL SPACE-PETROL OBSERVATORY)
+       Double-Bezel Architecture + Liquid Glass Hairlines + Tabular Telemetry
+       ========================================================================= */
+    :root {
+      --bg-void: #030912;
+      --bg-petrol: #061423;
+      --bg-elevated: rgba(10, 24, 40, 0.72);
+      --bg-core: rgba(6, 16, 28, 0.92);
+      --bg-core-hi: rgba(12, 28, 46, 0.88);
+
+      --ink: #f3f8fc;
+      --ink-soft: #b6cadc;
+      --muted: #6c87a1;
+
+      --crimson: #fb3b5f;
+      --crimson-soft: rgba(251, 59, 95, 0.14);
+      --crimson-border: rgba(251, 59, 95, 0.38);
+
+      --emerald: #10e5a0;
+      --emerald-soft: rgba(16, 229, 160, 0.12);
+      --emerald-border: rgba(16, 229, 160, 0.38);
+
+      --violet: #a77bff;
+      --violet-soft: rgba(167, 123, 255, 0.14);
+      --violet-border: rgba(167, 123, 255, 0.42);
+
+      --cyan: #38bdf8;
+      --cyan-soft: rgba(56, 189, 248, 0.12);
+
+      --amber: #f59e0b;
+      --amber-soft: rgba(245, 158, 11, 0.14);
+
+      --line: rgba(154, 201, 236, 0.13);
+      --line-hi: rgba(224, 242, 254, 0.24);
+
+      --radius-shell: 24px;
+      --radius-core: 18px;
+      --radius-pill: 999px;
+
+      --font-display: "Space Grotesk", system-ui, -apple-system, sans-serif;
+      --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-void);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: geometricPrecision;
+      user-select: none;
+    }
+
+    /* =========================================================================
+       OBSERVATORY ATMOSPHERE (DEEP SPACE-PETROL + STARFIELD + FILM GRAIN)
+       ========================================================================= */
+    .bg-cosmos {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(68% 58% at 14% 16%, rgba(11, 48, 78, 0.52) 0%, transparent 64%),
+        radial-gradient(54% 48% at 86% 84%, rgba(8, 56, 72, 0.36) 0%, transparent 66%),
+        radial-gradient(90% 90% at 50% 50%, #051120 0%, #030912 72%);
+    }
+
+    .bg-mood {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.9;
+      transition: background 450ms var(--ease-out);
+      background: radial-gradient(48% 52% at 80% 34%, rgba(251, 59, 95, 0.14) 0%, transparent 68%);
+    }
+
+    body[data-mood="crimson"] .bg-mood {
+      background: radial-gradient(48% 52% at 80% 34%, rgba(251, 59, 95, 0.16) 0%, transparent 68%);
+    }
+    body[data-mood="violet"] .bg-mood {
+      background: radial-gradient(46% 56% at 82% 48%, rgba(167, 123, 255, 0.18) 0%, transparent 68%);
+    }
+    body[data-mood="emerald"] .bg-mood {
+      background: radial-gradient(56% 56% at 72% 44%, rgba(16, 229, 160, 0.14) 0%, transparent 68%);
+    }
+    body[data-mood="cosmic"] .bg-mood {
+      background:
+        radial-gradient(55% 45% at 50% 82%, rgba(16, 229, 160, 0.16) 0%, transparent 66%),
+        radial-gradient(42% 38% at 24% 24%, rgba(56, 189, 248, 0.12) 0%, transparent 65%);
+    }
+
+    /* Precision micro-grid + delicate starlight */
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(148, 198, 232, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 198, 232, 0.035) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(75% 75% at 50% 48%, #000 35%, transparent 100%);
+      -webkit-mask-image: radial-gradient(75% 75% at 50% 48%, #000 35%, transparent 100%);
+    }
+
+    .bg-stars {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.42;
+      background-image:
+        radial-gradient(1.2px 1.2px at 12% 22%, rgba(255, 255, 255, 0.85), transparent),
+        radial-gradient(1px 1px at 26% 74%, rgba(186, 230, 253, 0.7), transparent),
+        radial-gradient(1.5px 1.5px at 42% 16%, rgba(255, 255, 255, 0.9), transparent),
+        radial-gradient(1px 1px at 61% 84%, rgba(167, 243, 208, 0.75), transparent),
+        radial-gradient(1.4px 1.4px at 78% 19%, rgba(255, 255, 255, 0.85), transparent),
+        radial-gradient(1px 1px at 91% 62%, rgba(196, 181, 253, 0.8), transparent),
+        radial-gradient(1px 1px at 54% 38%, rgba(255, 255, 255, 0.55), transparent),
+        radial-gradient(1.3px 1.3px at 8% 88%, rgba(56, 189, 248, 0.7), transparent),
+        radial-gradient(1.2px 1.2px at 86% 36%, rgba(255, 255, 255, 0.75), transparent);
+    }
+
+    .bg-grain {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0.032;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* =========================================================================
+       PROGRESS HAIRLINE + TOP CHROME + BOTTOM DOCK (MAX 2 BACKDROP-FILTERS)
+       ========================================================================= */
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: rgba(148, 198, 232, 0.08);
+      z-index: 40;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 16.666%;
+      background: linear-gradient(90deg, var(--crimson), #ff7a93);
+      box-shadow: 0 0 18px rgba(251, 59, 95, 0.65);
+      transition: width 380ms var(--ease-expo), background 380ms var(--ease-out), box-shadow 380ms var(--ease-out);
+    }
+
+    .progress-fill.calm {
+      background: linear-gradient(90deg, var(--emerald), var(--cyan));
+      box-shadow: 0 0 18px rgba(16, 229, 160, 0.6);
+    }
+
+    .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 68px;
+      padding: 0 clamp(24px, 4vw, 56px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 30;
+      pointer-events: none;
+    }
+
+    .brand-lockup {
+      display: inline-flex;
+      align-items: center;
+      gap: 11px;
+      padding: 8px 14px 8px 11px;
+      border-radius: var(--radius-pill);
+      background: rgba(6, 17, 30, 0.62);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      pointer-events: auto;
+    }
+
+    .brand-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--crimson);
+      box-shadow: 0 0 12px rgba(251, 59, 95, 0.85);
+      transition: background 320ms var(--ease-out), box-shadow 320ms var(--ease-out);
+    }
+
+    .brand-dot.calm {
+      background: var(--emerald);
+      box-shadow: 0 0 12px rgba(16, 229, 160, 0.85);
+    }
+
+    .brand-dot.beating {
+      animation: pulseDot 1.6s ease-in-out infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.38); opacity: 0.72; }
+    }
+
+    .brand-wordmark {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--ink);
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .track-chip {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      padding: 7px 14px;
+      border-radius: var(--radius-pill);
+      background: rgba(6, 17, 30, 0.56);
+      border: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    .stage-timer {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+      padding: 7px 14px;
+      border-radius: var(--radius-pill);
+      background: rgba(6, 17, 30, 0.82);
+      border: 1px solid var(--line-hi);
+      cursor: pointer;
+    }
+
+    .stage-timer.visible { display: inline-flex; }
+    .stage-timer.warn { border-color: rgba(245, 158, 11, 0.6); color: #fbbf24; }
+    .stage-timer.danger { border-color: rgba(251, 59, 95, 0.72); color: var(--crimson); }
+
+    /* Bottom Floating Dock */
+    .bottombar {
+      position: fixed;
+      bottom: 18px;
+      left: clamp(24px, 4vw, 56px);
+      right: clamp(24px, 4vw, 56px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 30;
+      pointer-events: none;
+    }
+
+    .kbd-hints {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      pointer-events: auto;
+    }
+
+    .dock-btn {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+      background: rgba(6, 17, 30, 0.52);
+      border: 1px solid rgba(154, 201, 236, 0.11);
+      border-radius: var(--radius-pill);
+      padding: 6px 11px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 180ms var(--ease-out), border-color 180ms var(--ease-out), background-color 180ms var(--ease-out), transform 140ms var(--ease-out);
+    }
+
+    .dock-btn:active { transform: scale(0.96); }
+
+    @media (hover: hover) and (pointer: fine) {
+      .dock-btn:hover {
+        color: var(--ink);
+        border-color: var(--line-hi);
+        background: rgba(14, 34, 56, 0.78);
+      }
+    }
+
+    .slide-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 7px;
+      border-radius: var(--radius-pill);
+      background: rgba(6, 17, 30, 0.68);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      pointer-events: auto;
+    }
+
+    .nav-arrow {
+      width: 32px;
+      height: 30px;
+      border: none;
+      border-radius: var(--radius-pill);
+      background: transparent;
+      color: var(--ink-soft);
+      font-size: 15px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out), transform 140ms var(--ease-out);
+    }
+
+    .nav-arrow:active { transform: scale(0.94); }
+
+    @media (hover: hover) and (pointer: fine) {
+      .nav-arrow:hover {
+        background: rgba(148, 198, 232, 0.14);
+        color: var(--ink);
+      }
+    }
+
+    .slide-counter {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink-soft);
+      min-width: 52px;
+      text-align: center;
+    }
+
+    /* =========================================================================
+       DECK STAGE & SLIDE ENGINE
+       ========================================================================= */
+    .deck {
+      position: relative;
+      z-index: 10;
+      width: 100vw;
+      height: 100dvh;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      padding: 82px clamp(28px, 4.4vw, 68px) 74px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(10px) scale(0.99);
+      transition: opacity 260ms var(--ease-out), transform 340ms var(--ease-expo);
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+    }
+
+    .slide-inner {
+      width: 100%;
+      max-width: 1320px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Staggered slide-entry craft */
+    .slide.active .stagger-1 { animation: riseIn 380ms var(--ease-expo) 20ms both; }
+    .slide.active .stagger-2 { animation: riseIn 400ms var(--ease-expo) 75ms both; }
+    .slide.active .stagger-3 { animation: riseIn 420ms var(--ease-expo) 130ms both; }
+    .slide.active .stagger-4 { animation: riseIn 440ms var(--ease-expo) 185ms both; }
+
+    @keyframes riseIn {
+      from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.985);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* =========================================================================
+       SHARED PRIMITIVES: TYPOGRAPHY, DOUBLE-BEZEL SHELLS, BUTTONS, PILLS
+       ========================================================================= */
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--crimson);
+    }
+
+    .eyebrow.emerald { color: var(--emerald); }
+
+    .h-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(32px, 3.65vw, 52px);
+      line-height: 1.06;
+      letter-spacing: -0.038em;
+      color: var(--ink);
+      text-wrap: balance;
+    }
+
+    .c-crimson { color: var(--crimson); }
+    .c-emerald { color: var(--emerald); }
+    .c-violet { color: var(--violet); }
+    .c-cyan { color: var(--cyan); }
+    .c-soft { color: var(--ink-soft); }
+    .c-muted { color: var(--muted); }
+
+    /* Double-Bezel Machined Surface (High-End Visual Design) */
+    .bezel {
+      position: relative;
+      border-radius: var(--radius-shell);
+      padding: 6px;
+      background: linear-gradient(155deg, rgba(164, 212, 245, 0.14), rgba(10, 24, 42, 0.42) 55%, rgba(164, 212, 245, 0.06));
+      box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.72);
+    }
+
+    .bezel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.22), rgba(148, 198, 232, 0.08) 45%, rgba(255, 255, 255, 0.04));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    .bezel-core {
+      position: relative;
+      height: 100%;
+      border-radius: var(--radius-core);
+      background: linear-gradient(165deg, var(--bg-core-hi), var(--bg-core));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+      padding: 24px 26px;
+    }
+
+    .bezel.bezel-violet {
+      background: linear-gradient(155deg, rgba(167, 123, 255, 0.34), rgba(20, 14, 44, 0.65) 55%, rgba(167, 123, 255, 0.14));
+    }
+    .bezel.bezel-violet .bezel-core {
+      background: linear-gradient(165deg, rgba(24, 18, 52, 0.94), rgba(9, 12, 28, 0.96));
+    }
+
+    .bezel.bezel-emerald {
+      background: linear-gradient(155deg, rgba(16, 229, 160, 0.32), rgba(7, 30, 32, 0.62) 55%, rgba(56, 189, 248, 0.14));
+    }
+    .bezel.bezel-emerald .bezel-core {
+      background: linear-gradient(165deg, rgba(9, 32, 36, 0.94), rgba(5, 16, 24, 0.96));
+    }
+
+    .bezel.bezel-crimson {
+      background: linear-gradient(155deg, rgba(251, 59, 95, 0.34), rgba(38, 10, 22, 0.62) 55%, rgba(251, 59, 95, 0.12));
+    }
+
+    /* Pills */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 12px;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      border: 1px solid var(--line);
+      background: rgba(12, 29, 48, 0.72);
+      color: var(--ink-soft);
+    }
+
+    .pill-crimson {
+      background: var(--crimson-soft);
+      border-color: var(--crimson-border);
+      color: #ff7790;
+    }
+
+    .pill-emerald {
+      background: var(--emerald-soft);
+      border-color: var(--emerald-border);
+      color: #4ef2bd;
+    }
+
+    .pill-violet {
+      background: var(--violet-soft);
+      border-color: var(--violet-border);
+      color: #cbb0ff;
+    }
+
+    .pill-amber {
+      background: var(--amber-soft);
+      border-color: rgba(245, 158, 11, 0.42);
+      color: #fcd34d;
+    }
+
+    /* Tactile Buttons (Button-in-Button Architecture) */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 10px 10px 10px 20px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 600;
+      color: #031119;
+      background: var(--ink);
+      text-decoration: none;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: transform 160ms var(--ease-out), background-color 180ms var(--ease-out), box-shadow 200ms var(--ease-out), border-color 180ms var(--ease-out);
+    }
+
+    .btn:active { transform: scale(0.97); }
+
+    .btn-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(3, 17, 25, 0.12);
+      font-size: 14px;
+      transition: transform 200ms var(--ease-out);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .btn:hover { box-shadow: 0 10px 28px -8px rgba(243, 248, 252, 0.35); }
+      .btn:hover .btn-icon { transform: translateX(2px); }
+    }
+
+    .btn-crimson {
+      background: linear-gradient(135deg, #ff476a, #e11d48);
+      color: #ffffff;
+      border-color: rgba(255, 164, 182, 0.32);
+      box-shadow: 0 12px 32px -10px rgba(251, 59, 95, 0.65);
+    }
+    .btn-crimson .btn-icon { background: rgba(255, 255, 255, 0.2); }
+
+    .btn-emerald {
+      background: linear-gradient(135deg, #10e5a0, #06b6d4);
+      color: #021417;
+      border-color: rgba(167, 243, 208, 0.4);
+      box-shadow: 0 12px 34px -10px rgba(16, 229, 160, 0.55);
+    }
+    .btn-emerald .btn-icon { background: rgba(2, 20, 23, 0.16); }
+
+    .btn-violet {
+      background: linear-gradient(135deg, #9b6bff, #7c3aed);
+      color: #ffffff;
+      border-color: rgba(221, 214, 254, 0.35);
+      box-shadow: 0 12px 32px -10px rgba(139, 92, 246, 0.65);
+    }
+    .btn-violet .btn-icon { background: rgba(255, 255, 255, 0.2); }
+
+    .btn-ghost {
+      background: rgba(10, 25, 42, 0.72);
+      color: var(--ink);
+      border-color: var(--line-hi);
+      padding: 10px 18px;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .btn-ghost:hover {
+        background: rgba(20, 44, 70, 0.9);
+        box-shadow: none;
+      }
+    }
+
+    /* Animated Cipher Redaction Bar (Fog of War Signature) */
+    .redaction {
+      display: inline-block;
+      height: 15px;
+      min-width: 92px;
+      border-radius: 5px;
+      vertical-align: middle;
+      background: repeating-linear-gradient(
+        -55deg,
+        rgba(251, 59, 95, 0.55),
+        rgba(251, 59, 95, 0.55) 4px,
+        rgba(15, 32, 52, 0.9) 4px,
+        rgba(15, 32, 52, 0.9) 9px
+      );
+      border: 1px solid rgba(251, 59, 95, 0.4);
+    }
+
+    .swap-blur {
+      transition: filter 160ms var(--ease-out), opacity 160ms var(--ease-out);
+    }
+    .swap-blur.mutating {
+      filter: blur(2.5px);
+      opacity: 0.62;
+    }
+
+    /* =========================================================================
+       SLIDE 1 · HOOK CINEMATOGRÁFICO (ASYMMETRIC MANIFESTO + TELEMETRY MONOLITH)
+       ========================================================================= */
+    .s1-grid {
+      display: grid;
+      grid-template-columns: 1.38fr 0.78fr;
+      gap: clamp(28px, 4vw, 60px);
+      align-items: center;
+    }
+
+    .s1-headline {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(50px, 6.1vw, 88px);
+      line-height: 0.99;
+      letter-spacing: -0.045em;
+      color: var(--ink);
+    }
+
+    .s1-headline .accent-line {
+      display: block;
+      margin-top: 12px;
+      color: var(--crimson);
+      text-shadow: 0 0 42px rgba(251, 59, 95, 0.32);
+    }
+
+    .s1-monolith .bezel-core {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 28px 28px 24px;
+    }
+
+    .wait-eyebrow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #ff869d;
+    }
+
+    .wait-clock {
+      font-family: var(--font-mono);
+      font-size: clamp(52px, 5.2vw, 76px);
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+      text-shadow: 0 0 36px rgba(251, 59, 95, 0.42);
+    }
+
+    .s1-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .s1-stat-num {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--ink);
+    }
+
+    .s1-stat-lbl {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .ecg-stage {
+      width: 100%;
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .ecg-svg {
+      width: 100%;
+      height: 54px;
+      overflow: visible;
+    }
+
+    .ecg-base {
+      fill: none;
+      stroke: rgba(251, 59, 95, 0.24);
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .ecg-path {
+      fill: none;
+      stroke: var(--crimson);
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 8px rgba(251, 59, 95, 0.8));
+      stroke-dasharray: 320 1400;
+      stroke-dashoffset: 0;
+      animation: ecgSweep 4.8s linear infinite;
+    }
+
+    @keyframes ecgSweep {
+      0% { stroke-dashoffset: 1720; }
+      100% { stroke-dashoffset: 0; }
+    }
+
+    .s1-footer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* =========================================================================
+       SLIDE 2 · PROBLEMA + HERO INTERACTIVO p^n (NO CARDS ON LEFT, MASSIVE GAUGE)
+       ========================================================================= */
+    .s2-grid {
+      display: grid;
+      grid-template-columns: 0.78fr 1.28fr;
+      gap: clamp(28px, 4vw, 56px);
+      align-items: center;
+    }
+
+    .s2-index {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .s2-row {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 14px;
+      padding: 22px 0;
+      border-top: 1px solid var(--line);
+      align-items: baseline;
+    }
+
+    .s2-row:last-child { border-bottom: 1px solid var(--line); }
+
+    .s2-num {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--crimson);
+      letter-spacing: 0.08em;
+    }
+
+    .s2-row h3 {
+      font-family: var(--font-display);
+      font-size: clamp(22px, 2.2vw, 29px);
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+
+    .s2-row p {
+      font-size: 15px;
+      color: var(--ink-soft);
+      line-height: 1.35;
+    }
+
+    /* Heroic p^n Meter */
+    .pn-card .bezel-core {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      padding: 28px 32px;
+    }
+
+    .pn-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .seg-switch {
+      display: inline-flex;
+      padding: 4px;
+      border-radius: var(--radius-pill);
+      background: rgba(3, 10, 18, 0.85);
+      border: 1px solid var(--line);
+      gap: 4px;
+    }
+
+    .seg-btn {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 7px 14px;
+      border-radius: var(--radius-pill);
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background-color 180ms var(--ease-out), color 180ms var(--ease-out), transform 140ms var(--ease-out);
+    }
+
+    .seg-btn:active { transform: scale(0.96); }
+    .seg-btn.active {
+      background: rgba(243, 248, 252, 0.14);
+      color: var(--ink);
+    }
+
+    .pn-readout {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .pn-number {
+      font-family: var(--font-display);
+      font-size: clamp(74px, 8.2vw, 118px);
+      font-weight: 700;
+      line-height: 0.9;
+      letter-spacing: -0.05em;
+      font-variant-numeric: tabular-nums;
+      color: var(--crimson);
+      text-shadow: 0 0 46px rgba(251, 59, 95, 0.35);
+      transition: color 320ms var(--ease-out), text-shadow 320ms var(--ease-out);
+    }
+
+    .pn-number.hybrid {
+      color: var(--emerald);
+      text-shadow: 0 0 48px rgba(16, 229, 160, 0.38);
+    }
+
+    .pn-delta {
+      text-align: right;
+      font-family: var(--font-display);
+      font-size: clamp(18px, 1.8vw, 24px);
+      font-weight: 700;
+      line-height: 1.18;
+      letter-spacing: -0.02em;
+    }
+
+    .pn-delta small {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .pn-track {
+      position: relative;
+      height: 18px;
+      border-radius: var(--radius-pill);
+      background: rgba(148, 198, 232, 0.09);
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .pn-bar {
+      height: 100%;
+      width: 43.4%;
+      border-radius: var(--radius-pill);
+      background: linear-gradient(90deg, #be123c, var(--crimson));
+      box-shadow: 0 0 24px rgba(251, 59, 95, 0.55);
+      transition: width 520ms var(--ease-expo), background 320ms var(--ease-out), box-shadow 320ms var(--ease-out);
+    }
+
+    .pn-bar.hybrid {
+      background: linear-gradient(90deg, #059669, var(--emerald));
+      box-shadow: 0 0 26px rgba(16, 229, 160, 0.55);
+    }
+
+    .pn-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(3, 10, 18, 0.72);
+      border: 1px solid var(--line);
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      color: var(--ink-soft);
+    }
+
+    .pn-meta strong { color: var(--ink); }
+
+    .pn-cta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .pn-scope-hint {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--muted);
+    }
+
+    /* =========================================================================
+       SLIDE 3 · DEMO EN VIVO · FOG OF WAR DUEL + VIOLET SPOTLIGHT QR
+       ========================================================================= */
+    .s3-grid {
+      display: grid;
+      grid-template-columns: 1.46fr 0.88fr;
+      gap: clamp(22px, 3vw, 38px);
+      align-items: stretch;
+    }
+
+    .arena-col {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .duel-row {
+      display: grid;
+      grid-template-columns: 1fr 94px 1fr;
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .org-card .bezel-core {
+      padding: 20px 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .org-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .org-name {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--ink);
+    }
+
+    .org-score-block {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .org-score-lbl {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+
+    .org-score {
+      font-family: var(--font-display);
+      font-size: clamp(38px, 3.8vw, 52px);
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+    }
+
+    .org-score.winner {
+      color: var(--emerald);
+      text-shadow: 0 0 28px rgba(16, 229, 160, 0.42);
+    }
+
+    .org-star {
+      font-size: 0.62em;
+      vertical-align: 0.14em;
+      margin-left: 3px;
+    }
+
+    .org-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 13.5px;
+    }
+
+    .org-kv {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--ink-soft);
+    }
+
+    .org-kv strong {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--ink);
+    }
+
+    .uci-monolith {
+      border-radius: var(--radius-shell);
+      background: linear-gradient(180deg, rgba(251, 59, 95, 0.2), rgba(251, 59, 95, 0.06));
+      border: 1px solid var(--crimson-border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-align: center;
+      padding: 12px 8px;
+      box-shadow: 0 0 36px -12px rgba(251, 59, 95, 0.42);
+    }
+
+    .uci-num {
+      font-family: var(--font-display);
+      font-size: 46px;
+      font-weight: 700;
+      line-height: 0.95;
+      color: var(--crimson);
+    }
+
+    .uci-lbl {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #ff99ab;
+    }
+
+    .uci-time {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-soft);
+      padding-top: 6px;
+      border-top: 1px solid rgba(251, 59, 95, 0.25);
+    }
+
+    /* Interactive 403 Shield Bar */
+    .breach-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 18px;
+      border-radius: 16px;
+      background: rgba(8, 21, 36, 0.85);
+      border: 1px solid var(--line);
+      transition: border-color 220ms var(--ease-out), background-color 220ms var(--ease-out), box-shadow 220ms var(--ease-out);
+    }
+
+    .breach-bar.denied {
+      background: rgba(45, 9, 22, 0.88);
+      border-color: var(--crimson);
+      box-shadow: 0 0 32px -10px rgba(251, 59, 95, 0.65);
+    }
+
+    .breach-msg {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      color: var(--ink-soft);
+    }
+
+    .breach-msg strong { color: var(--ink); }
+
+    .equity-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 13px 18px;
+      border-radius: 16px;
+      background: rgba(8, 28, 30, 0.56);
+      border: 1px solid var(--emerald-border);
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      color: var(--ink-soft);
+    }
+
+    .equity-strip strong { color: var(--emerald); }
+
+    /* Violet QR Spotlight */
+    .qr-panel .bezel-core {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      text-align: center;
+      gap: 14px;
+      padding: 22px 24px;
+    }
+
+    .qr-title {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--ink);
+    }
+
+    .qr-frame {
+      width: 214px;
+      height: 214px;
+      padding: 12px;
+      border-radius: 18px;
+      background: #ffffff;
+      box-shadow: 0 20px 50px -12px rgba(167, 123, 255, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .qr-frame svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .qr-url {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--muted);
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* =========================================================================
+       SLIDE 4 · METAMORFOSIS · GENOMA JSON + 7-ORGAN ARCHITECTURE MAP
+       ========================================================================= */
+    .morph-tabs {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .morph-tab {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--line);
+      background: rgba(8, 21, 36, 0.72);
+      color: var(--ink-soft);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background-color 180ms var(--ease-out), border-color 180ms var(--ease-out), color 180ms var(--ease-out), transform 140ms var(--ease-out);
+    }
+
+    .morph-tab:active { transform: scale(0.97); }
+    .morph-tab.active {
+      background: var(--emerald);
+      color: #021417;
+      border-color: var(--emerald);
+      box-shadow: 0 8px 26px -8px rgba(16, 229, 160, 0.65);
+    }
+
+    .s4-grid {
+      display: grid;
+      grid-template-columns: 1.16fr 0.94fr;
+      gap: clamp(20px, 2.8vw, 34px);
+      align-items: stretch;
+    }
+
+    .morph-card .bezel-core {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .morph-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .morph-title {
+      font-family: var(--font-display);
+      font-size: clamp(24px, 2.5vw, 31px);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.12;
+      color: var(--ink);
+    }
+
+    .morph-quad {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .m-cell {
+      padding: 18px 18px;
+      border-radius: 14px;
+      background: rgba(3, 11, 20, 0.76);
+      border: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 7px;
+    }
+
+    .m-lbl {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--emerald);
+    }
+
+    .m-val {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.3;
+    }
+
+    /* 7-Organ Visual Constellation Card */
+    .organs-card .bezel-core {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .organs-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .organs-head h3 {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .organs-svg-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 230px;
+    }
+
+    .organs-svg {
+      width: 100%;
+      max-width: 470px;
+      height: auto;
+      overflow: visible;
+    }
+
+    /* =========================================================================
+       SLIDE 5 · INGENIERÍA · DUAL CHAMBER + 4 MONUMENTAL PROOF MONOLITHS
+       ========================================================================= */
+    .s5-split {
+      display: grid;
+      grid-template-columns: 0.92fr 1.08fr;
+      gap: 20px;
+    }
+
+    .chamber .bezel-core {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding: 24px 26px;
+    }
+
+    .chamber-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .chamber-tag {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--muted);
+    }
+
+    .spec-pills {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .spec-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px 16px;
+      border-radius: 13px;
+      background: rgba(3, 11, 20, 0.72);
+      border: 1px solid var(--line);
+    }
+
+    .spec-item strong {
+      font-family: var(--font-display);
+      font-size: 16.5px;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: -0.015em;
+    }
+
+    .spec-item span {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .spec-item.emerald-hit {
+      border-color: rgba(16, 229, 160, 0.25);
+    }
+    .spec-item.emerald-hit span { color: #5ef5c5; }
+
+    .spec-item.violet-hit {
+      border-color: rgba(167, 123, 255, 0.22);
+    }
+    .spec-item.violet-hit span { color: #cbb0ff; }
+
+    .proof-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .proof-tile {
+      padding: 20px 22px;
+      border-radius: 18px;
+      background: rgba(8, 21, 36, 0.68);
+      border: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .proof-tile.highlight {
+      border-color: var(--emerald-border);
+      background: linear-gradient(160deg, rgba(10, 36, 40, 0.85), rgba(6, 17, 28, 0.92));
+    }
+
+    .proof-num {
+      font-family: var(--font-display);
+      font-size: clamp(26px, 2.6vw, 36px);
+      font-weight: 700;
+      letter-spacing: -0.035em;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+      line-height: 1.05;
+    }
+
+    .proof-tile.highlight .proof-num { color: var(--emerald); }
+
+    .proof-sub {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--ink-soft);
+      line-height: 1.35;
+    }
+
+    /* =========================================================================
+       SLIDE 6 · CIERRE MULTIPLAYER + PORTAL GALAXIA SCULPTOR (NGC 253)
+       ========================================================================= */
+    .s6-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 26px;
+    }
+
+    .s6-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .s6-calm-wave {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .calm-svg {
+      flex: 1;
+      height: 28px;
+      overflow: visible;
+    }
+
+    .calm-path {
+      fill: none;
+      stroke: var(--emerald);
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      filter: drop-shadow(0 0 10px rgba(16, 229, 160, 0.65));
+    }
+
+    .pillars-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 26px;
+    }
+
+    .pillar {
+      padding-top: 18px;
+      border-top: 1px solid rgba(16, 229, 160, 0.32);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .pillar-num {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--emerald);
+      letter-spacing: 0.14em;
+    }
+
+    .pillar h3 {
+      font-family: var(--font-display);
+      font-size: 23px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--ink);
+    }
+
+    .pillar p {
+      font-size: 15px;
+      color: var(--ink-soft);
+      line-height: 1.35;
+    }
+
+    /* Heroic SCULPTOR Portal Banner */
+    .closing-portal .bezel-core {
+      padding: 30px 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 28px;
+      background:
+        radial-gradient(48% 120% at 88% 50%, rgba(16, 229, 160, 0.18) 0%, transparent 70%),
+        radial-gradient(40% 110% at 12% 10%, rgba(56, 189, 248, 0.14) 0%, transparent 65%),
+        linear-gradient(160deg, rgba(8, 25, 40, 0.96), rgba(3, 10, 20, 0.98));
+    }
+
+    .closing-kicker {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--emerald);
+      margin-bottom: 8px;
+    }
+
+    .closing-punch {
+      font-family: var(--font-display);
+      font-size: clamp(26px, 2.75vw, 38px);
+      font-weight: 700;
+      line-height: 1.08;
+      letter-spacing: -0.036em;
+      color: var(--ink);
+    }
+
+    .closing-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .team-credits {
+      text-align: right;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--ink-soft);
+      line-height: 1.45;
+    }
+
+    .team-credits strong { color: var(--ink); }
+
+    .disclaimer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* =========================================================================
+       SPEAKER NOTES DRAWER & CONFIG MODAL
+       ========================================================================= */
+    .notes-bar {
+      position: fixed;
+      bottom: 68px;
+      left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      width: min(860px, calc(100vw - 48px));
+      padding: 14px 20px;
+      border-radius: 16px;
+      background: rgba(4, 13, 24, 0.94);
+      border: 1px solid var(--line-hi);
+      box-shadow: 0 24px 56px -12px rgba(0, 0, 0, 0.78);
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      z-index: 45;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms var(--ease-out), transform 220ms var(--ease-out);
+    }
+
+    .notes-bar.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .notes-time {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--emerald);
+      white-space: nowrap;
+    }
+
+    .notes-copy {
+      font-size: 13.5px;
+      color: var(--ink-soft);
+      line-height: 1.45;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      background: rgba(2, 7, 14, 0.76);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms var(--ease-out);
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      width: min(560px, 100%);
+      border-radius: 22px;
+      background: #071525;
+      border: 1px solid var(--line-hi);
+      box-shadow: 0 32px 80px -16px rgba(0, 0, 0, 0.85);
+      padding: 26px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transform: scale(0.96);
+      transition: transform 220ms var(--ease-out);
+    }
+
+    .modal-backdrop.open .modal-card { transform: scale(1); }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-head h2 {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .cfg-field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .cfg-field label {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--ink-soft);
+      letter-spacing: 0.04em;
+    }
+
+    .cfg-input {
+      width: 100%;
+      padding: 11px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line-hi);
+      background: #030b15;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      outline: none;
+    }
+
+    .cfg-input:focus {
+      border-color: var(--emerald);
+      box-shadow: 0 0 0 3px rgba(16, 229, 160, 0.18);
+    }
+
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .preset-chip {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 5px 10px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--line);
+      background: rgba(12, 29, 48, 0.72);
+      color: var(--ink-soft);
+      cursor: pointer;
+    }
+
+    /* =========================================================================
+       RESPONSIVE & REDUCED MOTION
+       ========================================================================= */
+    @media (max-width: 1024px) {
+      .s1-grid, .s2-grid, .s3-grid, .s4-grid, .s5-split { grid-template-columns: 1fr; }
+      .duel-row { grid-template-columns: 1fr; }
+      .proof-grid { grid-template-columns: repeat(2, 1fr); }
+      .pillars-row { grid-template-columns: 1fr; }
+      .closing-portal .bezel-core { flex-direction: column; align-items: flex-start; }
+      .closing-right { align-items: flex-start; }
+      .team-credits { text-align: left; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
 </head>
-<body>
-<div class="brand"><span class="dot"></span>NEXO</div>
-<main class="deck">
+<body data-mood="crimson">
+  <!-- Nocturnal Observatory Atmosphere -->
+  <div class="bg-cosmos" aria-hidden="true"></div>
+  <div class="bg-mood" aria-hidden="true"></div>
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="bg-stars" aria-hidden="true"></div>
+  <div class="bg-grain" aria-hidden="true"></div>
 
-  <section class="slide on" data-n="1">
-    <h1>Una cama. <span class="wait">Dos hospitales.</span></h1>
-    <p class="sub">Quien decide no ve el dato del otro.</p>
-    <svg class="ecg" viewBox="0 0 1600 52" preserveAspectRatio="none" aria-hidden="true"><g class="scroll"><path stroke="var(--wait)" d="M0 26 H44 L50 21 L56 26 H66 L72 5 L80 45 L87 16 L92 26 H112 L120 19 L128 26 H160 M160 26 H204 L210 21 L216 26 H226 L232 5 L240 45 L247 16 L252 26 H272 L280 19 L288 26 H320 M320 26 H364 L370 21 L376 26 H386 L392 5 L400 45 L407 16 L412 26 H432 L440 19 L448 26 H480 M480 26 H524 L530 21 L536 26 H546 L552 5 L560 45 L567 16 L572 26 H592 L600 19 L608 26 H640 M640 26 H684 L690 21 L696 26 H706 L712 5 L720 45 L727 16 L732 26 H752 L760 19 L768 26 H800 M800 26 H844 L850 21 L856 26 H866 L872 5 L880 45 L887 16 L892 26 H912 L920 19 L928 26 H960 M960 26 H1004 L1010 21 L1016 26 H1026 L1032 5 L1040 45 L1047 16 L1052 26 H1072 L1080 19 L1088 26 H1120 M1120 26 H1164 L1170 21 L1176 26 H1186 L1192 5 L1200 45 L1207 16 L1212 26 H1232 L1240 19 L1248 26 H1280 M1280 26 H1324 L1330 21 L1336 26 H1346 L1352 5 L1360 45 L1367 16 L1372 26 H1392 L1400 19 L1408 26 H1440 M1440 26 H1484 L1490 21 L1496 26 H1506 L1512 5 L1520 45 L1527 16 L1532 26 H1552 L1560 19 L1568 26 H1600 M1600 26 H1644 L1650 21 L1656 26 H1666 L1672 5 L1680 45 L1687 16 L1692 26 H1712 L1720 19 L1728 26 H1760" /></g></svg>
-  </section>
+  <!-- Top Progress Line -->
+  <div class="progress-bar" aria-hidden="true">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
 
-  <section class="slide" data-n="2">
-    <h2>Un agente solo <span class="wait">acumula errores.</span></h2>
-    <div class="row">
-      <div class="card"><p class="big wait">43%</p><p class="label">Agente solo · 10 pasos</p></div>
-      <div class="card"><p class="big ok">96%</p><p class="label">Con una persona que firma</p></div>
+  <!-- Minimal Floating Top Bar -->
+  <header class="topbar">
+    <div class="brand-lockup">
+      <span class="brand-dot beating" id="brandDot"></span>
+      <span class="brand-wordmark" data-brand>SCULPTOR</span>
     </div>
-    <details><summary>¿Por qué?</summary><p>Modelo ilustrativo del motor (<code>computeReliabilityPn</code>): 0,92<sup>10</sup> = 43,4&nbsp;%. Si quien firma detecta 95&nbsp;% de los errores, sube a 96,1&nbsp;%. Entre dos hospitales (22 pasos): 12,3&nbsp;% → 89,4&nbsp;%.</p></details>
-  </section>
-
-  <section class="slide" data-n="3">
-    <h2>Cada uno ve <span class="now">solo lo suyo.</span></h2>
-    <div class="row">
-      <div class="card"><p class="label">Clínica Andes · Paciente A</p><p class="mid">0,52</p><p class="lock" style="margin-top:14px">Costo <i></i></p></div>
-      <div class="card" style="border:2px solid var(--done)"><p class="label">Hospital Rural · Paciente B</p><p class="mid ok">0,53 ★</p><p class="lock" style="margin-top:14px">Costo <i></i></p></div>
-      <div class="card" style="flex:0 1 auto;display:flex;flex-direction:column;align-items:center;gap:10px"><div class="qr"><svg role="img" aria-label="Código QR hacia la demo de Nexo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 31 31" shape-rendering="crispEdges"><path fill="#fffdf8" d="M0 0h31v31H0z"/><path stroke="#24403a" d="M1 1.5h7m4 0h2m3 0h1m2 0h2m1 0h7M1 2.5h1m5 0h1m2 0h1m1 0h2m1 0h2m6 0h1m5 0h1M1 3.5h1m1 0h3m1 0h1m1 0h3m1 0h1m1 0h3m2 0h2m1 0h1m1 0h3m1 0h1M1 4.5h1m1 0h3m1 0h1m1 0h1m2 0h1m1 0h3m1 0h1m1 0h1m2 0h1m1 0h3m1 0h1M1 5.5h1m1 0h3m1 0h1m1 0h1m3 0h1m1 0h1m1 0h1m2 0h2m1 0h1m1 0h3m1 0h1M1 6.5h1m5 0h1m1 0h4m1 0h1m1 0h1m1 0h2m1 0h1m1 0h1m5 0h1M1 7.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M9 8.5h1m2 0h2m3 0h1M1 9.5h1m1 0h5m2 0h2m1 0h2m3 0h2m3 0h5M2 10.5h3m3 0h2m4 0h1m2 0h7m1 0h1m3 0h1M1 11.5h1m5 0h1m2 0h1m2 0h5m5 0h3M2 12.5h2m5 0h1m3 0h1m2 0h2m3 0h1m2 0h1m1 0h1m1 0h1M1 13.5h1m2 0h1m2 0h1m1 0h1m2 0h1m1 0h3m1 0h1m2 0h2m3 0h2M1 14.5h2m1 0h2m2 0h2m7 0h5m1 0h3m3 0h1M3 15.5h2m2 0h2m5 0h1m1 0h1m2 0h1m1 0h2m1 0h4M1 16.5h1m1 0h4m1 0h1m1 0h1m2 0h1m1 0h1m3 0h1m3 0h1m1 0h1m2 0h1M1 17.5h2m2 0h3m1 0h2m3 0h5m3 0h1m3 0h2M1 18.5h1m4 0h1m1 0h1m2 0h1m1 0h2m2 0h1m1 0h3m1 0h3m1 0h1m1 0h1M1 19.5h1m1 0h1m1 0h1m1 0h1m2 0h1m2 0h4m2 0h1m2 0h1m1 0h2m1 0h1M1 20.5h1m1 0h4m6 0h1m1 0h1m1 0h1m3 0h2m1 0h2m2 0h1M1 21.5h1m1 0h2m2 0h4m3 0h2m2 0h1m1 0h6m1 0h3M9 22.5h2m2 0h2m2 0h1m1 0h1m1 0h1m3 0h5M1 23.5h7m3 0h1m1 0h1m1 0h7m1 0h1m1 0h3M1 24.5h1m5 0h1m1 0h1m1 0h1m3 0h1m1 0h1m2 0h2m3 0h1m2 0h2M1 25.5h1m1 0h3m1 0h1m1 0h1m2 0h1m5 0h1m2 0h5m1 0h3M1 26.5h1m1 0h3m1 0h1m1 0h3m5 0h3m2 0h1m3 0h4M1 27.5h1m1 0h3m1 0h1m1 0h1m4 0h3m1 0h2m2 0h7M1 28.5h1m5 0h1m2 0h1m4 0h1m1 0h1m2 0h2m1 0h1m1 0h2m1 0h1M1 29.5h7m1 0h1m1 0h1m1 0h2m3 0h3m3 0h4"/></svg></div><p class="label" style="margin:0">Escanea y entra</p></div>
+    <div class="topbar-right">
+      <button class="stage-timer" id="stageTimer" type="button" title="Clic para pausar/reanudar">
+        <span id="timerIcon">●</span>
+        <span id="timerText">00:00 / 03:30</span>
+      </button>
+      <div class="track-chip">Platanus Hack 26 · Multiplayer</div>
     </div>
-    <details><summary>¿Por qué gana B?</summary><p>Regla: 0,5·gravedad + 0,3·urgencia − 0,2·demora. La diferencia es 0,01, menor que el margen de 0,02: es empate, y decide la equidad (mayor necesidad sin cubrir). El costo no entra y no viaja a la otra pantalla.</p></details>
-  </section>
+  </header>
 
-  <section class="slide" data-n="4">
-    <h2>Un esqueleto <span class="now">que muta.</span></h2>
-    <div class="row">
-      <div class="card"><p class="mid">1</p><p class="label">cama UCI</p></div>
-      <div class="card"><p class="mid">1</p><p class="label">grúa torre</p></div>
-      <div class="card"><p class="mid">1</p><p class="label">camión refrigerado</p></div>
+  <!-- 6-SLIDE KEYNOTE STAGE -->
+  <main class="deck">
+    <!-- ===================================================================
+         SLIDE 1 · HOOK (EDITORIAL MANIFESTO + LIVE WAIT MONOLITH)
+         =================================================================== -->
+    <section class="slide active" data-slide="1">
+      <div class="slide-inner">
+        <div class="s1-grid">
+          <div class="stagger-1">
+            <div class="eyebrow" style="margin-bottom:18px;">Código Rojo · Decisión Multi-Org</div>
+            <h1 class="s1-headline">
+              Hay una cama.<br />
+              Dos hospitales.
+              <span class="accent-line">Cero visibilidad compartida.</span>
+            </h1>
+          </div>
+
+          <div class="bezel bezel-crimson s1-monolith stagger-2">
+            <div class="bezel-core">
+              <div class="wait-eyebrow">
+                <span>Recurso bloqueado</span>
+                <span class="pill pill-crimson" style="padding:3px 9px;">EN ESPERA</span>
+              </div>
+              <div class="wait-clock" id="waitClock">00:00</div>
+              <div class="s1-stats">
+                <div>
+                  <div class="s1-stat-num">1 <span class="c-crimson">UCI</span></div>
+                  <div class="s1-stat-lbl">Recurso único</div>
+                </div>
+                <div>
+                  <div class="s1-stat-num">2 <span class="c-soft">Orgs</span></div>
+                  <div class="s1-stat-lbl">Datos sellados</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ecg-stage stagger-3">
+          <svg class="ecg-svg" viewBox="0 0 1200 56" preserveAspectRatio="none" aria-hidden="true">
+            <path
+              class="ecg-base"
+              d="M0,30 L110,30 L124,30 L132,12 L140,48 L149,6 L158,36 L168,30 L320,30 L334,30 L342,12 L350,48 L359,6 L368,36 L378,30 L530,30 L544,30 L552,12 L560,48 L569,6 L578,36 L588,30 L740,30 L754,30 L762,12 L770,48 L779,6 L788,36 L798,30 L950,30 L964,30 L972,12 L980,48 L989,6 L998,36 L1008,30 L1200,30"
+            />
+            <path
+              class="ecg-path"
+              d="M0,30 L110,30 L124,30 L132,12 L140,48 L149,6 L158,36 L168,30 L320,30 L334,30 L342,12 L350,48 L359,6 L368,36 L378,30 L530,30 L544,30 L552,12 L560,48 L569,6 L578,36 L588,30 L740,30 L754,30 L762,12 L770,48 L779,6 L788,36 L798,30 L950,30 L964,30 L972,12 L980,48 L989,6 L998,36 L1008,30 L1200,30"
+            />
+          </svg>
+          <div class="s1-footer-row">
+            <span>1 cama UCI esperando · 2 vidas en riesgo</span>
+            <span>Ramón Molina · Nahum Mateo Díaz López · Sebastian Vargas Webster</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         SLIDE 2 · EL QUIEBRE + MEDIDOR INTERACTIVO p^n
+         =================================================================== -->
+    <section class="slide" data-slide="2">
+      <div class="slide-inner">
+        <h2 class="h-title stagger-1">
+          Por chat se pierde tiempo. <span class="c-crimson">Sin freno, el control.</span>
+        </h2>
+
+        <div class="s2-grid">
+          <!-- Slim borderless 3-point typographic index -->
+          <div class="s2-index stagger-2">
+            <div class="s2-row">
+              <span class="s2-num">01</span>
+              <div>
+                <h3>Información partida</h3>
+                <p>Secretos privados que no salen de cada org.</p>
+              </div>
+            </div>
+            <div class="s2-row">
+              <span class="s2-num">02</span>
+              <div>
+                <h3>Sin regla visible</h3>
+                <p>Gana el WhatsApp más rápido, no la urgencia.</p>
+              </div>
+            </div>
+            <div class="s2-row">
+              <span class="s2-num">03</span>
+              <div>
+                <h3>Error compuesto</h3>
+                <p>Agentes encadenados fallan en cascada.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Heroic p^n Double-Bezel Gauge -->
+          <div class="bezel pn-card stagger-3" id="pnShell">
+            <div class="bezel-core">
+              <div class="pn-top">
+                <span class="pill pill-crimson" id="pnBadge">AGENTES SOLOS · SIN FRENO</span>
+                <div class="seg-switch" role="tablist" aria-label="Escala del modelo">
+                  <button class="seg-btn active" data-scope="single" type="button">1 clínica · 10 pasos</button>
+                  <button class="seg-btn" data-scope="cross" type="button">2 hospitales · 22 pasos</button>
+                </div>
+              </div>
+
+              <div class="pn-readout">
+                <div class="pn-number swap-blur" id="pnValue">43,4%</div>
+                <div class="pn-delta swap-blur" id="pnDelta">
+                  <span class="c-crimson">Falla &gt; 50%</span>
+                  <small>cadenas sin freno</small>
+                </div>
+              </div>
+
+              <div class="pn-track" aria-hidden="true">
+                <div class="pn-bar" id="pnBar"></div>
+              </div>
+
+              <div class="pn-meta">
+                <span id="pnFormula">0,92<sup>10</sup> = <strong>43,4%</strong> · p = 0,92 · n = 10</span>
+                <span class="c-muted" id="pnCompare">43,4% → 96,1%</span>
+              </div>
+
+              <div class="pn-cta-row">
+                <button class="btn btn-crimson" id="pnToggleBtn" type="button">
+                  <span id="pnBtnLabel">Activar freno humano (Espacio)</span>
+                  <span class="btn-icon" aria-hidden="true">→</span>
+                </button>
+                <span class="pn-scope-hint">[S] 12,3% → 89,4%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         SLIDE 3 · DEMO EN VIVO · FOG OF WAR + QR COMITÉ ÉTICO
+         =================================================================== -->
+    <section class="slide" data-slide="3">
+      <div class="slide-inner">
+        <h2 class="h-title stagger-1">
+          Cada org ve sus cartas. <span class="c-violet">Ustedes tienen el veto.</span>
+        </h2>
+
+        <div class="s3-grid">
+          <div class="arena-col stagger-2">
+            <!-- 3-Part Duel Row -->
+            <div class="duel-row">
+              <div class="bezel org-card">
+                <div class="bezel-core">
+                  <div class="org-head">
+                    <span class="org-name">Clínica Andes</span>
+                    <span class="pill" style="padding:3px 9px;">ORG A</span>
+                  </div>
+                  <div class="org-score-block">
+                    <span class="org-score-lbl">Puntaje de la regla</span>
+                    <span class="org-score">0,52</span>
+                  </div>
+                  <div class="org-rows">
+                    <div class="org-kv"><span>Gravedad</span><strong>18 / 40</strong></div>
+                    <div class="org-kv"><span>Costo cobertura</span><span class="redaction" aria-label="Dato sellado"></span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="uci-monolith">
+                <div class="uci-num">1</div>
+                <div class="uci-lbl">Cama UCI</div>
+                <div class="uci-time">18:00</div>
+              </div>
+
+              <div class="bezel bezel-emerald org-card">
+                <div class="bezel-core">
+                  <div class="org-head">
+                    <span class="org-name">Hosp. Valle Sur</span>
+                    <span class="pill pill-emerald" style="padding:3px 9px;">ORG B</span>
+                  </div>
+                  <div class="org-score-block">
+                    <span class="org-score-lbl">Equidad gana</span>
+                    <span class="org-score winner">0,53<span class="org-star" aria-hidden="true">★</span></span>
+                  </div>
+                  <div class="org-rows">
+                    <div class="org-kv"><span>Gravedad</span><strong>22 / 40</strong></div>
+                    <div class="org-kv"><span>Costo traslado</span><span class="redaction" aria-label="Dato sellado"></span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Interactive 403 RBAC_DENIED Shield -->
+            <div class="breach-bar" id="breachBanner">
+              <div class="breach-msg" id="breachText">
+                <span class="pill">DATO SELLADO</span> <span><strong>El secreto jamás viaja al navegador.</strong></span>
+              </div>
+              <button class="btn btn-crimson" id="breachBtn" type="button" style="padding:8px 8px 8px 16px;font-size:13px;">
+                <span id="breachBtnLabel">Probar lectura ajena (Espacio)</span>
+                <span class="btn-icon" aria-hidden="true">⚡</span>
+              </button>
+            </div>
+
+            <!-- Compact Deterministic Rule Strip -->
+            <div class="equity-strip">
+              <span>Diferencia 0,01: menos que el margen de 0,02 → empate</span>
+              <strong>Desempate por necesidad → Hospital Rural</strong>
+            </div>
+          </div>
+
+          <!-- Violet Spotlight QR Stage -->
+          <div class="bezel bezel-violet qr-panel stagger-3">
+            <div class="bezel-core">
+              <span class="pill pill-violet">ESCANEA AHORA · DEMO EN VIVO</span>
+              <div class="qr-title">3 personas · 3 toques</div>
+              <div class="qr-frame" id="qrMount" aria-label="Código QR hacia la demo en vivo"></div>
+              <a class="btn btn-violet" id="stageLaunchLink" href="#" target="_blank" rel="noopener">
+                <span id="stageLaunchLabel">Abrir /stage/demo-cross</span>
+                <span class="btn-icon" aria-hidden="true">↗</span>
+              </a>
+              <div class="qr-url" id="qrUrlText"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         SLIDE 4 · METAMORFOSIS (GENOMA JSON + 7-ORGAN CONSTELLATION)
+         =================================================================== -->
+    <section class="slide" data-slide="4">
+      <div class="slide-inner">
+        <div class="stagger-1">
+          <div class="eyebrow emerald" style="margin-bottom:10px;">Esqueleto Metamórfico</div>
+          <h2 class="h-title">
+            No es una app. <span class="c-emerald">Es un esqueleto que muta.</span>
+          </h2>
+        </div>
+
+        <div class="morph-tabs stagger-2" role="tablist" aria-label="Escenarios del esqueleto">
+          <button class="morph-tab active" data-morph="health" type="button">01 Salud · 2 Hospitales</button>
+          <button class="morph-tab" data-morph="b2b" type="button">02 Construcción · 1 grúa</button>
+          <button class="morph-tab" data-morph="free" type="button">03 Tu caso · 1 frase</button>
+        </div>
+
+        <div class="s4-grid stagger-3">
+          <!-- Mutating Genome Bento (Zero prose paragraphs) -->
+          <div class="bezel morph-card">
+            <div class="bezel-core swap-blur" id="morphCore">
+              <div class="morph-head">
+                <span class="pill pill-emerald" id="morphTag">SEMILLA CLÍNICA · INTER-ORG</span>
+                <span class="pill" id="morphSeedKey">demo-cross</span>
+              </div>
+
+              <div class="morph-title" id="morphTitle">Clínica Andes ↔ Hospital Rural Valle Sur</div>
+
+              <div class="morph-quad">
+                <div class="m-cell">
+                  <span class="m-lbl">Roles + Agentes</span>
+                  <span class="m-val" id="morphRoles">Urgencias · Turno · Comité</span>
+                </div>
+                <div class="m-cell">
+                  <span class="m-lbl">Dato sellado</span>
+                  <span class="m-val" id="morphSecret">Costo cobertura <span class="redaction" style="min-width:46px;height:12px;"></span></span>
+                </div>
+                <div class="m-cell">
+                  <span class="m-lbl">En vivo</span>
+                  <span class="m-val" id="morphGate">3 personas · el resto, automático</span>
+                </div>
+                <div class="m-cell">
+                  <span class="m-lbl">Decide</span>
+                  <span class="m-val" id="morphArbiter">Comité Ético · razón obligatoria</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7-Organ Visual Constellation Diagram -->
+          <div class="bezel bezel-emerald organs-card">
+            <div class="bezel-core">
+              <div class="organs-head">
+                <h3>7 piezas fijas · <span class="c-emerald">la IA no dibuja la interfaz</span></h3>
+                <span class="pill pill-emerald">VALIDADO</span>
+              </div>
+
+              <div class="organs-svg-wrap">
+                <svg class="organs-svg" viewBox="0 0 460 250" aria-label="7 piezas fijas de la interfaz alrededor del esqueleto de la sala">
+                  <defs>
+                    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stop-color="#10e5a0" stop-opacity="0.32" />
+                      <stop offset="100%" stop-color="#10e5a0" stop-opacity="0" />
+                    </radialGradient>
+                  </defs>
+                  <!-- Orbital ring + spokes -->
+                  <circle cx="230" cy="126" r="96" fill="none" stroke="rgba(16,229,160,0.16)" stroke-dasharray="4 6" />
+                  <circle cx="230" cy="126" r="70" fill="url(#coreGlow)" />
+                  <g stroke="rgba(56,189,248,0.34)" stroke-width="1.3">
+                    <line x1="230" y1="126" x2="230" y2="28" />
+                    <line x1="230" y1="126" x2="364" y2="54" />
+                    <line x1="230" y1="126" x2="392" y2="146" />
+                    <line x1="230" y1="126" x2="316" y2="220" />
+                    <line x1="230" y1="126" x2="144" y2="220" />
+                    <line x1="230" y1="126" x2="68" y2="146" />
+                    <line x1="230" y1="126" x2="96" y2="54" />
+                  </g>
+                  <!-- Center Nucleus -->
+                  <rect x="166" y="100" width="128" height="52" rx="14" fill="#041822" stroke="#10e5a0" stroke-width="1.6" />
+                  <text x="230" y="122" text-anchor="middle" fill="#10e5a0" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700">ESQUELETO</text>
+                  <text x="230" y="139" text-anchor="middle" fill="#b6cadc" font-family="JetBrains Mono, monospace" font-size="9.5">validado</text>
+
+                  <!-- 7 Fixed Organ Nodes -->
+                  <g font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600" fill="#f3f8fc">
+                    <rect x="176" y="12" width="108" height="28" rx="14" fill="#081a2d" stroke="rgba(56,189,248,0.48)" />
+                    <text x="230" y="30" text-anchor="middle">Grafo Vivo</text>
+
+                    <rect x="306" y="40" width="120" height="28" rx="14" fill="#081a2d" stroke="rgba(251,59,95,0.52)" />
+                    <text x="366" y="58" text-anchor="middle">Datos sellados</text>
+
+                    <rect x="332" y="132" width="120" height="28" rx="14" fill="#081a2d" stroke="rgba(245,158,11,0.5)" />
+                    <text x="392" y="150" text-anchor="middle">Comité por QR</text>
+
+                    <rect x="256" y="206" width="124" height="28" rx="14" fill="#081a2d" stroke="rgba(16,229,160,0.48)" />
+                    <text x="318" y="224" text-anchor="middle">Ranking Equidad</text>
+
+                    <rect x="82" y="206" width="124" height="28" rx="14" fill="#081a2d" stroke="rgba(16,229,160,0.48)" />
+                    <text x="144" y="224" text-anchor="middle">Contador + Acta</text>
+
+                    <rect x="8" y="132" width="118" height="28" rx="14" fill="#081a2d" stroke="rgba(167,123,255,0.52)" />
+                    <text x="67" y="150" text-anchor="middle">Agente por Rol</text>
+
+                    <rect x="34" y="40" width="122" height="28" rx="14" fill="#081a2d" stroke="rgba(56,189,248,0.48)" />
+                    <text x="95" y="58" text-anchor="middle">Tarjeta Dinámica</text>
+                  </g>
+                </svg>
+              </div>
+
+              <div style="display:flex;justify-content:flex-end;">
+                <a class="btn btn-ghost" id="homeLaunchLink" href="#" target="_blank" rel="noopener">
+                  Probar con tu caso ↗
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         SLIDE 5 · INGENIERÍA · DUAL CHAMBER + 4 MONUMENTAL PROOFS
+         =================================================================== -->
+    <section class="slide" data-slide="5">
+      <div class="slide-inner">
+        <h2 class="h-title stagger-1">
+          <span class="c-soft">La IA escribe.</span> <span class="c-emerald">El código decide.</span>
+        </h2>
+
+        <div class="s5-split stagger-2">
+          <!-- Left Chamber: Isolated LLM -->
+          <div class="bezel bezel-violet chamber">
+            <div class="bezel-core">
+              <div class="chamber-head">
+                <span class="pill pill-violet">IA · PROPONE</span>
+                <span class="chamber-tag">Propone · nunca ejecuta</span>
+              </div>
+              <div class="spec-pills">
+                <div class="spec-item violet-hit">
+                  <strong>Sala desde 1 frase</strong> <span>Se valida antes de usarse</span>
+                </div>
+                <div class="spec-item violet-hit">
+                  <strong>Redacción por rol</strong>
+                  <span>Solo vista filtrada</span>
+                </div>
+                <div class="spec-item violet-hit">
+                  <strong>Frontera dura</strong>
+                  <span>No cambia nada sola · no ve secretos</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Chamber: Deterministic Source of Truth -->
+          <div class="bezel bezel-emerald chamber">
+            <div class="bezel-core">
+              <div class="chamber-head">
+                <span class="pill pill-emerald">CÓDIGO · DECIDE</span>
+                <span class="chamber-tag">Mismo resultado siempre</span>
+              </div>
+              <div class="spec-pills">
+                <div class="spec-item emerald-hit">
+                  <strong>Permisos en el servidor</strong> <span>El dato ajeno no viaja</span>
+                </div>
+                <div class="spec-item emerald-hit">
+                  <strong>Regla conocida</strong> <span>0,52 vs 0,53 · desempate por necesidad</span>
+                </div>
+                <div class="spec-item emerald-hit">
+                  <strong>Funciona sin IA</strong> <span>Acta descargable</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 Oversized Proof Monoliths -->
+        <div class="proof-grid stagger-3">
+          <div class="proof-tile">
+            <div class="proof-num">429 pruebas ✓</div>
+            <div class="proof-sub">Motor, permisos y API · sin modelo</div>
+          </div>
+          <div class="proof-tile">
+            <div class="proof-num">200 conexiones</div>
+            <div class="proof-sub">p95 42 ms · cada una ve solo lo suyo</div>
+          </div>
+          <div class="proof-tile">
+            <div class="proof-num">3 personas</div>
+            <div class="proof-sub">Demo en vivo · el resto, automático y a la vista</div>
+          </div>
+          <div class="proof-tile highlight">
+            <div class="proof-num" id="infraProofTitle">Claude + Spark</div>
+            <div class="proof-sub" id="infraProofSub">Deploy en la nube · sede en local, y lo dice</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         SLIDE 6 · CIERRE MULTIPLAYER + PORTAL GALAXIA SCULPTOR (NGC 253)
+         =================================================================== -->
+    <section class="slide" data-slide="6">
+      <div class="slide-inner s6-wrap">
+        <div class="s6-top stagger-1">
+          <h2 class="h-title">Solo funciona <span class="c-emerald">con más de una persona.</span></h2>
+          <span class="pill pill-emerald">● ACTA SELLADA · RECURSO CONTENIDO</span>
+        </div>
+
+        <!-- Calm Emerald Horizon Pulse -->
+        <div class="s6-calm-wave stagger-2" aria-hidden="true">
+          <svg class="calm-svg" viewBox="0 0 1160 28" preserveAspectRatio="none">
+            <path
+              class="calm-path"
+              d="M0,16 L180,16 Q192,16 198,10 Q204,16 216,16 L460,16 Q472,16 478,10 Q484,16 496,16 L740,16 Q752,16 758,10 Q764,16 776,16 L1020,16 Q1032,16 1038,10 Q1044,16 1056,16 L1160,16"
+            />
+          </svg>
+        </div>
+
+        <!-- 3 Airy Hairline Pillars (Zero Boxy Cards) -->
+        <div class="pillars-row stagger-3">
+          <div class="pillar">
+            <span class="pillar-num">01 · DISEÑO</span>
+            <h3>Información partida</h3>
+            <p>Nadie tiene el mapa completo solo.</p>
+          </div>
+          <div class="pillar">
+            <span class="pillar-num">02 · ESCENARIO</span>
+            <h3>La audiencia decide</h3>
+            <p>Un QR mueve todas las pantallas.</p>
+          </div>
+          <div class="pillar">
+            <span class="pillar-num">03 · ESCALA</span>
+            <h3>Humanos + agentes</h3>
+            <p>Mismos permisos, nunca un paso más allá.</p>
+          </div>
+        </div>
+
+        <!-- Heroic SCULPTOR Closing Portal -->
+        <div class="bezel bezel-emerald closing-portal stagger-4">
+          <div class="bezel-core">
+            <div>
+              <div class="closing-kicker">NGC 253 · Galaxia <span data-brand>SCULPTOR</span></div>
+              <div class="closing-punch">Con <span data-brand>SCULPTOR</span>, el recurso deja de esperar.</div>
+            </div>
+            <div class="closing-right">
+              <a class="btn btn-emerald" id="closingStageLink" href="https://team-30-platanus-hack.onrender.com/stage/demo-cross" target="_blank" rel="noopener">
+                  <span>Abrir la demo</span>
+                <span class="btn-icon" aria-hidden="true">✦</span>
+              </a>
+              <div class="team-credits">
+                <strong>Equipo 30 · Platanus Hack 26</strong><br />
+                Ramón Molina · Nahum Mateo Díaz López · Sebastian Vargas Webster
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="disclaimer-row stagger-4">
+          <span>Simulación de coordinación multi-org · datos ilustrativos, no constituye diagnóstico clínico.</span>
+          <span id="closingUrl">team-30-platanus-hack.onrender.com</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Speaker Notes Drawer -->
+  <aside class="notes-bar" id="notesBar" aria-live="polite">
+    <span class="notes-time" id="notesTime">0:00–0:15</span>
+    <span class="notes-copy" id="notesCopy"></span>
+  </aside>
+
+  <!-- Floating Bottom Dock -->
+  <footer class="bottombar">
+    <div class="kbd-hints">
+      <button class="dock-btn" id="btnConfig" type="button">[C] Config</button>
+      <button class="dock-btn" id="btnTimer" type="button">[T] Reloj</button>
+      <button class="dock-btn" id="btnNotes" type="button">[N] Notas</button>
+      <button class="dock-btn" id="btnFull" type="button">[F] Pantalla</button>
     </div>
-    <p class="sub">Mismo motor. Tu caso en una frase.</p>
-  </section>
+    <nav class="slide-nav" aria-label="Navegación de láminas">
+      <button class="nav-arrow" id="prevBtn" type="button" aria-label="Lámina anterior">←</button>
+      <span class="slide-counter"><span id="curSlide">1</span> / 6</span>
+      <button class="nav-arrow" id="nextBtn" type="button" aria-label="Lámina siguiente">→</button>
+    </nav>
+  </footer>
 
-  <section class="slide" data-n="5">
-    <h2>La IA escribe. <span class="ok">El código decide.</span></h2>
-    <div class="row">
-      <div class="card"><p class="mid">400</p><p class="label">pruebas en verde</p></div>
-      <div class="card"><p class="mid">200</p><p class="label">conexiones · p95 42 ms</p></div>
-      <div class="card"><p class="mid">403</p><p class="label">al pedir un dato ajeno</p></div>
+  <!-- Live Config Modal (C) -->
+  <div class="modal-backdrop" id="configModal" role="dialog" aria-modal="true" aria-labelledby="cfgTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="cfgTitle">Configuración de Escenario</h2>
+        <button class="dock-btn" id="closeConfig" type="button">Esc ✕</button>
+      </div>
+
+      <div class="cfg-field">
+        <label for="cfgBrand">1. Nombre oficial del producto</label>
+        <input class="cfg-input" id="cfgBrand" type="text" value="SCULPTOR" />
+        <div class="preset-row">
+          <button class="preset-chip" data-brand-preset="SCULPTOR" type="button">SCULPTOR</button>
+          <button class="preset-chip" data-brand-preset="SCULPTOR · NGC 253" type="button">SCULPTOR · NGC 253</button>
+        </div>
+      </div>
+
+      <div class="cfg-field">
+        <label for="cfgBaseUrl">2. URL base en vivo (QR de la lámina 3)</label>
+        <input class="cfg-input" id="cfgBaseUrl" type="url" value="https://team-30-platanus-hack.onrender.com" />
+        <div class="preset-row">
+          <button class="preset-chip" data-url-preset="https://team-30-platanus-hack.onrender.com" type="button">Render (default)</button>
+          <button class="preset-chip" data-url-preset="http://localhost:3000" type="button">localhost:3000</button>
+          
+        </div>
+      </div>
+
+      <div class="cfg-field">
+        <label for="cfgRoom">3. Sala para el QR de Lámina 3</label>
+        <select class="cfg-input" id="cfgRoom">
+          <option value="demo-cross">demo-cross (2 hospitales · demo de 3 personas)</option>
+          <option value="demo-construccion">demo-construccion (2 constructoras · 1 grúa)</option>
+        </select>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:6px;">
+        <button class="btn btn-ghost" id="resetTimerBtn" type="button">Reiniciar reloj</button>
+        <button class="btn btn-emerald" id="saveConfigBtn" type="button" style="padding:10px 20px;">Aplicar</button>
+      </div>
     </div>
-    <details><summary>¿Dónde corre el modelo?</summary><p>En la sede, en un NVIDIA DGX Spark: nada sale de la red. El deploy público usa Claude, en la nube. La pantalla muestra cuál está activo. Cifras en <code>docs/MEDICIONES.md</code>.</p></details>
-  </section>
+  </div>
 
-  <section class="slide done" data-n="6">
-    <h2>Solo funciona <span class="ok">entre varios.</span></h2>
-    <svg class="ecg" viewBox="0 0 1600 52" preserveAspectRatio="none" aria-hidden="true"><path stroke="var(--done)" d="M0 26 H1600" /></svg>
-    <div class="row" style="align-items:center">
-      <p class="sub" style="flex:1 1 300px">El recurso deja de esperar.</p>
-      <div class="qr"><svg role="img" aria-label="Código QR hacia la demo de Nexo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 31 31" shape-rendering="crispEdges"><path fill="#fffdf8" d="M0 0h31v31H0z"/><path stroke="#24403a" d="M1 1.5h7m4 0h2m3 0h1m2 0h2m1 0h7M1 2.5h1m5 0h1m2 0h1m1 0h2m1 0h2m6 0h1m5 0h1M1 3.5h1m1 0h3m1 0h1m1 0h3m1 0h1m1 0h3m2 0h2m1 0h1m1 0h3m1 0h1M1 4.5h1m1 0h3m1 0h1m1 0h1m2 0h1m1 0h3m1 0h1m1 0h1m2 0h1m1 0h3m1 0h1M1 5.5h1m1 0h3m1 0h1m1 0h1m3 0h1m1 0h1m1 0h1m2 0h2m1 0h1m1 0h3m1 0h1M1 6.5h1m5 0h1m1 0h4m1 0h1m1 0h1m1 0h2m1 0h1m1 0h1m5 0h1M1 7.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M9 8.5h1m2 0h2m3 0h1M1 9.5h1m1 0h5m2 0h2m1 0h2m3 0h2m3 0h5M2 10.5h3m3 0h2m4 0h1m2 0h7m1 0h1m3 0h1M1 11.5h1m5 0h1m2 0h1m2 0h5m5 0h3M2 12.5h2m5 0h1m3 0h1m2 0h2m3 0h1m2 0h1m1 0h1m1 0h1M1 13.5h1m2 0h1m2 0h1m1 0h1m2 0h1m1 0h3m1 0h1m2 0h2m3 0h2M1 14.5h2m1 0h2m2 0h2m7 0h5m1 0h3m3 0h1M3 15.5h2m2 0h2m5 0h1m1 0h1m2 0h1m1 0h2m1 0h4M1 16.5h1m1 0h4m1 0h1m1 0h1m2 0h1m1 0h1m3 0h1m3 0h1m1 0h1m2 0h1M1 17.5h2m2 0h3m1 0h2m3 0h5m3 0h1m3 0h2M1 18.5h1m4 0h1m1 0h1m2 0h1m1 0h2m2 0h1m1 0h3m1 0h3m1 0h1m1 0h1M1 19.5h1m1 0h1m1 0h1m1 0h1m2 0h1m2 0h4m2 0h1m2 0h1m1 0h2m1 0h1M1 20.5h1m1 0h4m6 0h1m1 0h1m1 0h1m3 0h2m1 0h2m2 0h1M1 21.5h1m1 0h2m2 0h4m3 0h2m2 0h1m1 0h6m1 0h3M9 22.5h2m2 0h2m2 0h1m1 0h1m1 0h1m3 0h5M1 23.5h7m3 0h1m1 0h1m1 0h7m1 0h1m1 0h3M1 24.5h1m5 0h1m1 0h1m1 0h1m3 0h1m1 0h1m2 0h2m3 0h1m2 0h2M1 25.5h1m1 0h3m1 0h1m1 0h1m2 0h1m5 0h1m2 0h5m1 0h3M1 26.5h1m1 0h3m1 0h1m1 0h3m5 0h3m2 0h1m3 0h4M1 27.5h1m1 0h3m1 0h1m1 0h1m4 0h3m1 0h2m2 0h7M1 28.5h1m5 0h1m2 0h1m4 0h1m1 0h1m2 0h2m1 0h1m1 0h2m1 0h1M1 29.5h7m1 0h1m1 0h1m1 0h2m3 0h3m3 0h4"/></svg></div>
-    </div>
-    <p class="label">team-30-platanus-hack.onrender.com · Equipo 30</p>
-  </section>
+  <script>
+    /* =========================================================================
+       GENERADOR QR ISO/IEC 18004 PURO EN JS (Byte Mode · ECC-M · Versiones 1–10)
+       100% offline, cero dependencias externas, verificado bit-a-bit.
+       ========================================================================= */
+    const MiniQR = (() => {
+      const GF_EXP = new Uint8Array(512);
+      const GF_LOG = new Uint8Array(256);
+      {
+        let x = 1;
+        for (let i = 0; i < 255; i++) {
+          GF_EXP[i] = x;
+          GF_LOG[x] = i;
+          x <<= 1;
+          if (x & 0x100) x ^= 0x11d;
+        }
+        for (let i = 255; i < 512; i++) GF_EXP[i] = GF_EXP[i - 255];
+      }
 
-</main>
-<nav aria-label="Láminas"><button type="button" aria-label="Lámina anterior" data-go="-1"></button><button type="button" aria-label="Lámina siguiente" data-go="1"></button></nav>
-<p class="foot">Demostración simulada. No es una herramienta clínica.</p>
-<p class="idx"><span id="cur">1</span> / 6</p>
-<script>
-  // Navegación: flechas, espacio, clic (izquierda vuelve) o #n en la dirección.
-  const slides = [...document.querySelectorAll(".slide")];
-  let i = Math.min(slides.length, Math.max(1, Number(location.hash.slice(1)) || 1)) - 1;
-  function show(n) {
-    i = Math.max(0, Math.min(slides.length - 1, n));
-    slides.forEach((s, k) => s.classList.toggle("on", k === i));
-    document.body.classList.toggle("sealed", i === slides.length - 1);
-    document.getElementById("cur").textContent = i + 1;
-    history.replaceState(null, "", "#" + (i + 1));
-  }
-  document.addEventListener("keydown", (e) => {
-    if (["ArrowRight", "PageDown", " "].includes(e.key)) { e.preventDefault(); show(i + 1); }
-    if (["ArrowLeft", "PageUp"].includes(e.key)) { e.preventDefault(); show(i - 1); }
-  });
-  document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => show(i + Number(b.dataset.go))));
-  show(i);
-</script>
+      const gfMul = (a, b) => (a === 0 || b === 0 ? 0 : GF_EXP[GF_LOG[a] + GF_LOG[b]]);
+
+      function rsGeneratorPoly(degree) {
+        let poly = [1];
+        for (let i = 0; i < degree; i++) {
+          const next = new Array(poly.length + 1).fill(0);
+          for (let j = 0; j < poly.length; j++) {
+            next[j] ^= poly[j];
+            next[j + 1] ^= gfMul(poly[j], GF_EXP[i]);
+          }
+          poly = next;
+        }
+        return poly;
+      }
+
+      function rsRemainder(data, ecLen) {
+        const gen = rsGeneratorPoly(ecLen);
+        const res = new Uint8Array(ecLen);
+        for (const byte of data) {
+          const factor = byte ^ res[0];
+          for (let i = 0; i < ecLen - 1; i++) res[i] = res[i + 1];
+          res[ecLen - 1] = 0;
+          if (factor !== 0) {
+            for (let i = 0; i < ecLen; i++) res[i] ^= gfMul(gen[i + 1], factor);
+          }
+        }
+        return res;
+      }
+
+      const VERSIONS_M = [
+        null,
+        [16, 10, [[1, 16]], [], 0],
+        [28, 16, [[1, 28]], [6, 18], 0],
+        [44, 26, [[1, 44]], [6, 22], 0],
+        [64, 18, [[2, 32]], [6, 26], 0],
+        [86, 24, [[2, 43]], [6, 30], 0],
+        [108, 16, [[4, 27]], [6, 34], 0],
+        [124, 18, [[4, 31]], [6, 22, 38], 0x07c94],
+        [154, 22, [[2, 38], [2, 39]], [6, 24, 42], 0x085bc],
+        [182, 22, [[3, 36], [2, 37]], [6, 26, 46], 0x09a99],
+        [216, 26, [[4, 43], [1, 44]], [6, 28, 50], 0x0a4d3],
+      ];
+
+      function formatInfoBits(mask) {
+        const data = mask & 7;
+        let rem = data << 10;
+        for (let i = 4; i >= 0; i--) {
+          if (rem & (1 << (i + 10))) rem ^= 0x537 << i;
+        }
+        return ((data << 10) | rem) ^ 0x5412;
+      }
+
+      function encodeBytes(text) {
+        const bytes = Array.from(new TextEncoder().encode(text));
+        let ver = 1;
+        for (; ver <= 10; ver++) {
+          const capBits = VERSIONS_M[ver][0] * 8;
+          const lenBits = ver <= 9 ? 8 : 16;
+          if (4 + lenBits + bytes.length * 8 <= capBits) break;
+        }
+        if (ver > 10) throw new Error("URL demasiado larga para QR v10");
+
+        const [totalData, ecPerBlock, groups, alignCenters, versionBits] = VERSIONS_M[ver];
+        const bits = [];
+        const pushBits = (val, len) => {
+          for (let i = len - 1; i >= 0; i--) bits.push((val >>> i) & 1);
+        };
+
+        pushBits(0b0100, 4);
+        pushBits(bytes.length, ver <= 9 ? 8 : 16);
+        for (const b of bytes) pushBits(b, 8);
+
+        const capBits = totalData * 8;
+        const termLen = Math.min(4, capBits - bits.length);
+        pushBits(0, termLen);
+        while (bits.length % 8 !== 0) bits.push(0);
+
+        const dataCW = [];
+        for (let i = 0; i < bits.length; i += 8) {
+          let v = 0;
+          for (let j = 0; j < 8; j++) v = (v << 1) | bits[i + j];
+          dataCW.push(v);
+        }
+        let padToggle = 0;
+        while (dataCW.length < totalData) {
+          dataCW.push(padToggle % 2 === 0 ? 0xec : 0x11);
+          padToggle++;
+        }
+
+        const dataBlocks = [];
+        const ecBlocks = [];
+        let offset = 0;
+        for (const [count, size] of groups) {
+          for (let i = 0; i < count; i++) {
+            const blk = dataCW.slice(offset, offset + size);
+            offset += size;
+            dataBlocks.push(blk);
+            ecBlocks.push(rsRemainder(blk, ecPerBlock));
+          }
+        }
+
+        const interleaved = [];
+        const maxDataLen = Math.max(...dataBlocks.map((b) => b.length));
+        for (let i = 0; i < maxDataLen; i++) {
+          for (const blk of dataBlocks) if (i < blk.length) interleaved.push(blk[i]);
+        }
+        for (let i = 0; i < ecPerBlock; i++) {
+          for (const ec of ecBlocks) interleaved.push(ec[i]);
+        }
+
+        const size = ver * 4 + 17;
+        const grid = Array.from({ length: size }, () => new Int8Array(size));
+        const isFunc = Array.from({ length: size }, () => new Uint8Array(size));
+
+        const setFunc = (r, c, dark) => {
+          if (r < 0 || c < 0 || r >= size || c >= size) return;
+          grid[r][c] = dark ? 1 : 0;
+          isFunc[r][c] = 1;
+        };
+
+        const drawFinder = (tr, tc) => {
+          for (let dr = -1; dr <= 7; dr++) {
+            for (let dc = -1; dc <= 7; dc++) {
+              const r = tr + dr, c = tc + dc;
+              if (r < 0 || c < 0 || r >= size || c >= size) continue;
+              const inOuter = dr >= 0 && dr <= 6 && dc >= 0 && dc <= 6;
+              const dark =
+                inOuter &&
+                (dr === 0 || dr === 6 || dc === 0 || dc === 6 || (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4));
+              setFunc(r, c, dark);
+            }
+          }
+        };
+        drawFinder(0, 0);
+        drawFinder(0, size - 7);
+        drawFinder(size - 7, 0);
+
+        for (let i = 8; i < size - 8; i++) {
+          setFunc(6, i, i % 2 === 0);
+          setFunc(i, 6, i % 2 === 0);
+        }
+
+        for (let ai = 0; ai < alignCenters.length; ai++) {
+          for (let aj = 0; aj < alignCenters.length; aj++) {
+            const last = alignCenters.length - 1;
+            if ((ai === 0 && aj === 0) || (ai === 0 && aj === last) || (ai === last && aj === 0)) continue;
+            const r = alignCenters[ai], c = alignCenters[aj];
+            for (let dr = -2; dr <= 2; dr++) {
+              for (let dc = -2; dc <= 2; dc++) {
+                setFunc(r + dr, c + dc, Math.max(Math.abs(dr), Math.abs(dc)) !== 1);
+              }
+            }
+          }
+        }
+
+        setFunc(size - 8, 8, true);
+        for (let i = 0; i <= 8; i++) {
+          if (i !== 6) {
+            setFunc(8, i, false);
+            setFunc(i, 8, false);
+          }
+        }
+        for (let i = 0; i < 8; i++) setFunc(8, size - 1 - i, false);
+        for (let i = 0; i < 7; i++) setFunc(size - 1 - i, 8, false);
+
+        if (ver >= 7) {
+          for (let i = 0; i < 18; i++) {
+            const bit = ((versionBits >>> i) & 1) === 1;
+            const a = Math.floor(i / 3);
+            const b = size - 11 + (i % 3);
+            setFunc(a, b, bit);
+            setFunc(b, a, bit);
+          }
+        }
+
+        const allBits = [];
+        for (const cw of interleaved) {
+          for (let i = 7; i >= 0; i--) allBits.push((cw >>> i) & 1);
+        }
+        let bitIdx = 0;
+        let upward = true;
+        for (let col = size - 1; col >= 1; col -= 2) {
+          if (col === 6) col--;
+          for (let step = 0; step < size; step++) {
+            const r = upward ? size - 1 - step : step;
+            for (let dx = 0; dx < 2; dx++) {
+              const c = col - dx;
+              if (!isFunc[r][c]) {
+                grid[r][c] = bitIdx < allBits.length ? allBits[bitIdx++] : 0;
+              }
+            }
+          }
+          upward = !upward;
+        }
+
+        const maskFn = [
+          (r, c) => (r + c) % 2 === 0,
+          (r, c) => r % 2 === 0,
+          (r, c) => c % 3 === 0,
+          (r, c) => (r + c) % 3 === 0,
+          (r, c) => (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0,
+          (r, c) => ((r * c) % 2) + ((r * c) % 3) === 0,
+          (r, c) => (((r * c) % 2) + ((r * c) % 3)) % 2 === 0,
+          (r, c) => (((r + c) % 2) + ((r * c) % 3)) % 2 === 0,
+        ];
+
+        function applyFormat(mat, m) {
+          const f = formatInfoBits(m);
+          const coords1 = [
+            [8, 0], [8, 1], [8, 2], [8, 3], [8, 4], [8, 5], [8, 7], [8, 8],
+            [7, 8], [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [0, 8],
+          ];
+          const coords2 = [
+            [size - 1, 8], [size - 2, 8], [size - 3, 8], [size - 4, 8],
+            [size - 5, 8], [size - 6, 8], [size - 7, 8],
+            [8, size - 8], [8, size - 7], [8, size - 6], [8, size - 5],
+            [8, size - 4], [8, size - 3], [8, size - 2], [8, size - 1],
+          ];
+          for (let i = 0; i < 15; i++) {
+            const bit = (f >>> (14 - i)) & 1;
+            mat[coords1[i][0]][coords1[i][1]] = bit;
+            mat[coords2[i][0]][coords2[i][1]] = bit;
+          }
+        }
+
+        function penaltyScore(mat) {
+          let pen = 0;
+          for (let r = 0; r < size; r++) {
+            let run = 1;
+            for (let c = 1; c < size; c++) {
+              if (mat[r][c] === mat[r][c - 1]) run++;
+              else { if (run >= 5) pen += 3 + (run - 5); run = 1; }
+            }
+            if (run >= 5) pen += 3 + (run - 5);
+          }
+          for (let c = 0; c < size; c++) {
+            let run = 1;
+            for (let r = 1; r < size; r++) {
+              if (mat[r][c] === mat[r - 1][c]) run++;
+              else { if (run >= 5) pen += 3 + (run - 5); run = 1; }
+            }
+            if (run >= 5) pen += 3 + (run - 5);
+          }
+          for (let r = 0; r < size - 1; r++) {
+            for (let c = 0; c < size - 1; c++) {
+              const v = mat[r][c];
+              if (v === mat[r][c + 1] && v === mat[r + 1][c] && v === mat[r + 1][c + 1]) pen += 3;
+            }
+          }
+          const pat1 = [1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0];
+          const pat2 = [0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1];
+          for (let r = 0; r < size; r++) {
+            for (let c = 0; c <= size - 11; c++) {
+              let m1 = true, m2 = true, v1 = true, v2 = true;
+              for (let k = 0; k < 11; k++) {
+                if (mat[r][c + k] !== pat1[k]) m1 = false;
+                if (mat[r][c + k] !== pat2[k]) m2 = false;
+                if (mat[c + k][r] !== pat1[k]) v1 = false;
+                if (mat[c + k][r] !== pat2[k]) v2 = false;
+              }
+              if (m1 || m2) pen += 40;
+              if (v1 || v2) pen += 40;
+            }
+          }
+          let dark = 0;
+          for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) if (mat[r][c]) dark++;
+          const k = Math.floor(Math.abs(dark * 20 - size * size * 10) / (size * size));
+          pen += k * 10;
+          return pen;
+        }
+
+        let bestMat = null;
+        let bestScore = Infinity;
+        for (let m = 0; m < 8; m++) {
+          const mat = grid.map((row, r) =>
+            row.map((val, c) => (isFunc[r][c] ? val : maskFn[m](r, c) ? val ^ 1 : val))
+          );
+          applyFormat(mat, m);
+          const sc = penaltyScore(mat);
+          if (sc < bestScore) {
+            bestScore = sc;
+            bestMat = mat;
+          }
+        }
+        return { size, modules: bestMat };
+      }
+
+      function toSvg(text, darkColor = "#04101d") {
+        const { size, modules } = encodeBytes(text);
+        const quiet = 2;
+        const vb = size + quiet * 2;
+        let d = "";
+        for (let r = 0; r < size; r++) {
+          for (let c = 0; c < size; c++) {
+            if (modules[r][c]) d += `M${c + quiet},${r + quiet}h1v1h-1z`;
+          }
+        }
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${vb} ${vb}" shape-rendering="crispEdges"><rect width="${vb}" height="${vb}" fill="#ffffff"/><path d="${d}" fill="${darkColor}"/></svg>`;
+      }
+
+      return { encodeBytes, toSvg };
+    })();
+
+    /* =========================================================================
+       ESTADO Y LÓGICA DEL PITCH INTERACTIVO SCULPTOR
+       ========================================================================= */
+    const STORAGE_KEY = "sculptor_pitch_config_v3";
+    const DEFAULT_CFG = {
+      brand: "SCULPTOR",
+      baseUrl: "https://team-30-platanus-hack.onrender.com",
+      roomId: "demo-cross",
+      
+    };
+
+    const SLIDE_MOODS = {
+      1: "crimson",
+      2: "crimson",
+      3: "violet",
+      4: "emerald",
+      5: "emerald",
+      6: "cosmic",
+    };
+
+    const SLIDE_NOTES = {
+      1: { time: "0:00–0:15", copy: "Pausa tras cada frase: 'Hay una cama. Dos hospitales. Y quien decide no ve el dato del otro.'" },
+      2: { time: "0:15–0:35", copy: "Espacio: de 43,4% a 96,1% con una persona que firma ([S]: 12,3% → 89,4% con dos hospitales). Es un modelo ilustrativo." },
+      3: { time: "0:35–0:55 → DEMO 0:55–2:25", copy: "Espacio: el servidor rechaza la lectura ajena. Pide 3 voluntarios: cada hospital presenta su caso y el Comité aprueba o veta con razón." },
+      4: { time: "2:25–2:40", copy: "Espacio: mismo motor en construcción y en una sala armada desde una frase. La IA propone el contenido; la interfaz es siempre la misma." },
+      5: { time: "2:40–3:00", copy: "'La IA escribe. El código decide.' 429 pruebas sin modelo, 200 conexiones medidas. El deploy usa Claude en la nube; en la sede, el Spark local. La pantalla dice cuál." },
+      6: { time: "3:00–3:20", copy: "'Solo funciona con más de una persona. Con Sculptor, el recurso deja de esperar.'" },
+    };
+
+    const MORPH_SCENARIOS = {
+      health: {
+        tag: "SALUD · 2 HOSPITALES",
+        key: "demo-cross",
+        title: "Clínica Andes ↔ Hospital Rural Valle Sur",
+        roles: "Urgencias · Turno · Comité",
+        secret: 'Costo de cobertura <span class="redaction" style="min-width:48px;height:12px;"></span>',
+        gate: "3 personas · el resto, automático",
+        arbiter: "Comité Ético · razón obligatoria",
+      },
+      b2b: {
+        tag: "CONSTRUCCIÓN · 2 OBRAS",
+        key: "demo-construccion",
+        title: "Constructora Cordillera ↔ Constructora Litoral Sur",
+        roles: "Obra · Terreno · Comité",
+        secret: 'Costo de la grúa <span class="redaction" style="min-width:48px;height:12px;"></span>',
+        gate: "Mismo motor · otra semilla",
+        arbiter: "Comité de Coordinación de Obras",
+      },
+      free: {
+        tag: "TU CASO · 1 FRASE",
+        key: "sala nueva",
+        title: "“2 colegios y 1 bus para la salida”",
+        roles: "Los propone la IA · los valida el código",
+        secret: 'El dato que no se comparte <span class="redaction" style="min-width:48px;height:12px;"></span>',
+        gate: "Si la IA falla, usa una semilla",
+        arbiter: "Quien firma deja su razón",
+      },
+    };
+
+    let cfg = loadConfig();
+    let currentSlide = 1;
+    const TOTAL_SLIDES = 6;
+
+    let pnScope = "single";
+    let pnHybrid = false;
+    let breachTriggered = false;
+    let morphIndex = 0;
+    const MORPH_ORDER = ["health", "b2b", "free"];
+
+    let waitSeconds = 0;
+    let pitchSeconds = 0;
+    let timerRunning = true;
+    let timerVisible = false;
+    let notesVisible = false;
+
+    function loadConfig() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return { ...DEFAULT_CFG };
+        return { ...DEFAULT_CFG, ...JSON.parse(raw) };
+      } catch {
+        return { ...DEFAULT_CFG };
+      }
+    }
+
+    function saveConfig() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); } catch {}
+    }
+
+    function cleanBaseUrl(url) {
+      return (url || DEFAULT_CFG.baseUrl).trim().replace(/\/+$/, "");
+    }
+
+    function pulseMask(el) {
+      el.classList.add("mutating");
+      setTimeout(() => el.classList.remove("mutating"), 150);
+    }
+
+    function applyConfigToDOM() {
+      const brand = cfg.brand.trim() || "SCULPTOR";
+      const base = cleanBaseUrl(cfg.baseUrl);
+      
+      const stageUrl = `${base}/stage/${encodeURIComponent(cfg.roomId)}`;
+      // El QR abre la pantalla grande de la demo: ahí está el código para tomar una silla.
+      const qrJoinUrl = stageUrl;
+
+      document.title = `${brand} — Pitch Interactivo · Platanus Hack 26`;
+      document.querySelectorAll("[data-brand]").forEach((el) => (el.textContent = brand));
+
+      const qrMount = document.getElementById("qrMount");
+      try {
+        qrMount.innerHTML = MiniQR.toSvg(qrJoinUrl, "#04101d");
+      } catch {
+        qrMount.innerHTML = `<div style="padding:12px;font-size:12px;color:#be123c;">URL inválida para QR</div>`;
+      }
+
+      document.getElementById("qrUrlText").textContent = qrJoinUrl.replace(/^https?:\/\//, "");
+      document.getElementById("stageLaunchLink").href = stageUrl;
+      document.getElementById("stageLaunchLabel").textContent = `Abrir /stage/${cfg.roomId}`;
+      document.getElementById("homeLaunchLink").href = `${base}/#probar`;
+      document.getElementById("closingStageLink").href = stageUrl;
+      document.getElementById("closingUrl").textContent = base.replace(/^https?:\/\//, "");
+
+      document.getElementById("cfgBrand").value = brand;
+      document.getElementById("cfgBaseUrl").value = base;
+      document.getElementById("cfgRoom").value = cfg.roomId;
+    }
+
+    function renderPn(animate) {
+      const data =
+        pnScope === "single"
+          ? {
+              autoPct: 43.4,
+              hybPct: 96.1,
+              compare: "43,4% → 96,1%",
+              autoFormula: "0,92<sup>10</sup> = <strong>43,4%</strong> · p = 0,92 · n = 10",
+              hybFormula: "(1 − 0,08×0,05)<sup>10</sup> = <strong>96,1%</strong> · freno atrapa 95%",
+              autoDelta: '<span class="c-crimson">Falla &gt; 50%</span><small>cadenas sin freno</small>',
+              hybDelta: '<span class="c-emerald">+52,7 pts</span><small>compuerta + Comité</small>',
+            }
+          : {
+              autoPct: 12.3,
+              hybPct: 89.4,
+              compare: "12,3% → 89,4%",
+              autoFormula: "0,92<sup>10</sup> · 0,90<sup>12</sup> = <strong>12,3%</strong> · 2 orgs (n = 22)",
+              hybFormula: "0,996<sup>10</sup> · 0,994<sup>12</sup> = <strong>89,4%</strong> · Comité sella",
+              autoDelta: '<span class="c-crimson">Colapso 88%</span><small>sin freno entre orgs</small>',
+              hybDelta: '<span class="c-emerald">+77,1 pts</span><small>rescate determinista</small>',
+            };
+
+      const pct = pnHybrid ? data.hybPct : data.autoPct;
+      const valEl = document.getElementById("pnValue");
+      const deltaEl = document.getElementById("pnDelta");
+      const barEl = document.getElementById("pnBar");
+      const badgeEl = document.getElementById("pnBadge");
+      const shellEl = document.getElementById("pnShell");
+      const btnEl = document.getElementById("pnToggleBtn");
+      const btnLbl = document.getElementById("pnBtnLabel");
+
+      if (animate) {
+        pulseMask(valEl);
+        pulseMask(deltaEl);
+      }
+
+      valEl.textContent = pct.toFixed(1).replace(".", ",") + "%";
+      valEl.classList.toggle("hybrid", pnHybrid);
+      barEl.style.width = pct + "%";
+      barEl.classList.toggle("hybrid", pnHybrid);
+      shellEl.classList.toggle("bezel-emerald", pnHybrid);
+      shellEl.classList.toggle("bezel-crimson", !pnHybrid);
+
+      badgeEl.textContent = pnHybrid ? "FRENO HUMANO ACTIVO" : "AGENTES SOLOS · SIN FRENO";
+      badgeEl.className = pnHybrid ? "pill pill-emerald" : "pill pill-crimson";
+
+      document.getElementById("pnFormula").innerHTML = pnHybrid ? data.hybFormula : data.autoFormula;
+      document.getElementById("pnCompare").textContent = data.compare;
+      deltaEl.innerHTML = pnHybrid ? data.hybDelta : data.autoDelta;
+
+      btnLbl.textContent = pnHybrid ? "Ver agentes solos" : "Activar freno humano (Espacio)";
+      btnEl.className = pnHybrid ? "btn btn-ghost" : "btn btn-crimson";
+      if (!pnHybrid) {
+        btnEl.innerHTML = `<span id="pnBtnLabel">Activar freno humano (Espacio)</span><span class="btn-icon" aria-hidden="true">→</span>`;
+      } else {
+        btnEl.innerHTML = `<span id="pnBtnLabel">↺ &nbsp;Ver agentes solos</span>`;
+      }
+
+      if (currentSlide === 2) {
+        document.body.dataset.mood = pnHybrid ? "emerald" : "crimson";
+      }
+
+      document.querySelectorAll(".seg-btn").forEach((b) => {
+        b.classList.toggle("active", b.dataset.scope === pnScope);
+      });
+    }
+
+    function renderBreach() {
+      const banner = document.getElementById("breachBanner");
+      const text = document.getElementById("breachText");
+      const btn = document.getElementById("breachBtn");
+      banner.classList.toggle("denied", breachTriggered);
+      if (breachTriggered) {
+        text.innerHTML =
+          '<span class="pill pill-crimson">RECHAZADO</span>' + '<span><strong>El servidor lo niega y queda en el acta.</strong></span>';
+        btn.className = "btn btn-ghost";
+        btn.style.padding = "8px 16px";
+        btn.style.fontSize = "13px";
+        btn.innerHTML = `<span id="breachBtnLabel">Reiniciar</span>`;
+      } else {
+        text.innerHTML =
+          '<span class="pill">DATO SELLADO</span>' +
+          '<span><strong>El secreto jamás viaja al navegador.</strong></span>';
+        btn.className = "btn btn-crimson";
+        btn.style.padding = "8px 8px 8px 16px";
+        btn.style.fontSize = "13px";
+        btn.innerHTML = `<span id="breachBtnLabel">Probar lectura ajena (Espacio)</span><span class="btn-icon" aria-hidden="true">⚡</span>`;
+      }
+    }
+
+    function renderMorph(key, animate) {
+      const sc = MORPH_SCENARIOS[key];
+      const core = document.getElementById("morphCore");
+      if (animate) pulseMask(core);
+
+      morphIndex = MORPH_ORDER.indexOf(key);
+      document.getElementById("morphTag").textContent = sc.tag;
+      document.getElementById("morphSeedKey").textContent = sc.key;
+      document.getElementById("morphTitle").textContent = sc.title;
+      document.getElementById("morphRoles").textContent = sc.roles;
+      document.getElementById("morphSecret").innerHTML = sc.secret;
+      document.getElementById("morphGate").textContent = sc.gate;
+      document.getElementById("morphArbiter").textContent = sc.arbiter;
+      document.querySelectorAll(".morph-tab").forEach((t) => {
+        t.classList.toggle("active", t.dataset.morph === key);
+      });
+    }
+
+    function showSlide(n) {
+      currentSlide = Math.max(1, Math.min(TOTAL_SLIDES, n));
+      document.querySelectorAll(".slide").forEach((s) => {
+        s.classList.toggle("active", Number(s.dataset.slide) === currentSlide);
+      });
+      document.getElementById("curSlide").textContent = String(currentSlide);
+
+      const fill = document.getElementById("progressFill");
+      fill.style.width = `${(currentSlide / TOTAL_SLIDES) * 100}%`;
+      const isCalm = currentSlide >= 4;
+      fill.classList.toggle("calm", isCalm);
+
+      const dot = document.getElementById("brandDot");
+      dot.classList.toggle("calm", isCalm);
+      dot.classList.toggle("beating", !isCalm);
+
+      if (currentSlide === 2) {
+        document.body.dataset.mood = pnHybrid ? "emerald" : "crimson";
+      } else {
+        document.body.dataset.mood = SLIDE_MOODS[currentSlide];
+      }
+
+      const note = SLIDE_NOTES[currentSlide];
+      document.getElementById("notesTime").textContent = note.time;
+      document.getElementById("notesCopy").textContent = note.copy;
+    }
+
+    function smartAdvance() {
+      if (currentSlide === 2 && !pnHybrid) {
+        pnHybrid = true;
+        renderPn(true);
+        return;
+      }
+      if (currentSlide === 3 && !breachTriggered) {
+        breachTriggered = true;
+        renderBreach();
+        return;
+      }
+      if (currentSlide === 4 && morphIndex < MORPH_ORDER.length - 1) {
+        renderMorph(MORPH_ORDER[morphIndex + 1], true);
+        return;
+      }
+      showSlide(currentSlide + 1);
+    }
+
+    function formatMMSS(sec) {
+      const m = String(Math.floor(sec / 60)).padStart(2, "0");
+      const s = String(sec % 60).padStart(2, "0");
+      return `${m}:${s}`;
+    }
+
+    function updateTimers() {
+      if (!timerRunning) return;
+      waitSeconds++;
+      pitchSeconds++;
+      document.getElementById("waitClock").textContent = formatMMSS(waitSeconds);
+      const tEl = document.getElementById("stageTimer");
+      document.getElementById("timerText").textContent = `${formatMMSS(pitchSeconds)} / 03:30`;
+      tEl.classList.remove("warn", "danger");
+      if (pitchSeconds >= 195) tEl.classList.add("danger");
+      else if (pitchSeconds >= 165) tEl.classList.add("warn");
+    }
+
+    function resetTimers() {
+      waitSeconds = 0;
+      pitchSeconds = 0;
+      document.getElementById("waitClock").textContent = "00:00";
+      document.getElementById("timerText").textContent = "00:00 / 03:30";
+      document.getElementById("stageTimer").classList.remove("warn", "danger");
+    }
+
+    function toggleConfig(force) {
+      const modal = document.getElementById("configModal");
+      const open = force !== undefined ? force : !modal.classList.contains("open");
+      modal.classList.toggle("open", open);
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.().catch(() => {});
+      } else {
+        document.exitFullscreen?.().catch(() => {});
+      }
+    }
+
+    // UI Event Listeners
+    document.getElementById("prevBtn").addEventListener("click", () => showSlide(currentSlide - 1));
+    document.getElementById("nextBtn").addEventListener("click", () => showSlide(currentSlide + 1));
+
+    document.getElementById("pnToggleBtn").addEventListener("click", () => {
+      pnHybrid = !pnHybrid;
+      renderPn(true);
+    });
+
+    document.querySelectorAll(".seg-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        pnScope = btn.dataset.scope;
+        renderPn(true);
+      });
+    });
+
+    document.getElementById("breachBtn").addEventListener("click", () => {
+      breachTriggered = !breachTriggered;
+      renderBreach();
+    });
+
+    document.querySelectorAll(".morph-tab").forEach((tab) => {
+      tab.addEventListener("click", () => renderMorph(tab.dataset.morph, true));
+    });
+
+    document.getElementById("btnConfig").addEventListener("click", () => toggleConfig(true));
+    document.getElementById("closeConfig").addEventListener("click", () => toggleConfig(false));
+    document.getElementById("configModal").addEventListener("click", (e) => {
+      if (e.target.id === "configModal") toggleConfig(false);
+    });
+
+    document.querySelectorAll("[data-brand-preset]").forEach((b) => {
+      b.addEventListener("click", () => (document.getElementById("cfgBrand").value = b.dataset.brandPreset));
+    });
+    document.querySelectorAll("[data-url-preset]").forEach((b) => {
+      b.addEventListener("click", () => (document.getElementById("cfgBaseUrl").value = b.dataset.urlPreset));
+    });
+
+    document.getElementById("saveConfigBtn").addEventListener("click", () => {
+      cfg.brand = document.getElementById("cfgBrand").value.trim() || "SCULPTOR";
+      cfg.baseUrl = cleanBaseUrl(document.getElementById("cfgBaseUrl").value);
+      cfg.roomId = document.getElementById("cfgRoom").value;
+      saveConfig();
+      applyConfigToDOM();
+      toggleConfig(false);
+    });
+
+    document.getElementById("resetTimerBtn").addEventListener("click", resetTimers);
+
+    document.getElementById("btnTimer").addEventListener("click", () => {
+      timerVisible = !timerVisible;
+      document.getElementById("stageTimer").classList.toggle("visible", timerVisible);
+    });
+
+    document.getElementById("stageTimer").addEventListener("click", () => {
+      timerRunning = !timerRunning;
+      document.getElementById("timerIcon").textContent = timerRunning ? "●" : "❚❚";
+    });
+
+    document.getElementById("btnNotes").addEventListener("click", () => {
+      notesVisible = !notesVisible;
+      document.getElementById("notesBar").classList.toggle("visible", notesVisible);
+    });
+
+    document.getElementById("btnFull").addEventListener("click", toggleFullscreen);
+
+    // Keyboard Shortcuts
+    document.addEventListener("keydown", (e) => {
+      const modalOpen = document.getElementById("configModal").classList.contains("open");
+      if (e.key === "Escape" && modalOpen) { toggleConfig(false); return; }
+      if (modalOpen) return;
+
+      if (e.key === "ArrowRight") { e.preventDefault(); showSlide(currentSlide + 1); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); showSlide(currentSlide - 1); }
+      else if (e.key === " ") { e.preventDefault(); smartAdvance(); }
+      else if (e.key.toLowerCase() === "c") { e.preventDefault(); toggleConfig(); }
+      else if (e.key.toLowerCase() === "t") {
+        timerVisible = !timerVisible;
+        document.getElementById("stageTimer").classList.toggle("visible", timerVisible);
+      }
+      else if (e.key.toLowerCase() === "r") { resetTimers(); }
+      else if (e.key.toLowerCase() === "n") {
+        notesVisible = !notesVisible;
+        document.getElementById("notesBar").classList.toggle("visible", notesVisible);
+      }
+      else if (e.key.toLowerCase() === "f") { toggleFullscreen(); }
+      else if (e.key.toLowerCase() === "s" && currentSlide === 2) {
+        pnScope = pnScope === "single" ? "cross" : "single";
+        renderPn(true);
+      }
+      else if (e.key >= "1" && e.key <= "6") { showSlide(Number(e.key)); }
+    });
+
+    // Init
+    applyConfigToDOM();
+    renderPn(false);
+    renderBreach();
+    renderMorph("health", false);
+    showSlide(1);
+    setInterval(updateTimers, 1000);
+  </script>
 </body>
 </html>

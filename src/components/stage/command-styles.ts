@@ -1,7 +1,7 @@
 // Estilos del centro de mando de la pantalla grande. La base es el CSS de
 // src/components/ui/glassy-dashboard.tsx (clases .gd-*, variables --gd-* y
 // data-theme claro/oscuro), copiado tal cual por un script para no divergir a
-// mano. Al final se agregan las piezas propias de Nexo (prefijo .nx-*): colores
+// mano. Al final se agregan las piezas propias de Sculptor (prefijo .nx-*): colores
 // con significado, tipografía más grande para proyectar y los bloques de la sala.
 // Si cambia el panel base, volver a copiar su bloque dashboardStyles aquí.
 
@@ -558,7 +558,7 @@ export const commandStyles = `
   .gd-dock a[aria-current="page"] { border: 2px solid Highlight; }
 }
 
-/* ── Nexo: pantalla grande ─────────────────────────────────────────────────
+/* ── Sculptor: pantalla grande ─────────────────────────────────────────────────
    Agregado sobre el panel base: colores con significado (resuelto, por firmar,
    bloqueado) en ambos temas y una tipografía más grande para proyectar. */
 .gd-app {

@@ -10,9 +10,9 @@ export function RoomHeader({ subtitle, children }: { subtitle: ReactNode; childr
       <Disclaimer />
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-2" aria-label="Ir a la portada de Nexo">
+          <Link href="/" className="flex items-center gap-2" aria-label="Ir a la portada de Sculptor">
             <Mark size={28} />
-            <span className="text-lg font-semibold tracking-tight">Nexo</span>
+            <span className="text-lg font-semibold tracking-tight">Sculptor</span>
           </Link>
           <span className="min-w-0 truncate text-sm text-muted-foreground">{subtitle}</span>
           <div className="ml-auto flex items-center gap-2">{children}</div>

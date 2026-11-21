@@ -2,7 +2,7 @@
 // pueden importar el servidor y la interfaz (por ejemplo, para listar los
 // ejemplos en la portada) sin arrastrar código de servidor.
 //
-// Nexo sirve para cualquier grupo de organizaciones que deben decidir juntas
+// Sculptor sirve para cualquier grupo de organizaciones que deben decidir juntas
 // sobre un recurso escaso sin mostrarse sus datos. Los hospitales son el ejemplo
 // principal; los otros dos muestran que el mismo esqueleto sirve en otros rubros.
 // Los genomas y el recurso de cada escenario viven en seeds.ts.

@@ -1,6 +1,12 @@
-# Diseño visual de Nexo
+# Diseño visual de Sculptor
 
-Guía para cualquier persona o agente (Claude, Gemini, Antigravity) que cambie cómo se ve Nexo. Si vas a tocar una pantalla, lee esto primero: así lo nuevo calza con lo que ya existe.
+Guía para cualquier persona o agente (Claude, Gemini, Antigravity) que cambie cómo se ve Sculptor. Si vas a tocar una pantalla, lee esto primero: así lo nuevo calza con lo que ya existe.
+
+## Nombre y marca
+
+El producto se llama **Sculptor** (antes «Nexo»). En pantalla se escribe «Sculptor», y en mayúsculas espaciadas «SCULPTOR» en el encabezado de la pantalla grande. Los identificadores internos siguen diciendo `nexo` y no se cambian: variables `NEXO_*`, encabezados `x-nexo-*`, ids como `nexo:approve`, la carpeta `src/components/nexo/`, el repo y la URL del deploy.
+
+La marca (`src/components/landing/mark.tsx`) es una «S» de un solo trazo sobre un cuadrado redondeado en tinta, con un punto de arcilla. Es un SVG con los tokens de la paleta, sin imágenes externas. Con `bare` queda solo el trazo en `currentColor`, para ponerlo sobre el círculo lima de la pantalla grande. El ícono de la pestaña es `src/app/icon.svg`, con los mismos trazos.
 
 ## A quién le hablamos
 
@@ -82,7 +88,7 @@ Falta: el Comité decide — aprobar o vetar con razón      ← una sola frase,
 
 ### Sala de demo: 3 personas
 
-En las salas de demo (`demo` en el estado de la sala) la pantalla grande se simplifica para que alguien que no conoce Nexo pueda conducirla:
+En las salas de demo (`demo` en el estado de la sala) la pantalla grande se simplifica para que alguien que no conoce Sculptor pueda conducirla:
 
 - Pasos: Unirse → Casos → Comité → Acta. «Límites» no aparece: los límites y las firmas de cada hospital los hace el piloto automático.
 - En «Unirse» van grandes solo las 3 personas: «Clínica · Urgencias», «Hospital Rural · Turno» y «Comité». Los roles que juega el piloto automático van pequeños, con borde punteado y el chip «automático».
@@ -145,7 +151,7 @@ Reglas de texto (feedback del mentor: «bombardean con texto todo»): título de
 |---|---|
 | Portada (landing) | `src/app/page.tsx` y `src/components/landing/` |
 | Pantalla grande | `src/app/stage/[roomId]/stage-client.tsx` |
-| Deck del pitch (6 láminas, flechas para avanzar) | `public/pitch/index.html`, se abre en `/pitch/index.html` |
+| Deck del pitch (6 láminas, flechas o espacio para avanzar; diseño v2 de Nahum con cifras del repo) | `public/pitch/index.html`, se abre en `/pitch/index.html` |
 | Teléfono de cada rol | `src/app/room/[roomId]/room-client.tsx` y `src/components/seat/` |
 | Piezas de sala (guía de turnos, QR, avisos, voz) | `src/components/nexo/` |
 | Grafo vivo, choque de autoridad, medidor p^n, telemetría | `src/components/organs/` |

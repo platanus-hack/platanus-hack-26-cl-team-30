@@ -10,7 +10,7 @@ Repo oficial del equipo 30 en Platanus Hack 26: Santiago ft. Buk. Track: **Multi
 
 ## Qué construimos
 
-**Nexo** (nombre de trabajo): un esqueleto organizacional multijugador que coordina decisiones críticas entre personas y agentes emparejados por rol. Cada persona entra con un rol, ve solo lo que su rol y su organización pueden ver, y lo que decide cambia en el mismo segundo lo que ven los demás.
+**Sculptor** (antes «Nexo»; los identificadores internos como `NEXO_*` y `src/components/nexo/` conservan el nombre viejo): un esqueleto organizacional multijugador que coordina decisiones críticas entre personas y agentes emparejados por rol. Cada persona entra con un rol, ve solo lo que su rol y su organización pueden ver, y lo que decide cambia en el mismo segundo lo que ven los demás.
 
 - **Suelo (lo que tiene que funcionar sí o sí):** una clínica (`clinica_andes`) con 3 roles: Jefatura de Urgencias, Dirección Administrativa y Comité Ético. Urgencias quiere autorizar una cama UCI; Gestión exige firma si se cruza un umbral; el Comité entra por QR y aprueba o veta con una razón obligatoria.
 - **Capa inter-org (la ambición):** 2 hospitales (`clinica_andes` y `hospital_rural`) compiten por 1 cama UCI de referencia. Ninguno ve el costo de cobertura del otro. Un algoritmo determinista ordena a los candidatos, desempata por equidad, y el Comité puede vetar. Todo queda en una bitácora exportable como acta.

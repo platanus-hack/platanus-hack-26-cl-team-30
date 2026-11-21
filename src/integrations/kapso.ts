@@ -10,7 +10,7 @@
 //   KAPSO_PHONE_NUMBER_ID    id del número de WhatsApp conectado en Kapso
 //   KAPSO_WEBHOOK_SECRET     secreto con que Kapso firma el webhook (X-Webhook-Signature)
 //   NEXO_COMMITTEE_PHONE     número del Comité en formato E.164 (+569...)
-//   KAPSO_TEMPLATE_NAME      opcional: plantilla aprobada por Meta (p. ej. nexo_comite_caso).
+//   KAPSO_TEMPLATE_NAME      opcional: plantilla aprobada por Meta (p. ej. sculptor_comite_caso).
 //                            Con un número de producción, WhatsApp solo deja iniciar la
 //                            conversación con una plantilla; sin ella se envían botones
 //                            interactivos, que sirven en la Sandbox o dentro de las 24 h.
@@ -54,7 +54,7 @@ export function parseButtonId(id: string): { decision: "approve" | "veto"; sessi
 const templateParam = (text: string, max: number) => text.replace(/\s+/g, " ").trim().slice(0, max) || "-";
 
 /**
- * Componentes de la plantilla nexo_comite_caso: {{1}} = sala, {{2}} = recurso, y
+ * Componentes de la plantilla sculptor_comite_caso: {{1}} = sala, {{2}} = recurso, y
  * los dos botones de respuesta rápida con el mismo id que los interactivos, así
  * el webhook los trata igual.
  */
@@ -76,7 +76,7 @@ export function committeeTemplateComponents(sessionId: string, room: string, res
 export async function sendCommitteeCase(
   sessionId: string,
   brief: string,
-  context: { room: string; resource: string } = { room: "Nexo", resource: "recurso en disputa" },
+  context: { room: string; resource: string } = { room: "Sculptor", resource: "recurso en disputa" },
 ): Promise<void> {
   const config = kapsoConfig();
   if (!config.phoneNumberId || !config.committeePhone) throw new Error("Faltan KAPSO_PHONE_NUMBER_ID o NEXO_COMMITTEE_PHONE");
@@ -95,7 +95,7 @@ export async function sendCommitteeCase(
   await whatsapp().messages.sendInteractiveButtons({
     phoneNumberId: config.phoneNumberId,
     to: config.committeePhone,
-    header: { type: "text", text: "Nexo · Decisión del Comité" },
+    header: { type: "text", text: "Sculptor · Decisión del Comité" },
     bodyText: brief.slice(0, 1000),
     footerText: "Demostración simulada. Responder con un botón.",
     buttons: [

@@ -95,7 +95,7 @@ export default function RoomClient() {
 
   if (!room) {
     return (
-      <SeatShell who={{ title: "Nexo", org: `Sala ${roomId}` }} stakes={null} status={status} alert={alert}>
+      <SeatShell who={{ title: "Sculptor", org: `Sala ${roomId}` }} stakes={null} status={status} alert={alert}>
         <SeatMain>
           <section className="st-card">
             {unreachable ? (
@@ -123,7 +123,7 @@ export default function RoomClient() {
   // Sin silla todavía: elegir una (o esperar a que el servidor confirme la del enlace).
   if (!me) {
     return (
-      <SeatShell who={{ title: "Nexo", org: subtitle }} stakes={room.stakes} status={status} alert={alert}>
+      <SeatShell who={{ title: "Sculptor", org: subtitle }} stakes={room.stakes} status={status} alert={alert}>
         {session || draw === "pending" ? (
           <SeatMain>
             <section className="st-card">

@@ -1,4 +1,4 @@
-// Contrato de datos de Nexo. Todo lo que entra al sistema (semillas o genomas
+// Contrato de datos de Sculptor. Todo lo que entra al sistema (semillas o genomas
 // generados por un modelo) se valida contra estos esquemas antes de usarse.
 //
 // Dos familias de tipos:

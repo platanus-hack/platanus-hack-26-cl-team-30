@@ -6,7 +6,7 @@ Documento vivo. Se actualiza en el mismo commit que cambia la arquitectura. Si e
 
 ## Resumen
 
-Nexo (nombre de trabajo) es una sala compartida donde varias organizaciones deciden juntas sobre un recurso escaso sin mostrarse sus datos. Cada persona entra con un rol, ve solo lo que su rol y su organización pueden ver, y toma la decisión en tiempo real con las demás. Cada rol tiene un agente de IA emparejado que propone, pero no decide.
+Sculptor es una sala compartida donde varias organizaciones deciden juntas sobre un recurso escaso sin mostrarse sus datos. Cada persona entra con un rol, ve solo lo que su rol y su organización pueden ver, y toma la decisión en tiempo real con las demás. Cada rol tiene un agente de IA emparejado que propone, pero no decide.
 
 - **Quiénes participan a la vez:** los roles de una organización (proponente, aprobador y Comité) y, en la capa entre organizaciones, los roles de dos organizaciones más un Comité árbitro que no pertenece a ninguna.
 - **Qué hace el sistema con sus aportes:** el servidor guarda un solo estado por sala y le envía a cada conexión una versión distinta, filtrada por organización y por rol. Las reglas (permisos, choque de autoridad, compuerta, asignación del recurso, contador) son código determinista, sin modelo.
@@ -30,7 +30,7 @@ Esta sección describe el problema que el equipo quiere atacar. Es una hipótesi
 
 - **A quién ayuda.** A las personas que deciden juntas sobre un recurso escaso y caro (una cama UCI, una grúa, un camión, un presupuesto) cuando cada una tiene datos que no puede mostrarle a la otra. En el ejemplo principal: Dentro de una clínica, Urgencias conoce la gravedad y Administración el costo. Entre organizaciones, cada hospital conoce el costo de su paciente y no el del otro. Hoy eso se coordina por teléfono, chat y planillas, y después nadie puede explicar por qué se decidió así.
 - **Por qué no puede decidir una sola organización.** Por dos razones. Información: cada parte tiene un dato que la otra no puede ver (el costo de cobertura), así que quien decide solo decide con la mitad de los datos o exige ver lo que no le corresponde. Neutralidad: quien arbitra entre dos hospitales no puede ser uno de ellos. Por eso el Comité árbitro tiene su propio `orgId` (`comite_red`) y no ve el costo de nadie (`canViewCoverageCost`).
-- **Qué hace que no hacen una planilla compartida ni un flujo automatizado.** Una planilla les muestra a todos lo mismo; un flujo fijo ejecuta pasos sin que nadie decida. Nexo hace tres cosas a la vez: cada participante recibe una versión distinta de los mismos datos, filtrada en el servidor (`projectStateForOrgAndRole`); el recurso se ordena con una regla visible y reproducible (`resolveAllocation`); y la decisión la toma una persona que deja su razón escrita en un acta (`recordCommitteeDecision`, `buildAuditActa`). Todo en vivo, entre varias personas a la vez.
+- **Qué hace que no hacen una planilla compartida ni un flujo automatizado.** Una planilla les muestra a todos lo mismo; un flujo fijo ejecuta pasos sin que nadie decida. Sculptor hace tres cosas a la vez: cada participante recibe una versión distinta de los mismos datos, filtrada en el servidor (`projectStateForOrgAndRole`); el recurso se ordena con una regla visible y reproducible (`resolveAllocation`); y la decisión la toma una persona que deja su razón escrita en un acta (`recordCommitteeDecision`, `buildAuditActa`). Todo en vivo, entre varias personas a la vez.
 - **Qué muestra la demo en tres minutos.** Dos hospitales presentan a su paciente sin ver el costo del otro, el tablero ordena con la fórmula a la vista, y una persona del público entra como Comité escaneando un QR y aprueba o veta con una razón. Todas las pantallas cambian a la vez.
 
 ## Dónde está la parte difícil
@@ -149,7 +149,7 @@ De `src/components/organs/` quedan `living-graph-organ.tsx` (grafo vivo), `alloc
 
 ## Sala de demo: 3 personas y 3 toques
 
-Para que alguien que no conoce Nexo pueda jugar la demo entre organizaciones. Las tres salas fijas entre organizaciones (`demo-cross`, `demo-construccion`, `demo-logistica`) son salas de demo; una sala nueva lo es si se crea con `POST /api/rooms { mode: "cross_org", demo: true }`. Los modos completos siguen igual en las demás salas.
+Para que alguien que no conoce Sculptor pueda jugar la demo entre organizaciones. Las tres salas fijas entre organizaciones (`demo-cross`, `demo-construccion`, `demo-logistica`) son salas de demo; una sala nueva lo es si se crea con `POST /api/rooms { mode: "cross_org", demo: true }`. Los modos completos siguen igual en las demás salas.
 
 - **3 asientos humanos:** quien presenta el caso en cada organización (Jefatura de Urgencias y Médico Jefe de Turno en hospitales) y el Comité. El sorteo del QR único (`drawableSeats` en `src/lib/store/rooms.ts`) reparte solo esos; el Comité, como siempre, solo con la clave de su QR. La lista manual del celular también muestra solo esos dos.
 - **Bots administrativos:** al entrar la primera persona, `startDemoBots` sienta un bot del piloto automático en el aprobador de cada organización y corre `buildDemoBotScript` (`src/lib/engine/autopilot.ts`): sellan el límite y firman la compuerta, un paso cada 0,9 s, con las mismas funciones del motor que usaría una persona. Quien presenta no espera a los bots: puede presentar de inmediato (`submitCandidate` no depende de la compuerta).
@@ -235,7 +235,7 @@ En el deploy público los datos del caso que el rol puede ver sí salen hacia An
 | Kapso (WhatsApp) | El Comité recibe el caso con botones Aprobar / Vetar y responde la razón por escrito | Implementado. Probado con pruebas unitarias sin llamar al servicio (`tests/integrations.test.ts`). Necesita sus variables en el servidor |
 | ElevenLabs (voz) y Twilio | Asistente de voz del Comité, en el navegador o por llamada telefónica | Implementado. Probado con pruebas unitarias sin llamar al servicio. La llamada telefónica depende de un número de Twilio vinculado en ElevenLabs |
 
-No hay autenticación externa. Los códigos QR se generan en el navegador con la librería `qrcode`; no pasan por ningún servicio. Nexo no se conecta a ningún sistema hospitalario, de construcción ni de logística.
+No hay autenticación externa. Los códigos QR se generan en el navegador con la librería `qrcode`; no pasan por ningún servicio. Sculptor no se conecta a ningún sistema hospitalario, de construcción ni de logística.
 
 ### Canales externos del Comité
 

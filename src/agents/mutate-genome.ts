@@ -66,7 +66,7 @@ export function sanitizeDescription(description: unknown): string {
 
 // --- Instrucción y formato de salida -----------------------------------------
 
-const INSTRUCTION = `Eres el generador de genomas de Nexo, un sistema que coordina decisiones críticas entre roles de una organización.
+const INSTRUCTION = `Eres el generador de genomas de Sculptor, un sistema que coordina decisiones críticas entre roles de una organización.
 A partir de la descripción de una organización, escribe el contenido de su genoma: tres roles en tensión, los datos que maneja cada uno y un caso urgente que obliga a decidir.
 
 Reglas del contenido:

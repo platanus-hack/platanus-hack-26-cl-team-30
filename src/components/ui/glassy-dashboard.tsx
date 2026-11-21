@@ -1,7 +1,7 @@
 "use client";
 
 // Panel de vidrio esmerilado tipo "centro de mando", tomado de 21st.dev
-// (glassy-dashboard) y adaptado a la paleta de la landing de Nexo: marfil, menta,
+// (glassy-dashboard) y adaptado a la paleta de la landing de Sculptor: marfil, menta,
 // eucalipto, salvia y arcilla en modo claro, y "night" con acento lima en modo
 // oscuro. Por ahora usa los datos de ejemplo del componente original; la pantalla
 // grande lo toma como base para mostrar los datos reales de la sala.
@@ -1178,7 +1178,7 @@ type Modal = "search" | "notifications" | { itemId: string } | null;
 function GlassyDashboard({
   backgroundImage,
   backgroundCredit,
-  workspaceName = "NEXO",
+  workspaceName = "SCULPTOR",
   panelFrost = 12,
   initialTheme = "light",
 }: GlassyDashboardProps = {}) {
@@ -1274,12 +1274,12 @@ function GlassyDashboard({
   const inspect = (item: WorkItem) => setModal({ itemId: item.id });
   const downloadReport = () => {
     const stats = analytics[period];
-    saveCsv(`nexo-trends-${period.replace(" ", "-")}.csv`, [
+    saveCsv(`sculptor-trends-${period.replace(" ", "-")}.csv`, [
       ["Period ending", "Revenue (USD)", "Operating costs (USD)"],
       ...stats.axis.map((label, index) => [label, Math.round(stats.collected[index] * 1000), Math.round(stats.costs[index] * 1000)]),
     ]);
   };
-  const downloadWork = () => saveCsv("nexo-operations.csv", [
+  const downloadWork = () => saveCsv("sculptor-operations.csv", [
     ["ID", "Workflow", "System", "Owner", "Status", "Time"],
     ...work.map(item => [item.id, item.name, item.tool, item.owner, item.status, item.timestamp]),
   ]);

@@ -1,4 +1,4 @@
-# Nexo
+# Sculptor
 
 <img src="./project-logo.png" alt="Logo del proyecto" width="160" />
 

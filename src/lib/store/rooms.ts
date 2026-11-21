@@ -1,4 +1,4 @@
-// Almacén de salas de Nexo: estado en memoria del servidor, identidad por rol y
+// Almacén de salas de Sculptor: estado en memoria del servidor, identidad por rol y
 // aviso de cambios en tiempo real.
 //
 // Este archivo NO decide reglas: valida la forma de la acción (ActionSchema),

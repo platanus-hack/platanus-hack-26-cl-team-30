@@ -1,6 +1,6 @@
 "use client";
 
-// Cliente de una sala de Nexo para el navegador. Es el único lugar de la interfaz
+// Cliente de una sala de Sculptor para el navegador. Es el único lugar de la interfaz
 // que habla con /api/rooms: abre el flujo de eventos (SSE), guarda la identidad
 // del rol y envía acciones. El estado que entrega ya viene filtrado por el
 // servidor para quien mira; aquí no se oculta ni se calcula nada.

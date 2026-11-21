@@ -1,4 +1,4 @@
-// Semillas de Nexo: genomas y recurso escaso listos para usar sin ningún modelo.
+// Semillas de Sculptor: genomas y recurso escaso listos para usar sin ningún modelo.
 // Sirven de arranque con un clic y de respaldo si el modelo falla o devuelve un
 // genoma inválido. Se validan contra los esquemas al cargar el módulo: si una
 // semilla queda mal escrita, el servidor falla al iniciar y no en plena demo.
