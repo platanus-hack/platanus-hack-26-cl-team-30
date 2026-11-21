@@ -105,6 +105,25 @@ export async function sendCommitteeCase(
   });
 }
 
+/**
+ * Sube un audio a los medios de WhatsApp (vía Kapso) y devuelve su id. Es el
+ * mismo endpoint de medios de la API de WhatsApp (POST /{phone_number_id}/media).
+ */
+export async function uploadAudio(bytes: Uint8Array, mimeType: string, fileName: string): Promise<string> {
+  const config = kapsoConfig();
+  if (!config.phoneNumberId) throw new Error("Falta KAPSO_PHONE_NUMBER_ID");
+  const uploaded = await whatsapp().media.upload({ phoneNumberId: config.phoneNumberId, type: mimeType, file: bytes, fileName, messagingProduct: "whatsapp" });
+  if (!uploaded?.id) throw new Error("Kapso no devolvió el id del audio subido");
+  return uploaded.id;
+}
+
+/** Envía un audio ya subido. voice: true lo muestra como nota de voz (requiere OGG/Opus). */
+export async function sendAudioMessage(to: string, mediaId: string, voice: boolean): Promise<void> {
+  const config = kapsoConfig();
+  if (!config.phoneNumberId) throw new Error("Falta KAPSO_PHONE_NUMBER_ID");
+  await whatsapp().messages.sendAudio({ phoneNumberId: config.phoneNumberId, to: to.replace(/\D/g, ""), audio: { id: mediaId, ...(voice ? { voice: true } : {}) } });
+}
+
 export async function sendText(to: string, body: string): Promise<void> {
   const config = kapsoConfig();
   if (!config.phoneNumberId) throw new Error("Falta KAPSO_PHONE_NUMBER_ID");

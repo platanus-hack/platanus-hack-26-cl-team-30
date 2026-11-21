@@ -3,6 +3,7 @@ import { z } from "zod";
 import { buildCommitteeBrief, closeSession, openCommitteeSession } from "@/integrations/committee-channel";
 import { callCommittee, voiceStatus } from "@/integrations/elevenlabs";
 import { sendCommitteeCase, whatsappStatus } from "@/integrations/kapso";
+import { sendCommitteeVoiceNote } from "@/integrations/voice-notes";
 import { requireHost } from "@/lib/store/host";
 import { readJsonBody } from "@/lib/store/http";
 import { rateLimited } from "@/lib/store/rate-limit";
@@ -49,6 +50,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ roo
             resource,
           });
           results.whatsapp = { ok: true, detail: "Caso enviado por WhatsApp" };
+          // (a) Además de los botones, el caso en audio si la conversación está abierta
+          // (el Comité escribió en las últimas 24 h). Si no, se omite: se enviará al tocar un botón.
+          const session = opened.session;
+          if (session.phone && !session.caseVoiceSent) {
+            void sendCommitteeVoiceNote("case", roomId, session.phone).then((note) => {
+              if (note.sent) session.caseVoiceSent = true;
+              else if (note.reason === "error") console.error("[nota de voz]", note.message);
+            });
+          }
         } catch (error) {
           closeSession(opened.session);
           results.whatsapp = { ok: false, code: "SEND_FAILED", error: error instanceof Error ? error.message.slice(0, 200) : "No se pudo enviar" };

@@ -27,6 +27,8 @@ type Session = {
   pendingDecision: CommitteeDecision | null;
   /** WhatsApp: número del Comité (E.164 sin "+"), para asociar sus respuestas. */
   phone: string | null;
+  /** WhatsApp: ya se envió la nota de voz con el caso (src/integrations/voice-notes.ts). */
+  caseVoiceSent?: boolean;
 };
 
 const SESSION_TTL_MS = 30 * 60 * 1000;

@@ -84,3 +84,8 @@ Actualizado el 21 de noviembre de 2026.
 
 - **Probar contra el deploy con 3 celulares reales** después de subir: el tercero debe quedar como Comité sin clave, y «Nueva ronda» debe funcionar desde la pantalla grande sin `NEXO_ADMIN_KEY`.
 
+## Agregado en la ronda 14 (notas de voz por WhatsApp)
+
+- **Probar contra los servicios reales:** activar `NEXO_VOICE_NOTES=1` en Render con el número de producción y confirmar que (a) ElevenLabs entrega el Opus en OGG y WhatsApp lo muestra como nota de voz, y (b) el audio del caso llega al tocar un botón y el del acta al escribir la razón.
+- **El acta en audio solo llega si el Comité decide por WhatsApp.** Si sella desde la web, no se envía (no hay conversación abierta conocida).
+

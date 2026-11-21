@@ -1,5 +1,17 @@
 import { buildCommitteeBrief, closeSession, decideAsCommittee, getSession, getSessionByPhone, setPendingDecision } from "@/integrations/committee-channel";
 import { extractIncomingMessages, parseButtonId, sendText, verifyWebhook } from "@/integrations/kapso";
+import { noteInbound, sendCommitteeVoiceNote, type VoiceNoteKind } from "@/integrations/voice-notes";
+
+/**
+ * Nota de voz informativa, en segundo plano: la respuesta al webhook no espera a
+ * ElevenLabs ni a la subida del audio. Si no corresponde o falla, solo se anota.
+ */
+function voiceNoteInBackground(kind: VoiceNoteKind, roomId: string, phone: string, onSent?: () => void) {
+  void sendCommitteeVoiceNote(kind, roomId, phone).then((result) => {
+    if (result.sent) onSent?.();
+    else if (result.reason === "error") console.error("[nota de voz]", result.message);
+  });
+}
 
 // POST /api/integrations/kapso/webhook
 // Respuestas del Comité por WhatsApp, enviadas por Kapso. La firma
@@ -22,6 +34,8 @@ export async function POST(request: Request) {
   }
 
   for (const message of extractIncomingMessages(payload)) {
+    // El Comité escribió o tocó un botón: la conversación queda abierta 24 h.
+    noteInbound(message.from);
     try {
       if (message.buttonId) {
         const parsed = parseButtonId(message.buttonId);
@@ -36,6 +50,11 @@ export async function POST(request: Request) {
               ? "Eligió APROBAR. Escriba en un mensaje la razón de su decisión (es obligatoria)."
               : "Eligió VETAR. Escriba en un mensaje la razón del veto (es obligatoria)."),
         );
+        // (a) El caso en audio, una vez por sesión, ahora que la conversación está abierta.
+        if (!session.caseVoiceSent) {
+          session.caseVoiceSent = true;
+          voiceNoteInBackground("case", session.roomId, message.from);
+        }
         continue;
       }
 
@@ -46,10 +65,13 @@ export async function POST(request: Request) {
           await sendText(message.from, "Para decidir, toque primero Aprobar o Vetar en el mensaje del caso.");
           continue;
         }
-        const decided = await decideAsCommittee(session, session.pendingDecision, message.text, "WhatsApp");
+        const decision = session.pendingDecision;
+        const decided = await decideAsCommittee(session, decision, message.text, "WhatsApp");
         if (decided.ok) {
           closeSession(session);
           await sendText(message.from, "Decisión registrada con su razón. Ya aparece en todas las pantallas y en el acta.");
+          // (b) Si quedó sellada, el acta en audio al Comité (acaba de escribir: ventana abierta).
+          if (decision === "approve") voiceNoteInBackground("acta", session.roomId, message.from);
         } else {
           await sendText(message.from, `No se pudo registrar: ${decided.message}.`);
         }

@@ -320,3 +320,12 @@ Formato de cada entrada:
 - **Riesgo:** con el plan B, una decisión del Comité puede tomarla el piloto si la persona no responde a tiempo. Se acepta porque es una sala de demo con datos simulados; la decisión automática queda marcada como tal en el acta y en la bitácora (`AUTOPILOT` con `automatic: true`), nunca como si la hubiera tomado una persona.
 - **Descartado:** obligar el orden en el servidor (rechazar que el Hospital Rural presente antes que la Clínica). El orden lo guía el celular; el servidor sigue aceptando cualquier acción válida, que es lo que ya prueban las demás pruebas.
 
+## Notas de voz por WhatsApp: solo informan, dentro de la ventana de 24 h
+
+- **Decisión:** con `NEXO_VOICE_NOTES=1`, el Comité recibe por WhatsApp dos audios cortos: el caso cuando le llega (además de los botones) y el acta cuando se sella. El texto se arma con la misma vista filtrada que vería el Comité en su pantalla (`projectRoom`), ElevenLabs lo convierte a voz y Kapso lo sube y lo envía (`src/integrations/voice-notes.ts`). El audio no decide nada: la decisión sigue siendo con botón y razón escrita, por las mismas acciones que la web.
+- **Por qué:** idea de Sebastián para que quien decide escuche el caso sin leer, en cualquier rubro. Por eso el texto usa los datos del escenario (recurso, organizaciones, «Paciente A», «Obra A» o «Carga A») y no frases de hospital.
+- **Ventana de 24 h:** fuera de una conversación abierta, WhatsApp solo permite plantillas aprobadas. El audio se envía solo si el Comité escribió o tocó un botón en las últimas 24 h; si no, se omite sin error. Con un número de producción y plantilla, el audio del caso llega cuando el Comité toca un botón.
+- **Formato:** se pide Opus a ElevenLabs (`opus_48000_64`). Si llega en contenedor OGG va como nota de voz; si no, se pide MP3 y va como audio normal. La referencia de la API no dice el contenedor del Opus, por eso se revisan los primeros bytes en vez de suponerlo.
+- **Descartado:** servir el audio desde nuestro servidor con un enlace temporal. Se prefirió subirlo al endpoint de medios de WhatsApp (vía Kapso): no hay que exponer una ruta pública con archivos ni limpiar nada después.
+- **Riesgo:** sin probar contra los servicios reales (ElevenLabs y Kapso) desde este equipo; solo con dobles. Un fallo de cualquiera de los dos se registra y el canal de WhatsApp sigue funcionando sin audio.
+
