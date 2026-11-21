@@ -85,4 +85,4 @@ Reglas para cualquier cambio:
 - Completar `platanus-hack-project.jsonc` (nombre, resumen, descripción y URL del deploy) y `project-description.md` antes de enviar.
 - El logo debe ser un PNG de 1000x1000 de máximo 500 KB.
 - El README debe ser corto y directo. Lo escribe una persona del equipo.
-- Vercel no puede conectarse a este repo de la organización. El deploy sale de un repo personal espejo; el README explica cómo configurar el doble `push`.
+- El deploy público está en Render (`render.yaml`) y sale de un repo personal espejo, porque el servicio no se conecta a este repo de la organización; el README explica cómo configurar el doble `push`.

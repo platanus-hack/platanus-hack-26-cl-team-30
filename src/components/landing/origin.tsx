@@ -26,20 +26,20 @@ export function Origin() {
   const photos = readTeamPhotos();
 
   return (
-    <section id="equipo" className="bg-brand-ink pt-[clamp(4rem,2.5rem+6vw,8rem)] text-white" aria-labelledby="equipo-titulo">
+    <section id="equipo" className="bg-brand-ink pt-[clamp(4rem,2.5rem+6vw,8rem)] text-primary-foreground" aria-labelledby="equipo-titulo">
       <div className="wrap">
-        <p className="small font-semibold text-white/80">Platanus Hack 26: Santiago ft. Buk · track Multiplayer</p>
+        <p className="small font-semibold text-primary-foreground/80">Platanus Hack 26: Santiago ft. Buk · track Multiplayer</p>
         <Heading id="equipo-titulo" className="mt-6 max-w-[17ch]">
-          Una pregunta <span className="serif text-[#cfeae3]">que no soltamos.</span>
+          Una pregunta <span className="serif text-brand-soft">que no soltamos.</span>
         </Heading>
-        <p className="lede mt-8 max-w-[40rem] text-white">{ORIGIN.question}</p>
+        <p className="lede mt-8 max-w-[40rem] text-primary-foreground">{ORIGIN.question}</p>
         <Stagger className="mt-10 flex flex-wrap gap-x-14 gap-y-6">
           {ORIGIN.stats.map((stat) => (
             <p key={stat.label}>
-              <span className="serif tabular block text-[#cfeae3]" style={{ fontSize: "clamp(3.5rem, 2.5rem + 4vw, 6rem)", lineHeight: 0.9 }}>
+              <span className="serif tabular block text-brand-soft" style={{ fontSize: "clamp(3.5rem, 2.5rem + 4vw, 6rem)", lineHeight: 0.9 }}>
                 {stat.value}
               </span>
-              <span className="mt-2 block font-medium text-white/85">{stat.label}</span>
+              <span className="mt-2 block font-medium text-primary-foreground/85">{stat.label}</span>
             </p>
           ))}
         </Stagger>
@@ -48,7 +48,7 @@ export function Origin() {
             <li key={member.github}>
               <a
                 href={`https://github.com/${member.github}`}
-                className="inline-flex min-h-10 items-center rounded-full px-4 font-medium text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.35)] transition-colors hover:bg-white/10"
+                className="inline-flex min-h-10 items-center rounded-full px-4 font-medium text-primary-foreground ring-1 ring-inset ring-current/35 transition-colors hover:bg-card/10"
               >
                 {member.name}
               </a>
@@ -62,7 +62,7 @@ export function Origin() {
           {photos.map((src, i) => (
             <figure
               key={src}
-              className={`relative mr-4 h-56 shrink-0 overflow-hidden rounded-2xl bg-black/20 md:mr-6 md:h-72 ${TILE_WIDTHS[i % TILE_WIDTHS.length]} ${
+              className={`relative mr-4 h-56 shrink-0 overflow-hidden rounded-2xl bg-foreground/15 md:mr-6 md:h-72 ${TILE_WIDTHS[i % TILE_WIDTHS.length]} ${
                 i % 2 === 1 ? "mt-8 md:mt-12" : ""
               }`}
             >
@@ -72,7 +72,7 @@ export function Origin() {
         </Marquee>
       )}
 
-      <div className="mt-12 bg-white text-foreground md:mt-16">
+      <div className="mt-12 bg-card text-foreground md:mt-16">
         <div className="wrap flex flex-wrap items-baseline justify-between gap-x-8 gap-y-1 pt-6">
           <p className="small font-semibold">Patrocinadores de Platanus Hack 26</p>
           <p className="small text-muted-foreground">No son de este proyecto.</p>

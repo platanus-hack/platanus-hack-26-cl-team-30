@@ -23,7 +23,7 @@ function Chain({ steps, perStep, total, tone, label, icon: Icon }: { steps: numb
       </div>
       <div className="mt-4 flex gap-1 md:gap-2" aria-hidden>
         {Array.from({ length: steps }, (_, i) => (
-          <span key={i} className="relative h-20 flex-1 overflow-hidden rounded-full bg-white md:h-24">
+          <span key={i} className="relative h-20 flex-1 overflow-hidden rounded-full bg-card md:h-24">
             <span
               data-fill
               className={`absolute inset-x-0 bottom-0 rounded-full transition-[height] duration-500 ${tone === "bleed" ? "bg-bleed/80" : "bg-calm/85"}`}

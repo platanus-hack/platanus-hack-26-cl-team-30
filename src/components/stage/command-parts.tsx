@@ -107,7 +107,7 @@ export function Dialog({ title, children, close, light = false }: { title: strin
         if (event.target === event.currentTarget) event.currentTarget.close();
       }}
       // Algunos contenidos usan la paleta clara de la app: en ese caso el diálogo va claro en ambos temas.
-      style={light ? { background: "#ffffff", color: "#1c2826", maxInlineSize: "min(calc(100% - 26px), 560px)" } : undefined}
+      style={light ? { background: "var(--card)", color: "var(--foreground)", maxInlineSize: "min(calc(100% - 26px), 560px)" } : undefined}
     >
       <section className="gd-dialog-inner">
         <header>

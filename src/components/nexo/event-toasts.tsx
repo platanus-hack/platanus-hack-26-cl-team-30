@@ -91,7 +91,7 @@ export function EventToasts({ room }: { room: ProjectedRoomState }) {
           key={toast.id}
           role="status"
           className={cn(
-            "flex w-full items-center gap-2.5 rounded-2xl border bg-white px-4 py-3 text-base font-semibold shadow-lift motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2",
+            "flex w-full items-center gap-2.5 rounded-2xl border bg-card px-4 py-3 text-base font-semibold shadow-lift motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2",
             TONES[toast.tone],
           )}
         >

@@ -14,6 +14,9 @@
 //   otra org.   una distribuidora (semilla no clínica) y permisos que cambian en vivo.
 //   otro rubro  dos constructoras y una grúa, ensayadas por el piloto automático
 //               con una persona en un puesto: el bot no lo toca y nada se filtra.
+//   sorteo      QR único: POST /api/rooms/:id/seat entrega una silla libre al azar,
+//               «sortear otro rol» cambia de silla y libera la anterior, el Comité
+//               solo entra con su clave y, sin sillas libres, responde 409.
 //   frase       POST /api/rooms con description crea una sala nueva ya mutada.
 //               Intenta el modelo (máximo 15 s) y acepta la semilla de respaldo:
 //               el resultado no depende del modelo, pero contra el deploy gasta una
@@ -1098,6 +1101,106 @@ async function mutatedRoomJourney() {
   });
 }
 
+// --- Sorteo de silla (QR único) ------------------------------------------------------
+
+/** Pide una silla al azar, como el celular que llega con el QR único de la sala. */
+const drawSeat = (roomId, body = {}) => request(baseUrl, "POST", `/api/rooms/${roomId}/seat`, body);
+const seatId = (seat) => `${seat?.orgId}/${seat?.roleId}`;
+
+async function seatDrawJourney() {
+  title("sorteo de silla: un solo QR para toda la sala");
+  let roomId = null;
+  const stage = { current: null };
+  const people = [];
+  try {
+    roomId = await createRoom("cross_org");
+    stage.current = new Participant(roomId, "pantalla general");
+    await stage.current.listen();
+    const arbiter = stage.current.state.scarcity.arbiter;
+    const playable = stage.current.state.orgs.flatMap((org) => org.roles.filter((role) => !role.isQrOptional).map((role) => `${org.orgId}/${role.id}`));
+    let first = null;
+
+    await step("quien llega sin rol recibe una silla libre al azar, con su token, y su SSE viene filtrado para ese rol", async () => {
+      const res = await drawSeat(roomId);
+      expectOk(res);
+      check(playable.includes(seatId(res.data.seat)) && typeof res.data.token === "string" && res.data.token.length >= 16, `El sorteo debía responder { seat, token } con una silla de la sala: ${describeResponse(res)}`);
+      first = new Participant(roomId, "primera persona", res.data.seat.orgId, res.data.seat.roleId);
+      first.token = res.data.token;
+      people.push(first);
+      const state = await first.listen();
+      check(sameViewer(state, first), `El SSE debía venir proyectado para ${seatId(res.data.seat)} y vino para ${JSON.stringify(state.viewer)}`);
+      check(state.orgs.some((org) => org.fields.some((field) => field.redacted)), "La silla sorteada debía recibir datos reservados sin valor, como cualquier rol");
+      await stage.current.waitFor((current) => orgOf(current, first.orgId)?.roles.find((role) => role.id === first.roleId)?.connected === true, "la silla sorteada aparece conectada");
+      return seatId(res.data.seat);
+    });
+    if (!first) return;
+
+    await step("«sortear otro rol» entrega una silla distinta, libera la anterior y el token viejo deja de servir", async () => {
+      const before = { orgId: first.orgId, roleId: first.roleId, token: first.token };
+      const res = await drawSeat(roomId, { current: before });
+      expectOk(res);
+      check(seatId(res.data.seat) !== seatId(before) && playable.includes(seatId(res.data.seat)), `Debía tocar otra silla y tocó ${describeResponse(res)}`);
+      const stale = await first.act("SEAL_RULE", PAYLOADS.seal(undefined));
+      check(stale.status === 401, `El token de la silla que se soltó debía dar 401 y dio ${describeResponse(stale)}`);
+      await stage.current.waitFor(
+        (current) =>
+          orgOf(current, before.orgId)?.roles.find((role) => role.id === before.roleId)?.connected === false &&
+          orgOf(current, res.data.seat.orgId)?.roles.find((role) => role.id === res.data.seat.roleId)?.connected === true,
+        "la silla anterior queda libre y la nueva conectada",
+      );
+      first.close();
+      first.orgId = res.data.seat.orgId;
+      first.roleId = res.data.seat.roleId;
+      first.token = res.data.token;
+      return `${seatId(before)} -> ${seatId(res.data.seat)}`;
+    });
+
+    await step("cada silla toca una sola vez; sin la clave del Comité, su puesto nunca sale", async () => {
+      const taken = [seatId(first)];
+      for (let i = 0; i < playable.length - 1; i++) {
+        const res = await drawSeat(roomId);
+        expectOk(res);
+        taken.push(seatId(res.data.seat));
+      }
+      check(new Set(taken).size === taken.length, `Se repitió una silla: ${taken.join(", ")}`);
+      check([...taken].sort().join() === [...playable].sort().join(), `Debían tocar exactamente las sillas de los roles (${playable.join(", ")}) y tocaron ${taken.join(", ")}`);
+      check(!taken.includes(seatId(arbiter)), "El Comité salió en un sorteo sin su clave");
+      return `${taken.length} sillas`;
+    });
+
+    await step("sin sillas libres responde 409 NO_FREE_SEAT, también al pedir «otro rol», y nadie pierde su silla", async () => {
+      expectError(await drawSeat(roomId), 409, "NO_FREE_SEAT");
+      expectError(await drawSeat(roomId, { committeeKey: "clave-inventada" }), 409, "NO_FREE_SEAT");
+      expectError(await drawSeat(roomId, { current: { orgId: first.orgId, roleId: first.roleId, token: first.token } }), 409, "NO_FREE_SEAT");
+      const still = await first.act("TEST_RBAC_BREACH", { targetOrgId: first.orgId, fieldKey: "no_existe" });
+      check(still.status !== 401, `Tras el 409 la persona debía conservar su silla y su token: ${describeResponse(still)}`);
+    });
+
+    await step("con la clave de su QR, el Comité entra al sorteo y toma el único puesto que queda", async () => {
+      const res = await drawSeat(roomId, { committeeKey: hosts.get(roomId).committeeKey });
+      expectOk(res);
+      check(seatId(res.data.seat) === seatId(arbiter), `Debía tocar el Comité (${seatId(arbiter)}) y tocó ${describeResponse(res)}`);
+      await stage.current.waitFor((current) => current.scarcity?.arbiter.connected === true, "el Comité aparece conectado");
+    });
+
+    await step("un sorteo con forma inválida se rechaza (400) y en una sala que no existe responde 404", async () => {
+      expectError(await drawSeat(roomId, { current: { orgId: "x" } }), 400, "BAD_REQUEST");
+      expectError(await drawSeat("sala-que-no-existe"), 404, "ROOM_NOT_FOUND");
+    });
+
+    await step("el sorteo queda en el acta como silla asignada al azar", async () => {
+      const acta = await request(baseUrl, "GET", `/api/rooms/${roomId}/acta`);
+      check(acta.status === 200, `El acta debía responder 200: ${describeResponse(acta)}`);
+      const drawn = acta.data.auditLog.filter((event) => (event.type === "ROLE_JOINED" || event.type === "QR_JOINED") && event.detail?.assigned === "random");
+      check(drawn.length === playable.length + 2, `Se esperaban ${playable.length + 2} entradas por sorteo en la bitácora y hay ${drawn.length}`);
+    });
+  } finally {
+    stage.current?.close();
+    for (const person of people) person.close();
+    await discardRoom(roomId);
+  }
+}
+
 // --- Salas fijas -------------------------------------------------------------------
 
 async function fixedRooms() {
@@ -1131,6 +1234,7 @@ async function main() {
   if (ONLY !== "single") await crossOrgJourney();
   if (!ONLY) await otherOrgJourney();
   if (!ONLY) await scenarioJourney("construccion");
+  if (!ONLY) await seatDrawJourney();
   if (!ONLY) await mutatedRoomJourney();
 
   console.log(`\nResultado: ${passed} pasos OK, ${failures.length} con FALLA.`);

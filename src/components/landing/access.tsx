@@ -93,8 +93,8 @@ export function Access() {
   );
 
   return (
-    <section id="acceso" className="band relative overflow-clip bg-brand text-white" aria-labelledby="acceso-titulo">
-      <svg viewBox="0 0 900 600" aria-hidden className="pointer-events-none absolute -bottom-[30%] -left-[10%] w-[max(46rem,70vw)] text-white/15">
+    <section id="acceso" className="band relative overflow-clip bg-brand text-primary-foreground" aria-labelledby="acceso-titulo">
+      <svg viewBox="0 0 900 600" aria-hidden className="pointer-events-none absolute -bottom-[30%] -left-[10%] w-[max(46rem,70vw)] text-primary-foreground/15">
         <circle cx="330" cy="300" r="270" fill="none" stroke="currentColor" strokeWidth="2" />
         <circle cx="570" cy="300" r="270" fill="none" stroke="currentColor" strokeWidth="2" />
       </svg>
@@ -103,12 +103,12 @@ export function Access() {
           <Heading id="acceso-titulo" className="max-w-[13ch]">
             Llévalo a tu <span className="serif">organización.</span>
           </Heading>
-          <p className="lede mt-8 max-w-[32rem] text-white/90">
+          <p className="lede mt-8 max-w-[32rem] text-primary-foreground/90">
             Déjanos tus datos y lo probamos con tu caso.
           </p>
         </div>
 
-        <div className="rounded-[1.5rem] bg-white p-6 text-foreground shadow-lift md:p-8">
+        <div className="rounded-[1.5rem] bg-card p-6 text-foreground shadow-lift md:p-8">
           {state.status === "ok" ? (
             <div className="flex min-h-[18rem] flex-col justify-center" role="status">
               <span className="grid size-12 place-items-center rounded-full bg-calm-soft text-calm">

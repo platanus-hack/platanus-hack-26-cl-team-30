@@ -62,7 +62,7 @@ export function CommitteeNotify({ room, credentials }: { room: ProjectedRoomStat
       </p>
       <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Canales">
         {available.map((channel) => (
-          <label key={channel} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full bg-white px-4 shadow-[inset_0_0_0_1.5px_var(--input)] has-checked:shadow-[inset_0_0_0_2px_var(--brand)]">
+          <label key={channel} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full bg-card px-4 shadow-[inset_0_0_0_1.5px_var(--input)] has-checked:shadow-[inset_0_0_0_2px_var(--brand)]">
             <input type="checkbox" className="size-4 accent-[var(--brand)]" checked={selected[channel]} onChange={(event) => setSelected((prev) => ({ ...prev, [channel]: event.target.checked }))} />
             {channel === "whatsapp" ? <MessageCircle className="size-4" aria-hidden /> : <Phone className="size-4" aria-hidden />}
             {LABEL[channel]}

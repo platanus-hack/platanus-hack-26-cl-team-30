@@ -8,7 +8,7 @@ export function RoomHeader({ subtitle, children }: { subtitle: ReactNode; childr
   return (
     <>
       <Disclaimer />
-      <header className="border-b border-border bg-white">
+      <header className="border-b border-border bg-card">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
           <Link href="/" className="flex items-center gap-2" aria-label="Ir a la portada de Nexo">
             <Mark size={28} />

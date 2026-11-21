@@ -33,7 +33,7 @@ function OverlapDrawing() {
       <svg viewBox="0 0 520 360" className="w-full overflow-visible" aria-hidden>
         <circle cx="190" cy="180" r="150" fill="var(--brand-soft)" fillOpacity="0.55" stroke="var(--brand)" strokeWidth="2.5" />
         <circle cx="330" cy="180" r="150" fill="var(--brand-soft)" fillOpacity="0.55" stroke="var(--brand-ink)" strokeWidth="2.5" />
-        <path d="M260 47.5a150 150 0 0 1 0 265a150 150 0 0 1 0-265Z" fill="#ffffff" />
+        <path d="M260 47.5a150 150 0 0 1 0 265a150 150 0 0 1 0-265Z" fill="var(--card)" />
         {/* Lo privado de cada lado: líneas tachadas que nunca cruzan al otro círculo. */}
         {[0, 1, 2].map((i) => (
           <g key={i}>
@@ -53,7 +53,7 @@ function OverlapDrawing() {
       </div>
       <div className="pointer-events-none absolute inset-0 grid place-items-center">
         <div key={`r-${index}`} className="flex flex-col items-center gap-1.5 motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:fade-in">
-          <span className="grid size-14 place-items-center rounded-full bg-clash text-white shadow-lift">
+          <span className="grid size-14 place-items-center rounded-full bg-clash text-primary-foreground shadow-lift">
             <Icon className="size-7" aria-hidden />
           </span>
           <span className="small max-w-[8.5rem] text-center font-semibold leading-tight">{scene.resource}</span>

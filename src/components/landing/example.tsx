@@ -56,7 +56,7 @@ export function Example({ example }: { example: LandingExample }) {
   return (
     <section id="ejemplo" className="band bg-brand-soft/60" aria-labelledby="ejemplo-titulo">
       <div className="wrap">
-        <p className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-sm font-semibold text-brand-ink shadow-soft">
+        <p className="inline-flex items-center gap-2 rounded-full bg-card px-3 py-1 text-sm font-semibold text-brand-ink shadow-soft">
           <BedDouble className="size-4" aria-hidden /> Un ejemplo
         </p>
         <div className="mt-5 grid gap-8 lg:grid-cols-2 lg:items-end lg:gap-20">
@@ -107,7 +107,7 @@ export function Example({ example }: { example: LandingExample }) {
                 <div
                   key={candidate.caseId}
                   className={`rounded-[1.25rem] p-6 transition-[background-color,box-shadow] duration-500 md:p-7 ${
-                    winner ? "bg-white shadow-[inset_0_0_0_2px_var(--calm),var(--shadow-lift)]" : "bg-white/60"
+                    winner ? "bg-card shadow-[inset_0_0_0_2px_var(--calm),var(--shadow-lift)]" : "bg-card/60"
                   }`}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-4">

@@ -1,13 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import { Instrument_Serif, JetBrains_Mono } from "next/font/google";
+// Una sans para toda la app: Manrope, la misma de la pantalla grande y del teléfono.
+import "@fontsource-variable/manrope";
 import "./globals.css";
-
-// Una sans para todo lo que se lee y se toca.
-const geist = Geist({
-  variable: "--font-geist",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 // La segunda voz: serif itálica para la parte humana de un título y para la razón de un veto.
 const instrument = Instrument_Serif({
@@ -38,13 +33,16 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#fffdf8",
-  colorScheme: "light",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fffdf8" },
+    { media: "(prefers-color-scheme: dark)", color: "#151515" },
+  ],
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es-CL" className={`${geist.variable} ${instrument.variable} ${jetbrains.variable} h-full`}>
+    <html lang="es-CL" className={`${instrument.variable} ${jetbrains.variable} h-full`}>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );

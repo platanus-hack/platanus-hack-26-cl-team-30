@@ -46,7 +46,9 @@ Los valores exactos en CSS están en `src/components/ui/glassy-dashboard.tsx`, e
 
 Los tokens globales (`src/app/globals.css`: `--brand`, `--primary`, `--background`, `--clash`…) ya usan esta paleta en claro: la portada, las salas y la pantalla grande se ven como una sola app. El botón primario va en tinta y `--brand` es sage. El teléfono tiene sus propios tokens con los mismos valores (`--st-*` en `src/components/seat/seat.css`).
 
-**Pendiente:** el modo «night» de los tokens globales existe, pero es opcional (`data-theme="dark"` en un contenedor) y no sigue a `prefers-color-scheme`. Antes de activarlo hay que cambiar los `bg-white` fijos de la portada y de `src/components/nexo/` por `bg-card`. La tipografía global sigue siendo Geist; la pantalla grande usa Manrope.
+El modo «night» de los tokens globales sigue a `prefers-color-scheme`, igual que el teléfono, y se puede forzar con `data-theme="dark"` o `data-theme="light"`. La portada y `src/components/nexo/` ya no usan `bg-white` fijo (salvo el código QR, que necesita fondo blanco para leerse). Toda la app usa Manrope.
+
+**Pendiente:** revisar la portada en oscuro con capturas; la verificación en el navegador quedó a medias.
 
 ### Reglas de color
 
@@ -134,6 +136,7 @@ Reglas de texto (feedback del mentor: «bombardean con texto todo»): título de
 |---|---|
 | Portada (landing) | `src/app/page.tsx` y `src/components/landing/` |
 | Pantalla grande | `src/app/stage/[roomId]/stage-client.tsx` |
+| Deck del pitch (6 láminas, flechas para avanzar) | `public/pitch/index.html`, se abre en `/pitch/index.html` |
 | Teléfono de cada rol | `src/app/room/[roomId]/room-client.tsx` y `src/components/seat/` |
 | Piezas de sala (guía de turnos, QR, avisos, voz) | `src/components/nexo/` |
 | Grafo vivo, choque de autoridad, medidor p^n, telemetría | `src/components/organs/` |

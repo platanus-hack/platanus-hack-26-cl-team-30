@@ -51,7 +51,7 @@ export function Shielding({ projections }: { projections: RoleProjection[] }) {
         </div>
 
         <div className="self-start rounded-[1.5rem] bg-brand-soft p-3 shadow-lift md:p-6">
-          <div role="tablist" aria-label="Ver el caso como" className="flex gap-1 rounded-full bg-white p-1">
+          <div role="tablist" aria-label="Ver el caso como" className="flex gap-1 rounded-full bg-card p-1">
             {projections.map((p) => (
               <button
                 key={p.roleId}
@@ -60,7 +60,7 @@ export function Shielding({ projections }: { projections: RoleProjection[] }) {
                 aria-selected={p.roleId === current.roleId}
                 onClick={() => setRoleId(p.roleId)}
                 className={`min-h-11 flex-1 rounded-full px-2 text-sm font-semibold transition-colors duration-200 sm:text-base ${
-                  p.roleId === current.roleId ? "bg-brand text-white shadow-soft" : "text-muted-foreground hover:text-foreground"
+                  p.roleId === current.roleId ? "bg-brand text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {p.tab}
@@ -76,7 +76,7 @@ export function Shielding({ projections }: { projections: RoleProjection[] }) {
                 key={field.key}
                 data-row
                 className={`flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-2xl px-4 py-2.5 ${
-                  field.redacted ? "shield" : "bg-white shadow-soft"
+                  field.redacted ? "shield" : "bg-card shadow-soft"
                 }`}
               >
                 <span className={field.redacted ? "" : "text-muted-foreground"}>{field.label}</span>
