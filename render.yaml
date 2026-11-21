@@ -5,7 +5,7 @@ services:
     name: team-30-platanus-hack
     runtime: node
     region: virginia
-    plan: starter
+    plan: free
     buildCommand: npm ci && npm run build
     startCommand: npm run start
     healthCheckPath: /api/ping
