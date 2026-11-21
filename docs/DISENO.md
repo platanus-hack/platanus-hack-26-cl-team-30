@@ -93,7 +93,10 @@ En las salas de demo (`demo` en el estado de la sala) la pantalla grande se simp
 - Pasos: Unirse → Casos → Comité → Acta. «Límites» no aparece: los límites y las firmas de cada hospital los hace el piloto automático.
 - En «Unirse» van grandes solo las 3 personas: «Clínica · Urgencias», «Hospital Rural · Turno» y «Comité». Los roles que juega el piloto automático van pequeños, con borde punteado y el chip «automático».
 - La barra de arriba no tiene «Pregúntale al caso» (está en el dock) y la vista principal no muestra el selector de escenario (está en «Controles del presentador», en Acta).
-- Al cerrar el acta, el anfitrión ve un botón grande «Nueva ronda».
+- Al cerrar el acta aparece un botón grande «Nueva ronda». En la demo lo puede apretar cualquiera.
+- **Demo pauteada:** la pantalla le habla a una persona a la vez, por su rol: una franja gigante dice «Clínica: presenta a tu paciente», «Hospital Rural: presenta a tu paciente» o «Comité: ¿aceptas o rechazas?», con el asiento o la tarjeta de esa persona resaltados en el color del paso actual. Si el servidor manda la cuenta regresiva del plan B, va al lado como un anillo que se vacía (en arcilla los últimos 5 s). Nunca se numera a las personas: cada una es su rol y su color.
+- Mientras quede una silla libre, el código para entrar sigue a la vista: grande en «Unirse», en la esquina en Casos («¿Falta alguien? Escanea») y en la franja cuando falta el Comité («Comité: escanea el QR»).
+- El guion del narrador, sincronizado con cada paso, está en `docs/GUION_DEMO.md`.
 
 ### Paso «Unirse»: la galaxia
 
@@ -150,6 +153,7 @@ Reglas de texto (feedback del mentor: «bombardean con texto todo»): título de
 | Qué | Dónde |
 |---|---|
 | Portada (landing) | `src/app/page.tsx` y `src/components/landing/` |
+| Caso de uso (hoy, los hospitales) | `src/app/casos/hospitales/page.tsx` y `src/components/casos/` (texto en `content.ts`, cifras del motor en `data.ts`) |
 | Pantalla grande | `src/app/stage/[roomId]/stage-client.tsx` |
 | Deck del pitch (6 láminas, flechas o espacio para avanzar; diseño v2 de Nahum con cifras del repo) | `public/pitch/index.html`, se abre en `/pitch/index.html` |
 | Teléfono de cada rol | `src/app/room/[roomId]/room-client.tsx` y `src/components/seat/` |

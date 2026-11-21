@@ -18,6 +18,8 @@ const CreateSchema = z.discriminatedUnion("mode", [
     scenario: z.enum(CROSS_ORG_SCENARIO_IDS).optional(),
     /** Sala de demo: 3 asientos humanos y bots en los roles administrativos. */
     demo: z.boolean().optional(),
+    /** Sala de demo: plan B en ms (si nadie actúa, juega el piloto). 0 lo apaga. Por defecto 20 s. */
+    turnMs: z.number().int().min(0).max(120_000).optional(),
   }),
 ]);
 
@@ -28,7 +30,7 @@ const CreateSchema = z.discriminatedUnion("mode", [
 //   { mode: "cross_org", scenario? }                   -> dos organizaciones y un recurso escaso:
 //                                                          "hospitales" (por defecto), "construccion", "logistica".
 //                                                          Con demo: true, sala de demo (3 personas, bots en los
-//                                                          roles administrativos)
+//                                                          roles administrativos); turnMs: plan B en ms (0 lo apaga)
 // Responde { roomId, hostToken, committeeKey, mode, scenario?, source?, latencyMs?, orgName? }.
 // hostToken habilita los controles de la pantalla grande (encabezado x-host-token);
 // committeeKey va dentro del QR del Comité. Se entregan solo aquí: guardarlos.
@@ -61,7 +63,7 @@ export async function POST(request: Request) {
       return Response.json({ ...room, ...getHostCredentials(room.roomId), mode: "single_org" });
     }
     const room =
-      input.mode === "cross_org" ? createRoom({ mode: "cross_org", scenario: input.scenario, demo: input.demo }) : createRoom({ mode: "single_org", seed: input.seed });
+      input.mode === "cross_org" ? createRoom({ mode: "cross_org", scenario: input.scenario, demo: input.demo, turnTimeoutMs: input.turnMs }) : createRoom({ mode: "single_org", seed: input.seed });
     return Response.json({
       roomId: room.roomId,
       ...getHostCredentials(room.roomId),

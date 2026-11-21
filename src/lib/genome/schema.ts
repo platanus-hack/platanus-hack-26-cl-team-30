@@ -308,6 +308,10 @@ export const RoomStateSchema = z.object({
   clockStartedAt: z.number().nullable().optional(),
   /** Sala de demo: 3 asientos humanos y los roles administrativos los juega el piloto automático. */
   demo: z.boolean().optional(),
+  /** Sala de demo: cuándo empezó el turno actual (lo fija el almacén al cambiar de turno). */
+  turnStartedAt: z.number().nullable().optional(),
+  /** Sala de demo: tras este tiempo sin que actúe la persona del turno, el piloto juega por ella. 0 o ausente: apagado. */
+  turnTimeoutMs: z.number().int().min(0).optional(),
   /** Asientos que tiene un bot del piloto automático. Si entra una persona a uno, deja de serlo. */
   botSeats: z.array(z.object({ orgId: z.string(), roleId: z.string() })).optional(),
   decisionSealedAt: z.number().nullable(),
@@ -430,7 +434,13 @@ export const StakesViewSchema = z.object({
 });
 
 /** bot: el asiento lo tiene un bot del piloto automático (cuenta como conectado). Lo lee la pantalla grande. */
-export const ProjectedRoleSchema = RoleDefinitionSchema.extend({ connected: z.boolean(), bot: z.boolean().optional() });
+/**
+ * Asiento humano de la sala de demo (opcionales, solo ahí): seatOrder es el orden de
+ * llegada fijo (1 = primer caso, 2 = segundo caso, 3 = Comité; no se muestra como
+ * número) y seatLabel el nombre corto que se muestra («Clínica», «Hospital Rural», «Comité»).
+ */
+const DemoSeatSchema = { seatOrder: z.number().int().min(1).optional(), seatLabel: z.string().optional() };
+export const ProjectedRoleSchema = RoleDefinitionSchema.extend({ connected: z.boolean(), bot: z.boolean().optional(), ...DemoSeatSchema });
 
 export const ProjectedOrgSchema = OrgGenomeBaseSchema.omit({ roles: true, fields: true }).extend({
   roles: z.array(ProjectedRoleSchema),
@@ -444,7 +454,7 @@ export const ProjectedScarcitySchema = z.object({
   resource: z.string(),
   rule: AllocationRuleSchema,
   candidates: z.array(ProjectedCandidateSchema),
-  arbiter: ArbiterSchema.extend({ connected: z.boolean(), bot: z.boolean().optional() }),
+  arbiter: ArbiterSchema.extend({ connected: z.boolean(), bot: z.boolean().optional(), ...DemoSeatSchema }),
   deadlineLabel: z.string(),
   stakesLabel: z.string(),
 });
@@ -470,6 +480,15 @@ export const ProjectedRoomStateSchema = z.object({
   scenarioId: z.string().optional(),
   /** true en una sala de demo (3 asientos humanos, los administrativos son bots). */
   demo: z.boolean().optional(),
+  /**
+   * Sala de demo: a quién le toca ahora (primer caso, segundo caso, Comité). remainingMs
+   * es lo que queda antes de que el piloto juegue ese turno; 0 y totalMs 0 si el plan B
+   * está apagado. null si nadie ha entrado o el acta ya se cerró.
+   */
+  turn: z
+    .object({ orgId: z.string(), roleId: z.string(), seatOrder: z.number().int(), label: z.string(), action: z.enum(["submit", "decide"]), remainingMs: z.number().min(0), totalMs: z.number().min(0) })
+    .nullable()
+    .optional(),
   /** Ensayo automático en curso o terminado. Falta o es null si nunca se usó. */
   autopilot: AutopilotViewSchema.nullable().optional(),
   viewer: ViewerSchema,

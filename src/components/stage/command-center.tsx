@@ -51,9 +51,9 @@ import { SUGGESTIONS, answer } from "./ask";
 import { commandStyles } from "./command-styles";
 import { Dialog, Dock, NewRoundButton, Panel, State, type ViewId, type ViewInfo } from "./command-parts";
 import { Galaxy } from "./galaxy";
-import { JoinView } from "./join-view";
+import { JoinQr, JoinView } from "./join-view";
 import { isDemoRoom, shortLabel, stageSeats } from "./seats";
-import { storyProgress } from "./story";
+import { demoTurn, freeHumanSeat, storyProgress } from "./story";
 import { StoryView } from "./story-view";
 
 const VIEWS: ViewInfo[] = [
@@ -129,13 +129,23 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
   const canNotify = !!host && cross && !!integrations && (integrations.whatsapp || (integrations.voice && integrations.canCall));
   const current = VIEWS.find((entry) => entry.id === view)!;
   const select = (id: ViewId) => (id === "preguntar" ? setModal("ask") : setView(id));
-  const newRound = host
-    ? async () => {
-        const result = await hostRequest(room.roomId, host, "", "DELETE");
-        if (!result.ok) window.alert(result.error ?? "No se pudo reiniciar la sala.");
-        setView("mando");
-      }
-    : undefined;
+  // «Nueva ronda»: el anfitrión reinicia con su token. En la demo cualquiera puede,
+  // una vez cerrada el acta: el servidor acepta el mismo reinicio sin token en ese caso.
+  const newRound =
+    host || demo
+      ? async () => {
+          const result = host ? await hostRequest(room.roomId, host, "", "DELETE") : await resetDemoRoom(room.roomId);
+          if (!result.ok) window.alert(result.error ?? "No se pudo reiniciar la sala.");
+          setView("mando");
+        }
+      : undefined;
+  // En la demo el código para entrar no desaparece mientras quede una silla de persona libre.
+  // Si la franja de abajo ya lo muestra (falta el Comité), no se repite en la esquina.
+  const turn = demoTurn(room);
+  // En la demo con turno, el código chico va dentro de la franja del turno (turn-band.tsx).
+  const cornerQr = view === "mando" && !joining && !!baseUrl && freeHumanSeat(room) && !turn;
+  // Título: en la demo le habla a quien le toca al unirse; en los pasos siguientes lo dice la franja del turno.
+  const title = view !== "mando" ? current.label : joining ? (demo && turn ? `${turn.who}: ${turn.text}` : "Escanea y entra") : demo ? null : current.label;
 
   const openLog = () => {
     setView("acta");
@@ -177,9 +187,10 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
             <div className="gd-stage-scroll">
               <header className="gd-view-head">
                 <div>
-                  <h1>{view === "mando" && joining ? "Escanea y entra" : current.label}</h1>
+                  {title && <h1>{title}</h1>}
                 </div>
                 <div className="gd-view-actions">
+                  {cornerQr && <JoinQr room={room} baseUrl={baseUrl!} label="¿Falta alguien? Escanea" size={104} className="nx-qr-corner" />}
                   {/* En la demo el escenario no se cambia desde la vista principal: está en los controles del anfitrión. */}
                   {cross && !demo && (
                     <nav className="gd-period" aria-label="Escenario">
@@ -195,7 +206,7 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
 
               <div className="gd-content" data-view={view}>
                 {view === "mando" &&
-                  (joining ? <JoinView room={room} seats={allSeats} theme={theme} baseUrl={baseUrl} /> : <StoryView room={room} onNotify={canNotify ? () => setModal("notify") : undefined} onNewRound={newRound} />)}
+                  (joining ? <JoinView room={room} seats={allSeats} theme={theme} baseUrl={baseUrl} /> : <StoryView room={room} onNotify={canNotify ? () => setModal("notify") : undefined} onNewRound={newRound} baseUrl={baseUrl} />)}
                 {view === "ranking" && <RankingView room={room} />}
                 {view === "organizaciones" && <OrgsView room={room} baseUrl={baseUrl} committeeKey={host?.committeeKey ?? null} onOpenOwnRoom={onOpenOwnRoom} />}
                 {view === "acta" && (
@@ -225,6 +236,21 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
       {!(view === "mando" && joining) && !demo && <EventToasts room={room} />}
     </div>
   );
+}
+
+/**
+ * Reinicio de una sala de demo sin token de anfitrión. Es el mismo DELETE /api/rooms/:id;
+ * el servidor lo acepta solo en salas de demo con el acta cerrada.
+ */
+async function resetDemoRoom(roomId: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch(`/api/rooms/${encodeURIComponent(roomId)}`, { method: "DELETE" });
+    if (res.ok) return { ok: true };
+    const data = await res.json().catch(() => ({}));
+    return { ok: false, error: typeof data.error === "string" ? data.error : `El servidor respondió ${res.status}` };
+  } catch {
+    return { ok: false, error: "No se pudo llegar al servidor." };
+  }
 }
 
 // --- Vistas ---------------------------------------------------------------------

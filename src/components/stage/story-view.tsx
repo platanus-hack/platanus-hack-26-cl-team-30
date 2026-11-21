@@ -16,8 +16,11 @@ import type { ProjectedRoomState } from "@/lib/genome/schema";
 import { formatClock } from "@/components/organs/format";
 import { cn } from "@/lib/utils";
 import { deadlineWindow } from "./metrics";
+import { JoinQr } from "./join-view";
+import { TurnBand } from "./turn-band";
 import { isDemoRoom } from "./seats";
 import {
+  demoTurn,
   storyCards,
   storyMissing,
   storyProgress,
@@ -72,12 +75,20 @@ export function StoryView({
   room,
   onNotify,
   onNewRound,
+  baseUrl = null,
 }: {
   room: ProjectedRoomState;
   onNotify?: () => void;
   onNewRound?: () => Promise<void>;
+  baseUrl?: string | null;
 }) {
   const done = storyProgress(room).done;
+  const demo = isDemoRoom(room);
+  const turn = demoTurn(room);
+  const turnOrg =
+    turn && !turn.scan && turn.text !== "¿aceptas o rechazas?"
+      ? turn.seatId.split("/")[0]
+      : null;
   const resource = storyResource(room);
   const cards = storyCards(room);
   const missing = storyMissing(room);
@@ -89,6 +100,21 @@ export function StoryView({
     <div className="nx-story">
       {/* 1. Pasos */}
       <StorySteps room={room} />
+
+      {/* En la demo, a quién le toca ahora: la pantalla le habla a una persona. */}
+      {demo && turn && <TurnBand room={room} turn={turn} baseUrl={baseUrl} />}
+      {demo && done && (
+        <section
+          className="nx-turn gd-panel"
+          data-done="true"
+          aria-live="polite"
+        >
+          <p className="nx-turn-text">
+            <b>{missing.lead}:</b> {missing.text}
+          </p>
+          {onNewRound && <NewRoundButton onNewRound={onNewRound} />}
+        </section>
+      )}
 
       {/* 2. Recurso, plazo y tiempo */}
       <section className="nx-resource gd-panel" aria-label="Recurso en disputa">
@@ -132,6 +158,7 @@ export function StoryView({
         {cards.map((card) => (
           <article
             key={card.id}
+            data-turn={card.orgId === turnOrg || undefined}
             className={cn(
               "nx-card gd-panel",
               card.proposed && "is-proposed",
@@ -188,37 +215,61 @@ export function StoryView({
         ))}
       </section>
 
-      {/* 4. Lo que falta */}
-      <section
-        className="nx-missing gd-panel"
-        data-lead={missing.lead}
-        aria-live="polite"
-        aria-label="Lo que falta ahora"
-      >
-        <p className="nx-missing-text">
-          <b>{missing.lead}:</b> {missing.text}
-        </p>
-        <div className="nx-missing-who">
-          <p>
-            <UserRound aria-hidden="true" />
-            <span>{missing.who}</span>
-            {missing.whoConnected !== null && (
-              <span
-                className="nx-state"
-                data-state={missing.whoConnected ? "calm" : "plain"}
-              >
-                {missing.whoConnected ? "conectado" : "sin entrar"}
-              </span>
+      {/* 4. Lo que falta (fuera de la demo; en ella lo dice la franja del turno) */}
+      {!demo && (
+        <section
+          className="nx-missing gd-panel"
+          data-lead={missing.lead}
+          aria-live="polite"
+          aria-label="Lo que falta ahora"
+        >
+          <p className="nx-missing-text">
+            {missing.scan ? (
+              <>
+                <b>Falta el {missing.who}:</b> {missing.text}
+              </>
+            ) : (
+              <>
+                <b>{missing.lead}:</b> {missing.text}
+              </>
             )}
           </p>
-          {onNewRound && done && <NewRoundButton onNewRound={onNewRound} />}
-          {onNotify && room.allocation?.status === "PROPOSED" && (
-            <button type="button" className="gd-secondary" onClick={onNotify}>
-              <BellRing aria-hidden="true" /> Avisar al Comité
-            </button>
+          {missing.scan && baseUrl ? (
+            <JoinQr
+              room={room}
+              baseUrl={baseUrl}
+              label="Comité: escanea aquí"
+              size={150}
+              className="nx-qr-band"
+            />
+          ) : (
+            <div className="nx-missing-who">
+              <p>
+                <UserRound aria-hidden="true" />
+                <span>{missing.who}</span>
+                {missing.whoConnected !== null && (
+                  <span
+                    className="nx-state"
+                    data-state={missing.whoConnected ? "calm" : "plain"}
+                  >
+                    {missing.whoConnected ? "conectado" : "sin entrar"}
+                  </span>
+                )}
+              </p>
+              {onNewRound && done && <NewRoundButton onNewRound={onNewRound} />}
+              {onNotify && room.allocation?.status === "PROPOSED" && (
+                <button
+                  type="button"
+                  className="gd-secondary"
+                  onClick={onNotify}
+                >
+                  <BellRing aria-hidden="true" /> Avisar al Comité
+                </button>
+              )}
+            </div>
           )}
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }

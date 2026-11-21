@@ -118,13 +118,14 @@ export function seats(room: ProjectedRoomState): { orgName: string; seats: SeatI
 /**
  * Cuántas sillas libres podrían tocar en un sorteo, sin contar la propia. Es
  * solo para decidir si se ofrece «Sortear otro rol»: quién recibe qué silla lo
- * decide el servidor. El Comité cuenta únicamente si este teléfono trae su clave.
+ * decide el servidor. El Comité cuenta si este teléfono trae su clave o si la sala es de demo.
  */
 export function freeDrawSeats(room: ProjectedRoomState, withCommittee: boolean, me?: RoleViewer | null): number {
   const arbiter = room.scarcity?.arbiter;
   const drawable = room.orgs.flatMap((org) =>
     org.roles.filter((role) => (room.demo ? demoHumanSeat(room, org.orgId, role.id) : role.isQrOptional ? !arbiter && withCommittee : true)).map((role) => ({ orgId: org.orgId, roleId: role.id as string, connected: role.connected })),
   );
-  if (arbiter && withCommittee) drawable.push({ orgId: arbiter.orgId, roleId: arbiter.roleId, connected: arbiter.connected });
+  // En la sala de demo el Comité entra al sorteo sin clave; en las demás, solo con ella.
+  if (arbiter && (withCommittee || room.demo)) drawable.push({ orgId: arbiter.orgId, roleId: arbiter.roleId, connected: arbiter.connected });
   return drawable.filter((seat) => !seat.connected && !(me && me.orgId === seat.orgId && me.roleId === seat.roleId)).length;
 }

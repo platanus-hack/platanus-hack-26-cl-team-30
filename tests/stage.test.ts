@@ -3,11 +3,11 @@
 // general ("stage"), igual que la pantalla: sin red, sin reloj y sin modelo.
 
 import { describe, expect, it } from "vitest";
-import { markRoleJoined, openRoom, projectStateForOrgAndRole, sealRule, type ActorRef, type EngineResult } from "../src/lib/engine/deterministic";
+import { markRoleJoined, openRoom, projectStateForOrgAndRole, sealRule, submitCandidate, type ActorRef, type EngineResult } from "../src/lib/engine/deterministic";
 import type { RoomState, Telemetry } from "../src/lib/genome/schema";
 import { getInitialCrossOrgRoom, getInitialSingleOrgRoom } from "../src/lib/genome/seeds";
 import { isDemoRoom, shortLabel, stageSeats } from "../src/components/stage/seats";
-import { roomStarted, storyCards, storyMissing, storyProgress } from "../src/components/stage/story";
+import { demoTurn, freeHumanSeat, roomStarted, storyCards, storyMissing, storyProgress } from "../src/components/stage/story";
 
 const T0 = 1_800_000_000_000;
 const TELEMETRY: Telemetry = { modelName: "prueba", provider: "local", endpointHost: "localhost:11434", bytesSentToCloud: 0, queueDepth: 0, lastLatencyMs: 0, tokensPerSec: 0 };
@@ -99,7 +99,7 @@ describe("sala de demo: 3 personas", () => {
 
   it("muestra 3 asientos de personas y los aprobadores como automáticos", () => {
     const seats = stageSeats(stage(demo));
-    expect(seats.filter((seat) => seat.human).map((seat) => seat.short)).toEqual(["Clínica · Urgencias", "Hospital Rural · Turno", "Comité"]);
+    expect(seats.filter((seat) => seat.human).map((seat) => seat.short)).toEqual(["Clínica", "Hospital Rural", "Comité"]);
     expect(seats.filter((seat) => !seat.human).every((seat) => seat.bot && seat.kind === "approver")).toBe(true);
   });
 
@@ -115,5 +115,39 @@ describe("sala de demo: 3 personas", () => {
     expect(storyProgress(both).index).toBe(1);
     // No pide acordar límites ni firmas internas: eso lo hace el piloto automático.
     expect(storyMissing(both).text).toBe("cada organización presenta su caso");
+  });
+
+  it("mientras quede una silla de persona libre, la pantalla sigue mostrando el código para entrar", () => {
+    expect(freeHumanSeat(stage(demo))).toBe(true);
+    expect(freeHumanSeat(stage(join(demo, ...PROPOSERS)))).toBe(true);
+    expect(freeHumanSeat(stage(join(demo, ...PROPOSERS, ARBITER)))).toBe(false);
+    // Fuera de la demo no se muestra: allí cada rol entra con su propio código.
+    expect(freeHumanSeat(stage(openRoom(getInitialCrossOrgRoom("s7", { now: T0, telemetry: TELEMETRY }), T0)))).toBe(false);
+  });
+
+  it("con la propuesta lista y sin Comité, pide escanear el QR", () => {
+    let state = join(demo, ...PROPOSERS);
+    for (const [actor, caseId] of [[PROPOSERS[0], "A1"], [PROPOSERS[1], "B1"]] as const) state = ok(submitCandidate(state, actor, caseId, T0 + 700));
+    const waiting = storyMissing(stage(state));
+    expect(waiting).toMatchObject({ lead: "Falta", who: "Comité", text: "escanea el QR", scan: true });
+    expect(storyMissing(stage(join(state, ARBITER))).scan).toBeFalsy();
+  });
+
+  it("la pantalla le habla a una persona por su rol, en orden, sin números de jurado", () => {
+    const says = (state: RoomState) => {
+      const turn = demoTurn(stage(state));
+      return turn ? `${turn.who}: ${turn.text}` : null;
+    };
+    expect(says(demo)).toBe("Clínica: escanea el QR");
+    expect(says(join(demo, PROPOSERS[0]))).toBe("Hospital Rural: escanea el QR");
+    let state = join(demo, ...PROPOSERS);
+    expect(says(state)).toBe("Clínica: presenta a tu paciente");
+    state = ok(submitCandidate(state, PROPOSERS[0], "A1", T0 + 700));
+    expect(says(state)).toBe("Hospital Rural: presenta a tu paciente");
+    state = ok(submitCandidate(state, PROPOSERS[1], "B1", T0 + 800));
+    expect(says(state)).toBe("Comité: escanea el QR");
+    expect(says(join(state, ARBITER))).toBe("Comité: ¿aceptas o rechazas?");
+    // Sin plan B del servidor no hay cuenta regresiva inventada.
+    expect(demoTurn(stage(join(state, ARBITER)))?.totalMs).toBe(0);
   });
 });

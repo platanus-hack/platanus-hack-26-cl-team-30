@@ -80,3 +80,7 @@ Actualizado el 21 de noviembre de 2026.
 - **Plantilla de WhatsApp:** el nombre sugerido ahora es `sculptor_comite_caso`. Hay que crearla y aprobarla en Meta; mientras tanto, `KAPSO_TEMPLATE_NAME` debe seguir con el nombre de la plantilla ya aprobada. El encabezado del mensaje interactivo ya dice «Sculptor · Decisión del Comité».
 - **Fuera del reparto de la ronda 10:** `project-description.md` y `public/pitch/index.html` todavía dicen «Nexo».
 
+## Agregado en la ronda 11 (Comité sin clave en la demo)
+
+- **Probar contra el deploy con 3 celulares reales** después de subir: el tercero debe quedar como Comité sin clave, y «Nueva ronda» debe funcionar desde la pantalla grande sin `NEXO_ADMIN_KEY`.
+

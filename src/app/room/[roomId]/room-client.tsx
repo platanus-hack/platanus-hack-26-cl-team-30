@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { seatTurn } from "@/components/nexo/guide";
 import { committeeKeyStorageKey } from "@/components/nexo/voice-assistant";
 import { findOrg, isArbiter, isRoleViewer, roleLabel } from "@/components/organs/format";
+import { DemoSeatView, demoSeatList } from "@/components/seat/demo-view";
 import { RevealCard } from "@/components/seat/reveal-card";
 import { RoomView } from "@/components/seat/room-view";
 import { SeatPicker } from "@/components/seat/seat-picker";
@@ -136,7 +137,7 @@ export default function RoomClient() {
               <SeatActions>
                 <button type="button" className="st-btn" onClick={() => void drawSeat()}>
                   <Dices aria-hidden />
-                  Sortear mi rol
+                  {room.demo ? "Entrar" : "Sortear mi rol"}
                 </button>
               </SeatActions>
             )}
@@ -161,8 +162,19 @@ export default function RoomClient() {
     void leave();
   }
 
+  // Demo pauteada: quien tiene uno de los 3 asientos humanos ve solo quién es y, cuando
+  // le toca, un botón. Sin tarjeta de entrada, sin «Sortear otro rol» y sin pestañas.
+  const demoSeat = room.demo ? demoSeatList(room).find((entry) => entry.orgId === me.orgId && entry.roleId === me.roleId) : undefined;
+  if (demoSeat) {
+    return (
+      <SeatShell who={{ title: demoSeat.label, org: arbiter ? undefined : myOrg?.orgName, accent: demoSeat.accent }} stakes={room.stakes} status={status} alert={alert}>
+        <DemoSeatView room={room} me={me} act={act} acta={{ md: actaUrl(roomId, "md") }} />
+      </SeatShell>
+    );
+  }
+
   // «Sortear otro rol» solo para quien llegó por sorteo y mientras quede otra silla libre.
-  const canReroll = !byLink && freeDrawSeats(room, !!loadCommitteeKey(roomId), me) > 0;
+  const canReroll = !byLink && !room.demo && freeDrawSeats(room, !!loadCommitteeKey(roomId), me) > 0;
 
   // Recién llegado: la tarjeta «Te tocó», antes de mostrar el turno.
   if (enteredSeat !== seat) {

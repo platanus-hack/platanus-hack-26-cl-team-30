@@ -875,4 +875,45 @@ export const commandStyles = `
 /* Tarjeta sin caso: «Esperando caso» en lugar de un puntaje vacío. */
 .nx-card-waiting { display: flex; align-items: center; gap: 12px; min-block-size: clamp(52px, 5.4vw, 96px); font-size: clamp(24px, 2.4vw, 40px); font-weight: 800; letter-spacing: -.03em; color: var(--gd-muted); }
 .nx-card-waiting svg { width: 1em; height: 1em; flex: none; }
+
+/* ── Ronda 11: el código para entrar no desaparece en la demo ─────────────── */
+.nx-qr-mini { display: flex; align-items: center; gap: 12px; margin: 0; }
+.nx-qr-mini > span { border-radius: 12px !important; border: 0 !important; }
+.nx-qr-mini figcaption { font-size: clamp(15px, 1.2vw, 19px); font-weight: 800; line-height: 1.2; max-inline-size: 11ch; }
+.nx-qr-corner { border-radius: 20px; padding: 10px 16px 10px 10px; border: 1px solid var(--gd-rim); background: var(--gd-card); }
+.nx-qr-band { justify-self: end; flex-direction: row-reverse; }
+.nx-qr-band figcaption { text-align: end; color: var(--gd-sign); }
+@media (max-width: 760px) {
+  .nx-qr-band { justify-self: start; flex-direction: row; }
+  .nx-qr-band figcaption { text-align: start; }
+}
+
+/* ── Ronda 12: demo pauteada. La pantalla le habla a una persona por su rol ── */
+.nx-turn { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px 28px;
+  padding: clamp(18px, 2vw, 30px) clamp(20px, 2.6vw, 40px); border: 2px solid var(--nx-current); }
+.nx-turn[data-scan="true"] { border-color: var(--gd-sign); }
+.nx-turn[data-done="true"] { border-color: var(--gd-calm); }
+.nx-turn-text { font-size: clamp(34px, 4.4vw, 72px); font-weight: 840; letter-spacing: -.04em; line-height: 1.02; text-wrap: balance; }
+.nx-turn-text b { color: var(--nx-current); font-weight: 860; }
+.gd-app:not([data-theme="dark"]) .nx-turn-text b { color: var(--gd-teal); }
+.nx-turn[data-scan="true"] .nx-turn-text b { color: var(--gd-sign); }
+.nx-turn[data-done="true"] .nx-turn-text b { color: var(--gd-calm); }
+/* Cuenta regresiva del plan B: un anillo que se vacía y el número de segundos. */
+.nx-turn-clock { position: relative; display: grid; place-items: center; inline-size: clamp(96px, 8vw, 136px); aspect-ratio: 1; border-radius: 50%;
+  background: conic-gradient(var(--nx-current) calc(var(--nx-left, 1) * 360deg), var(--gd-track) 0); }
+.nx-turn-clock::before { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: var(--gd-surface); }
+.nx-turn-clock span { position: relative; font-size: clamp(38px, 3.4vw, 58px); font-weight: 850; font-variant-numeric: tabular-nums; letter-spacing: -.04em; }
+.nx-turn-clock[data-late="true"] { background: conic-gradient(var(--gd-sign) calc(var(--nx-left, 1) * 360deg), var(--gd-track) 0); }
+.nx-turn-clock[data-late="true"] span { color: var(--gd-sign); }
+/* El asiento y la tarjeta de quien tiene el turno, resaltados. */
+.nx-card[data-turn] { border-color: var(--nx-current); box-shadow: inset 0 0 0 3px var(--nx-current), 0 14px 34px rgb(var(--gd-dark-shadow) / 22%); }
+.nx-seats li[data-turn] { border-color: var(--nx-current); box-shadow: 0 0 0 3px var(--nx-current); color: var(--gd-ink); }
+/* En la demo, la franja del turno ocupa el lugar del título. */
+.gd-app[data-demo="true"] .gd-view-head:not(:has(h1)) { margin-block-end: 6px; }
+@media (max-width: 760px) {
+  .nx-turn { grid-template-columns: minmax(0, 1fr); }
+  .nx-turn-text { font-size: 32px; }
+}
+.nx-turn-side { display: flex; align-items: center; gap: 18px; }
+@media (max-width: 760px) { .nx-turn-side { flex-wrap: wrap; } }
 `;

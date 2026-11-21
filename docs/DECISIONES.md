@@ -11,6 +11,20 @@ Formato de cada entrada:
 
 ---
 
+## Páginas de caso de uso con el mismo armado y cifras del motor
+
+- **Decisión:** `/casos/hospitales` se arma con componentes de `src/components/casos/`: el texto de cada caso es un objeto (`CaseStudy`, en `content.ts`) y las cifras (puntajes y qué ve cada rol) las calcula `caseView` (`data.ts`) en el servidor, proyectando la sala del escenario con el mismo motor. Para `/casos/construccion` basta otro objeto y otra página de tres líneas.
+- **Alternativa descartada:** escribir la página de los hospitales a mano, con los puntajes y los candados copiados.
+- **Por qué:** así las cifras no se desactualizan y lo que se muestra como reservado es exactamente lo que el servidor no envía a ese rol. La portada general es de Ramón; esta página solo la enlaza una vez.
+- **Costo:** la tabla de «qué ve cada uno» muestra dos datos por organización (el costo primero), no todos.
+
+## Demo pauteada: la pantalla le habla a cada persona por su rol, y el turno lo decide el servidor
+
+- **Decisión:** en las salas de demo, la pantalla grande muestra una franja gigante con el turno («Clínica: presenta a tu paciente», «Comité: ¿aceptas o rechazas?»), resalta el asiento o la tarjeta de esa persona y, si el servidor la manda, la cuenta regresiva del plan B. Cada persona es su rol y su color: «Clínica», «Hospital Rural», «Comité». El orden de llegada (`seatOrder`) y el nombre corto (`seatLabel`) viajan en el estado, igual que el turno (`turn`); la pantalla los lee en `demoTurn` (`src/components/stage/story.ts`) y los dibuja en `turn-band.tsx`. Mientras falta gente, el turno es de la primera silla libre: «Clínica: escanea el QR». El guion del narrador está en `docs/GUION_DEMO.md`.
+- **Alternativa descartada:** numerar a las personas («Jurado 1, 2, 3»), o que la pantalla calcule su propia cuenta regresiva de 20 s.
+- **Por qué:** quien juega no lee; escucha al narrador, que lo llama por su rol, y ve ese mismo rol en pantalla. Un número no le dice qué es. La cuenta regresiva solo tiene sentido si al llegar a 0 pasa algo, y eso lo hace el servidor (juega el turno y lo marca como automático); una cuenta local mentiría.
+- **Costo:** sin un servidor que mande `turn`, la pantalla deduce el turno pero no muestra cuenta regresiva.
+
 ## La pantalla grande lee de la sala qué asientos juega un bot y si es de demo
 
 - **Decisión:** el estado proyectado trae `demo` (la sala es de demo: 3 personas) y, por asiento, `bot` (`role.bot` y `scarcity.arbiter.bot`: lo tiene un bot del piloto automático, y cuenta como conectado toda la ronda). La pantalla grande los lee en `stageSeats` e `isDemoRoom` (`src/components/stage/seats.ts`). Si `bot` no viene, usa `autopilot.botSeats` mientras el ensayo corre.
@@ -290,4 +304,19 @@ Formato de cada entrada:
 - **Por qué:** Ramón pidió que la demo la pueda hacer gente que no la conoce. Probándola como novato, Sebastián encontró que hacían falta 5 personas, que el paso de límite y firma no se entendía y que el reloj de la sala fija marcaba casi 2 horas (contaba desde que se creó la sala).
 - **Descartado:** borrar el paso de límite y firma. Es la regla de autoridad del suelo y sigue completo en las salas normales y en la sala de una clínica; en la demo lo juegan bots a la vista.
 - **Tras una ronda, los teléfonos viejos no recuperan su silla.** Decisión de Sebastián: prioridad a que el siguiente grupo pueda jugar. Fuera de la demo, una pestaña que pierde su token (por ejemplo, porque el servidor se reinició) vuelve a tomar su silla sola; en una sala de demo no (`shouldRecoverSeat` en `src/lib/client/use-room.ts`): tras «Nueva ronda» o el reinicio automático, el teléfono vuelve a «Elige tu silla» con «Sortear mi rol» y el aviso «Empezó una ronda nueva». Descartado: recuperar la silla y liberarla a los 45 s sin señal, porque un teléfono con la página abierta nunca la soltaba.
+
+## En la demo, el Comité entra sin clave y «Nueva ronda» no pide token tras el acta
+
+- **Decisión:** en las salas de demo, el sorteo del QR único reparte también el asiento del Comité sin la clave de su QR (el azar elige entre los 3 asientos humanos libres). Y con el acta cerrada, `DELETE /api/rooms/:id` («Nueva ronda») funciona sin token de anfitrión (`canResetWithoutHost` en `src/lib/store/rooms.ts`). En las salas normales todo sigue igual: el Comité solo con la clave y el reinicio solo con el token.
+- **Por qué:** en una prueba con 3 celulares contra el deploy, el tercero vio «No quedan sillas libres» y la demo quedó trabada en «Falta: el Comité decide». En producción, una sala fija no entrega su token ni la clave del Comité sin `NEXO_ADMIN_KEY` (`POST /api/rooms/demo-cross/host` responde 403), así que la pantalla grande no podía mostrar el QR del Comité ni reiniciar la sala.
+- **Riesgo:** cualquiera que escanee el QR único de una sala de demo puede terminar siendo el Comité y decidir la asignación, y cualquiera puede empezar una ronda nueva apenas se cierra el acta, aunque el grupo quiera seguir mirando el resultado. Se acepta porque las salas de demo tienen datos simulados y son para mostrar el producto, no para decidir nada real. Lo que no cambia: antes del acta nadie sin token puede reiniciar (una ronda en curso no se puede borrar), `JOIN_ROLE` directo al Comité sigue pidiendo la clave, y cada decisión sigue exigiendo una razón y queda en el acta.
+- **Descartado:** definir `NEXO_ADMIN_KEY` en Render y abrir la pantalla grande con esa clave. Es lo correcto para un despliegue serio y sigue disponible, pero obliga a quien presenta a tener y escribir la clave en el momento, y si falla la demo se traba igual.
+
+## Demo pauteada: asientos por orden de llegada, el rol en grande y plan B a los 20 s
+
+- **Decisión:** en las salas de demo el narrador guía en voz alta y quien juega no lee. Los asientos se reparten por orden de llegada, no al azar: 1.º la Clínica (quien presenta el primer caso), 2.º el Hospital Rural (el segundo) y 3.º el Comité. El servidor proyecta, solo en la demo, `seatOrder` (orden fijo, para el narrador; no se muestra como número), `seatLabel` (el nombre corto que se muestra: «Clínica», «Hospital Rural», «Comité») y `turn` (a quién le toca, con `remainingMs` y `totalMs`). El celular muestra «Eres la Clínica» en grande con su color, una sola línea, y cuando no es su turno solo «Espera: le toca al Hospital Rural»; cuando le toca, un botón enorme. El Comité ve «¿Aceptas o rechazas?» con una razón precargada («por equidad») que cambia con un toque; la razón sigue siendo obligatoria y queda en el acta tal como la eligió. Si la persona del turno no actúa en 20 s, el piloto juega por ella (plan B): presenta el caso, o el Comité acepta la propuesta de la regla, y queda en el acta con `modo: "automático"` y una razón que empieza con «Automático (plan B)».
+- **Por qué:** Sebastián quiere que en el pitch el narrador llame a cada juez por su rol («usted es la Clínica», «Comité, ¿acepta o rechaza?») y que la demo nunca se detenga porque alguien no encontró el botón. No se muestra «Jurado 1/2/3»: la identidad de cada persona es su rol y su color.
+- **Configuración:** `NEXO_DEMO_TURN_MS` cambia el plazo (por defecto 20 000; `0` apaga el plan B). Una sala nueva puede pedir otro plazo con `POST /api/rooms { mode: "cross_org", demo: true, turnMs }`. En las salas normales no hay orden de llegada, ni turno ni plan B.
+- **Riesgo:** con el plan B, una decisión del Comité puede tomarla el piloto si la persona no responde a tiempo. Se acepta porque es una sala de demo con datos simulados; la decisión automática queda marcada como tal en el acta y en la bitácora (`AUTOPILOT` con `automatic: true`), nunca como si la hubiera tomado una persona.
+- **Descartado:** obligar el orden en el servidor (rechazar que el Hospital Rural presente antes que la Clínica). El orden lo guía el celular; el servidor sigue aceptando cualquier acción válida, que es lo que ya prueban las demás pruebas.
 

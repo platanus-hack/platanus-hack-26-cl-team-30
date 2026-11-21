@@ -19,13 +19,20 @@ export type Seat = {
   bot: boolean;
   /** En una sala de demo: asiento de una persona. Fuera de la demo, todos lo son. */
   human: boolean;
-  /** Nombre corto para leer de lejos: «Clínica · Urgencias», «Comité». */
+  /** Nombre corto para leer de lejos: el rol en la demo («Clínica», «Comité»); «Clínica · Urgencias» fuera de ella. */
   short: string;
+  /**
+   * En la demo: orden de llegada fijo de las personas (1 Clínica, 2 Hospital Rural,
+   * 3 Comité). Sirve para ordenar y para que el narrador sepa quién es quién; nunca
+   * se muestra como número: en pantalla cada persona es su rol y su color.
+   */
+  order: number | null;
 };
 
-// Marca por asiento que agrega el almacén en la demo: true mientras un bot del
-// piloto automático tiene ese puesto (cuenta como conectado toda la ronda).
-type BotMark = { bot?: boolean };
+// Marcas por asiento que agrega el almacén en la demo: `bot` es true mientras un
+// bot del piloto automático tiene ese puesto (cuenta como conectado toda la
+// ronda); `seatOrder` es el orden de llegada y `seatLabel` el nombre corto que se muestra.
+type BotMark = { bot?: boolean; seatOrder?: number | null; seatLabel?: string | null };
 
 const key = (orgId: string, roleId: string) => `${orgId}/${roleId}`;
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
@@ -71,6 +78,9 @@ export function stageSeats(room: ProjectedRoomState): Seat[] {
   const demo = isDemoRoom(room);
   const bots = botKeys(room);
   const seats: Seat[] = [];
+  // Orden de llegada: el que manda el servidor; si no viene, el de la demo (cada organización y el Comité).
+  let next = 0;
+  const orderOf = (mark: number | null | undefined, human: boolean) => (demo && human ? (typeof mark === "number" ? mark : ++next) : null);
   room.orgs.forEach((org, orgIndex) => {
     for (const role of org.roles) {
       // En una sala entre organizaciones el Comité es el de la red, no el de cada una.
@@ -81,13 +91,22 @@ export function stageSeats(room: ProjectedRoomState): Seat[] {
       // En la demo, cada organización pone una persona (quien presenta el caso); lo demás es automático.
       const human = !demo || kind === "proposer" || kind === "arbiter";
       // Quien presenta se nombra por su etiqueta corta («Urgencias»); el resto, por su título, que trae tildes.
-      const short = kind === "arbiter" ? "Comité" : `${shortLabel(org.orgName)} · ${kind === "proposer" ? capitalize(role.shortTag) : shortLabel(role.title)}`;
-      seats.push({ id, label: role.title, org: org.orgName, kind, tone, connected: role.connected, bot: bots.has(id) || (demo && !human), human, short });
+      const mark = role as BotMark;
+      const order = orderOf(mark.seatOrder, human && kind !== "arbiter");
+      // En la demo cada persona es su rol: «Clínica», «Hospital Rural». Los automáticos llevan además su cargo.
+      const short = order
+        ? (mark.seatLabel ?? shortLabel(org.orgName))
+        : kind === "arbiter"
+          ? "Comité"
+          : `${shortLabel(org.orgName)} · ${kind === "proposer" ? capitalize(role.shortTag) : shortLabel(role.title)}`;
+      seats.push({ id, label: role.title, org: org.orgName, kind, tone, connected: role.connected, bot: bots.has(id) || (demo && !human), human, short, order });
     }
   });
   if (arbiter) {
     const id = key(arbiter.orgId, arbiter.roleId);
-    seats.push({ id, label: arbiter.title, org: "", kind: "arbiter", tone: ARBITER_TONE, connected: arbiter.connected, bot: bots.has(id), human: true, short: "Comité" });
+    const mark = arbiter as BotMark;
+    const order = orderOf(mark.seatOrder, true);
+    seats.push({ id, label: arbiter.title, org: "", kind: "arbiter", tone: ARBITER_TONE, connected: arbiter.connected, bot: bots.has(id), human: true, short: (order && mark.seatLabel) || "Comité", order });
   } else {
     // Sala de una organización: su Comité va al final, como en la otra.
     const index = seats.findIndex((seat) => seat.kind === "arbiter");

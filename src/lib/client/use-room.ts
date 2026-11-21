@@ -458,7 +458,7 @@ export function useRoom(roomId: string, { spectator = false }: Options = {}) {
       // Fuera del efecto: el cambio de sesión vuelve a dibujar la pantalla de sorteo.
       queueMicrotask(() => {
         setSession(null);
-        setNotice("Empezó una ronda nueva. Sortea tu silla.");
+        setNotice("Empezó una ronda nueva. Toca «Entrar».");
       });
       return;
     }

@@ -148,6 +148,10 @@ export function Example({ example }: { example: LandingExample }) {
               <MonitorPlay className="size-5" aria-hidden />
               Verlo en vivo
             </Link>
+            {/* Único enlace al caso de uso completo (src/app/casos/hospitales). */}
+            <Link href="/casos/hospitales" className="ml-0 inline-flex min-h-11 items-center font-semibold underline decoration-border underline-offset-4 hover:decoration-brand sm:ml-5">
+              Ver el caso completo
+            </Link>
           </div>
         </div>
       </div>

@@ -631,6 +631,62 @@ function projectCandidate(state: RoomState, candidate: OrgCandidate, viewer: Vie
   };
 }
 
+// --- Sala de demo: asientos en orden y turno -------------------------------------------
+
+/** Nombres cortos de los asientos de la demo de hospitales. En otros escenarios se usa el nombre de la organización sin su primera palabra. */
+const DEMO_SEAT_LABELS: Record<string, string> = { clinica_andes: "Clínica", hospital_rural: "Hospital Rural" };
+
+export type DemoSeat = { seat: ActorRef; seatOrder: number; label: string; action: "submit" | "decide" };
+
+/**
+ * Asientos humanos de una sala de demo, en el orden en que se reparten al llegar:
+ * quien presenta el primer caso, quien presenta el segundo y el Comité. El orden
+ * es fijo para que el narrador sepa quién es quién.
+ */
+export function demoSeats(state: RoomState): DemoSeat[] {
+  if (!state.demo || !state.scarcity) return [];
+  const cases = state.scarcity.candidates.map((candidate, i): DemoSeat => {
+    const orgName = findGenome(state, candidate.orgId)?.orgName ?? candidate.orgId;
+    const label = DEMO_SEAT_LABELS[candidate.orgId] ?? (orgName.split(" ").slice(1).join(" ") || orgName);
+    return { seat: { orgId: candidate.orgId, roleId: candidate.proposerRoleId }, seatOrder: i + 1, label, action: "submit" };
+  });
+  const arbiter = state.scarcity.arbiter;
+  return [...cases, { seat: { orgId: arbiter.orgId, roleId: arbiter.roleId }, seatOrder: cases.length + 1, label: "Comité", action: "decide" }];
+}
+
+function demoSeatOf(state: RoomState, actor: ActorRef): DemoSeat | undefined {
+  return demoSeats(state).find((entry) => entry.seat.orgId === actor.orgId && entry.seat.roleId === actor.roleId);
+}
+
+/**
+ * A quién le toca en una sala de demo: los casos en orden y después el Comité.
+ * null si nadie ha entrado (el reloj no corre) o si la asignación ya se selló.
+ * key cambia con cada turno nuevo (también si el Comité veta y hay otro recomendado).
+ */
+export function demoTurn(state: RoomState): (DemoSeat & { key: string; caseId: string | null }) | null {
+  if (!state.demo || !state.scarcity || state.decisionSealedAt !== null || clockStart(state) === null) return null;
+  const seats = demoSeats(state);
+  for (const entry of seats.filter((seat) => seat.action === "submit")) {
+    const candidate = state.scarcity.candidates.find((item) => item.orgId === entry.seat.orgId && item.proposerRoleId === entry.seat.roleId);
+    if (candidate && candidate.submitted !== true) return { ...entry, key: `submit:${candidate.caseId}`, caseId: candidate.caseId };
+  }
+  if (state.allocationStatus !== "PROPOSED") return null;
+  const winner = resolveRoomAllocation(state)?.winnerCaseId ?? null;
+  const committee = seats.find((seat) => seat.action === "decide");
+  // Solo cuentan las decisiones sobre la asignación: una firma de compuerta (de un bot) no cambia el turno del Comité.
+  const allocationDecisions = state.decisions.filter((decision) => decision.scope === "allocation").length;
+  return committee && winner ? { ...committee, key: `decide:${winner}:${allocationDecisions}`, caseId: winner } : null;
+}
+
+function projectDemoTurn(state: RoomState, nowTs: number): ProjectedRoomState["turn"] {
+  const turn = demoTurn(state);
+  if (!turn) return null;
+  const totalMs = state.turnTimeoutMs ?? 0;
+  const startedAt = state.turnStartedAt ?? nowTs;
+  const remainingMs = totalMs > 0 ? Math.max(0, startedAt + totalMs - nowTs) : 0;
+  return { orgId: turn.seat.orgId, roleId: turn.seat.roleId, seatOrder: turn.seatOrder, label: turn.label, action: turn.action, remainingMs, totalMs };
+}
+
 /** true si el asiento lo tiene un bot del piloto automático. */
 export function isBotSeat(state: Pick<RoomState, "botSeats">, actor: ActorRef): boolean {
   return (state.botSeats ?? []).some((seat) => seat.orgId === actor.orgId && seat.roleId === actor.roleId);
@@ -662,7 +718,8 @@ export function projectStateForOrgAndRole(state: RoomState, viewer: Viewer, nowT
     liveCase: genome.liveCase,
     roles: genome.roles.map((role) => {
       const seat = { orgId: genome.orgId, roleId: role.id };
-      return { ...role, connected: isConnected(state, seat, nowTs), bot: isBotSeat(state, seat) };
+      const demo = demoSeatOf(state, seat);
+      return { ...role, connected: isConnected(state, seat, nowTs), bot: isBotSeat(state, seat), ...(demo ? { seatOrder: demo.seatOrder, seatLabel: demo.label } : {}) };
     }),
     fields: genome.fields.map((field) => projectField(state, field, safeViewer)),
     conflict: detectRuleConflict(genome.authorityRule),
@@ -676,6 +733,7 @@ export function projectStateForOrgAndRole(state: RoomState, viewer: Viewer, nowT
     mode: state.mode,
     ...(state.scenarioId !== undefined ? { scenarioId: state.scenarioId } : {}),
     demo: state.demo === true,
+    ...(state.demo ? { turn: projectDemoTurn(state, nowTs) } : {}),
     viewer: safeViewer,
     serverNowTs: nowTs,
     orgs,
@@ -684,7 +742,12 @@ export function projectStateForOrgAndRole(state: RoomState, viewer: Viewer, nowT
           resource: state.scarcity.resource,
           rule: state.scarcity.rule,
           candidates: state.scarcity.candidates.map((candidate) => projectCandidate(state, candidate, safeViewer)),
-          arbiter: { ...state.scarcity.arbiter, connected: isConnected(state, state.scarcity.arbiter, nowTs), bot: isBotSeat(state, state.scarcity.arbiter) },
+          arbiter: {
+            ...state.scarcity.arbiter,
+            connected: isConnected(state, state.scarcity.arbiter, nowTs),
+            bot: isBotSeat(state, state.scarcity.arbiter),
+            ...(state.demo ? { seatOrder: demoSeatOf(state, state.scarcity.arbiter)?.seatOrder, seatLabel: "Comité" } : {}),
+          },
           deadlineLabel: state.scarcity.deadlineLabel,
           stakesLabel: state.scarcity.stakesLabel,
         }
@@ -1024,7 +1087,7 @@ export function recordGateDecision(state: RoomState, actor: ActorRef, input: Gat
  * proponente de ese caso. Cuando todas presentaron, el algoritmo propone la
  * asignación (ALLOCATION_PROPOSED) y queda a la espera del Comité.
  */
-export function submitCandidate(state: RoomState, actor: ActorRef, caseId: string | undefined, nowTs: number): EngineResult {
+export function submitCandidate(state: RoomState, actor: ActorRef, caseId: string | undefined, nowTs: number, detail?: Record<string, unknown>): EngineResult {
   if (!state.scarcity) return fail(409, "WRONG_MODE", "Esta sala no tiene un recurso compartido entre organizaciones");
   if (!isKnownActor(state, actor)) return fail(404, "ROLE_NOT_FOUND", `El rol ${actor.roleId} no existe en ${actor.orgId}`);
   const candidate = state.scarcity.candidates.find((entry) => (caseId ? entry.caseId === caseId : entry.orgId === actor.orgId));
@@ -1040,7 +1103,7 @@ export function submitCandidate(state: RoomState, actor: ActorRef, caseId: strin
     candidates: state.scarcity.candidates.map((entry) => (entry.caseId === candidate.caseId ? { ...entry, submitted: true } : entry)),
   };
   let next: RoomState = { ...state, scarcity };
-  const events: NewEvent[] = [{ type: "CANDIDATE_SUBMITTED", orgId: actor.orgId, roleId: actor.roleId, detail: { caseId: candidate.caseId, patientLabel: candidate.patientLabel } }];
+  const events: NewEvent[] = [{ type: "CANDIDATE_SUBMITTED", orgId: actor.orgId, roleId: actor.roleId, detail: { caseId: candidate.caseId, patientLabel: candidate.patientLabel, ...detail } }];
   const resolution = resolveRoomAllocation(next)!;
   if (resolution.pendingCaseIds.length === 0 && state.allocationStatus !== "PROPOSED") {
     next = { ...next, allocationStatus: "PROPOSED" };
@@ -1064,7 +1127,8 @@ function allocationProposedEvent(resolution: AllocationResolution): NewEvent {
   };
 }
 
-export type CommitteeDecisionInput = { decision: "APPROVE" | "VETO"; reason: string };
+/** detail: datos extra para la bitácora (por ejemplo, { modo: "automático" } cuando juega el plan B). */
+export type CommitteeDecisionInput = { decision: "APPROVE" | "VETO"; reason: string; detail?: Record<string, unknown> };
 
 /**
  * Decisión del Comité, con razón obligatoria.
@@ -1104,7 +1168,7 @@ export function recordCommitteeDecision(state: RoomState, actor: ActorRef, input
         type: "ALLOCATION_SEALED",
         orgId: actor.orgId,
         roleId: actor.roleId,
-        detail: { by: title, reason, winnerCaseId: winner.caseId, winnerOrgId: winner.orgId, patientLabel: winner.patientLabel, score: winner.score, tieBreakApplied: resolution.tieBreakApplied, tieBreakRule: resolution.tieBreakRule },
+        detail: { by: title, reason, winnerCaseId: winner.caseId, winnerOrgId: winner.orgId, patientLabel: winner.patientLabel, score: winner.score, tieBreakApplied: resolution.tieBreakApplied, tieBreakRule: resolution.tieBreakRule, ...input.detail },
       },
       { type: "STAKES_CONTAINED", detail: { timeToDecisionMs: waitedMs(state, nowTs) } },
     ];
@@ -1123,11 +1187,11 @@ export function recordCommitteeDecision(state: RoomState, actor: ActorRef, input
 }
 
 /** Sella la asignación propuesta. Solo el Comité árbitro. */
-export function sealAllocation(state: RoomState, actor: ActorRef, reason: string, nowTs: number): EngineResult {
+export function sealAllocation(state: RoomState, actor: ActorRef, reason: string, nowTs: number, detail?: Record<string, unknown>): EngineResult {
   if (!state.scarcity) return fail(409, "WRONG_MODE", "Esta sala no tiene un recurso compartido entre organizaciones");
   if (!isKnownActor(state, actor)) return fail(404, "ROLE_NOT_FOUND", `El rol ${actor.roleId} no existe en ${actor.orgId}`);
   if (!isArbiter(state, actor)) return deny(state, actor, nowTs, "ALLOCATION_SEAL", "solo el Comité árbitro sella la asignación", "Solo el Comité árbitro puede sellar la asignación");
-  return recordCommitteeDecision(state, actor, { decision: "APPROVE", reason }, nowTs);
+  return recordCommitteeDecision(state, actor, { decision: "APPROVE", reason, detail }, nowTs);
 }
 
 export type AgentProposalInput = {

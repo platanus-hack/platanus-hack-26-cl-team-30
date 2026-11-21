@@ -1112,6 +1112,93 @@
   box-shadow: 0 0 0 2px var(--st-rail);
 }
 
+/* ── Demo pauteada: quién eres, en grande y con tu color ─────────────────── */
+.st-demo {
+  border-color: color-mix(in srgb, var(--st-accent) 55%, transparent);
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--st-accent) 22%, transparent), transparent 70%),
+    var(--st-card);
+}
+.st-demo-who {
+  font-size: clamp(2.4rem, 1.6rem + 4vw, 3.2rem);
+  font-weight: 850;
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  color: var(--st-accent);
+  text-wrap: balance;
+}
+.st-demo-line {
+  margin-block-start: 10px;
+  font-size: 19px;
+  font-weight: 650;
+  color: var(--st-ink);
+}
+.st-demo-state {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.st-demo-state > svg {
+  inline-size: 34px;
+  block-size: 34px;
+  color: var(--st-done);
+}
+.st-demo-state[data-tone="wait"] {
+  color: var(--st-wait);
+}
+.st-demo-state[data-tone="done"] {
+  border-color: color-mix(in srgb, var(--st-done) 55%, transparent);
+}
+.st-demo-ask {
+  font-size: 30px;
+  font-weight: 850;
+  letter-spacing: -0.03em;
+}
+.st-demo-reason {
+  margin-block-start: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-block-size: 56px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 750;
+  text-align: start;
+  cursor: pointer;
+  color: var(--st-ink);
+  background: var(--st-raised);
+  box-shadow: inset 0 0 0 1.5px var(--st-line-strong);
+}
+.st-demo-reason svg {
+  flex: none;
+  inline-size: 20px;
+  block-size: 20px;
+  color: var(--st-soft);
+}
+.st-btn[data-size="huge"] {
+  flex: 1 1 0;
+  min-inline-size: 0;
+  min-block-size: 96px;
+  padding: 0 14px;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+}
+/* Dos botones enormes lado a lado (Comité): mismo ancho y letra un poco menor. */
+.st-btn[data-size="huge"] + .st-btn[data-size="huge"],
+.st-btn[data-size="huge"]:has(+ .st-btn[data-size="huge"]) {
+  font-size: 24px;
+}
+.st-btn[data-size="huge"] svg {
+  inline-size: 28px;
+  block-size: 28px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .st-ecg-beat,
   .st-dots i,

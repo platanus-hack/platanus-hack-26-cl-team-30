@@ -36,7 +36,7 @@ import { ActionSchema, RandomSeatRequestSchema, type ActionError, type ActionErr
 
 /** Con qué se abrió la sala: sirve para reiniciarla exactamente donde empezó. */
 /** Con qué se abrió la sala. demo: sala de demo de 3 personas (solo entre organizaciones). */
-type RoomOrigin = { mode: RoomMode; seed?: SeedGenomeId; genome?: OrgGenome; scenario?: CrossOrgScenarioId; demo?: boolean };
+type RoomOrigin = { mode: RoomMode; seed?: SeedGenomeId; genome?: OrgGenome; scenario?: CrossOrgScenarioId; demo?: boolean; turnTimeoutMs?: number };
 
 type AutopilotRun = {
   running: boolean;
@@ -64,6 +64,9 @@ type RoomRecord = {
   busy: Set<string>;
   /** Sala de demo con el acta cerrada: reinicio automático tras DEMO_RESET_IDLE_MS sin actividad. */
   resetTimer?: ReturnType<typeof setTimeout> | null;
+  /** Sala de demo: turno actual (demoTurn().key) y su plan B. */
+  turnKey?: string | null;
+  turnTimer?: ReturnType<typeof setTimeout> | null;
 };
 
 type Store = {
@@ -108,6 +111,20 @@ export const ROOM_IDLE_TTL_MS = 2 * 60 * 60 * 1000;
 export const FIXED_ROOM_IDLE_RESET_MS = 15 * 60 * 1000;
 /** Sala de demo con el acta cerrada: se reinicia sola tras este tiempo sin actividad. */
 export const DEMO_RESET_IDLE_MS = 2 * 60 * 1000;
+/**
+ * Plan B de la sala de demo: si la persona a la que le toca no actúa en este tiempo,
+ * el piloto juega su turno. NEXO_DEMO_TURN_MS lo cambia; 0 lo apaga. En las salas
+ * normales no existe.
+ */
+export const DEMO_TURN_TIMEOUT_MS = 20_000;
+export const MAX_DEMO_TURN_TIMEOUT_MS = 120_000;
+function demoTurnTimeoutMs(): number {
+  const raw = process.env.NEXO_DEMO_TURN_MS;
+  if (raw === undefined || raw.trim() === "") return DEMO_TURN_TIMEOUT_MS;
+  const value = Number.parseInt(raw, 10);
+  return Number.isFinite(value) && value >= 0 ? Math.min(value, MAX_DEMO_TURN_TIMEOUT_MS) : DEMO_TURN_TIMEOUT_MS;
+}
+
 /** Intervalo entre los pasos de los bots de una sala de demo. Cortos: no deben hacer esperar a nadie. */
 export const DEMO_BOT_STEP_MS = 900;
 export const MAX_CONNECTIONS_PER_ROOM = 200;
@@ -156,6 +173,7 @@ export function sweepRooms(now: number = Date.now()): number {
     if (expired) {
       stopTimer(record);
       clearResetTimer(record);
+      clearTurnTimer(record);
       store.rooms.delete(roomId);
       removed += 1;
     }
@@ -207,6 +225,8 @@ export type CreateRoomInput = {
   scenario?: CrossOrgScenarioId;
   /** Sala de demo: 3 asientos humanos y bots en los roles administrativos. Solo en cross_org. */
   demo?: boolean;
+  /** Plan B de la demo (ms). Por defecto NEXO_DEMO_TURN_MS o 20 s; 0 lo apaga. */
+  turnTimeoutMs?: number;
   /** Reloj del servidor. Por defecto, ahora. */
   now?: number;
 };
@@ -223,7 +243,8 @@ function initialState(id: string, origin: RoomOrigin, now: number): RoomState {
       : getInitialSingleOrgRoom(id, origin.genome ? structuredClone(origin.genome) : origin.seed, options);
   const opened = engine.openRoom(initial, now);
   // El reloj de espera arranca con la primera persona que entra (markRoleJoined).
-  return { ...opened, clockStartedAt: null, ...(origin.mode === "cross_org" && origin.demo ? { demo: true } : {}) };
+  const demo = origin.mode === "cross_org" && origin.demo === true;
+  return { ...opened, clockStartedAt: null, ...(demo ? { demo: true, turnStartedAt: null, turnTimeoutMs: origin.turnTimeoutMs ?? demoTurnTimeoutMs() } : {}) };
 }
 
 /**
@@ -238,7 +259,7 @@ export function createRoom(input: CreateRoomInput = {}): RoomState {
   const mode = input.mode ?? "single_org";
   const origin: RoomOrigin =
     mode === "cross_org"
-      ? { mode, scenario: input.scenario ?? DEFAULT_CROSS_ORG_SCENARIO, ...(input.demo ? { demo: true } : {}) }
+      ? { mode, scenario: input.scenario ?? DEFAULT_CROSS_ORG_SCENARIO, ...(input.demo ? { demo: true, ...(input.turnTimeoutMs !== undefined ? { turnTimeoutMs: input.turnTimeoutMs } : {}) } : {}) }
       : { mode, ...(input.genome ? { genome: structuredClone(input.genome) } : { seed: input.seed }) };
   const state = initialState(id, origin, input.now ?? Date.now());
   store.rooms.set(id, {
@@ -282,6 +303,7 @@ export function resetRoom(roomId: string, now: number = Date.now()): boolean {
   if (!record) return false;
   stopTimer(record);
   clearResetTimer(record);
+  clearTurnTimer(record);
   record.autopilot = null;
   record.tokens.clear();
   record.busy.clear();
@@ -291,12 +313,24 @@ export function resetRoom(roomId: string, now: number = Date.now()): boolean {
   return true;
 }
 
+/**
+ * «Nueva ronda» sin anfitrión: en una sala de demo con el acta cerrada, cualquiera
+ * puede reiniciarla, para que el siguiente grupo juegue aunque la pantalla grande
+ * no tenga el token (sala fija en el deploy sin NEXO_ADMIN_KEY). Antes del acta,
+ * o en una sala normal, sigue siendo solo del anfitrión.
+ */
+export function canResetWithoutHost(roomId: string): boolean {
+  const state = lookup(roomId)?.state;
+  return !!state && state.demo === true && state.decisionSealedAt !== null;
+}
+
 /** Borra una sala de la memoria. Una sala fija renace limpia la próxima vez que alguien entre. */
 export function discardRoom(roomId: string): boolean {
   const record = store.rooms.get(roomId);
   if (!record) return false;
   stopTimer(record);
   clearResetTimer(record);
+  clearTurnTimer(record);
   store.rooms.delete(roomId);
   emit(roomId);
   return true;
@@ -477,6 +511,7 @@ function settle(roomId: string, record: RoomRecord, result: engine.EngineResult,
   const nextState = result.state;
   if (nextState && nextState !== record.state) {
     record.state = nextState;
+    syncDemoTurn(roomId, record);
     emit(roomId);
   }
   scheduleDemoReset(roomId, record);
@@ -526,11 +561,14 @@ function join(roomId: string, record: RoomRecord, actor: engine.ActorRef, token:
  */
 function drawableSeats(state: RoomState, withCommittee: boolean): engine.ActorRef[] {
   const arbiter = state.scarcity?.arbiter;
-  // Sala de demo: solo quien presenta cada caso y, con la clave, el Comité. Lo demás lo juegan bots.
+  // Sala de demo: quien presenta cada caso y el Comité, este último SIN clave: en
+  // el deploy la pantalla grande de una sala fija no tiene la clave del QR del
+  // Comité (exige NEXO_ADMIN_KEY), y sin esto la demo quedaba trabada esperando
+  // al Comité. Lo demás lo juegan bots. Riesgo y alternativa en docs/DECISIONES.md.
   if (state.demo && state.scarcity && arbiter) {
     return [
       ...state.scarcity.candidates.map((candidate) => ({ orgId: candidate.orgId, roleId: candidate.proposerRoleId })),
-      ...(withCommittee ? [{ orgId: arbiter.orgId, roleId: arbiter.roleId }] : []),
+      { orgId: arbiter.orgId, roleId: arbiter.roleId },
     ];
   }
   const seats: engine.ActorRef[] = [];
@@ -576,7 +614,9 @@ export function joinRandomSeat(roomId: string, rawBody: unknown, now: number = D
   );
   if (pool.length === 0) return reject(409, "NO_FREE_SEAT", holding ? "No queda otra silla libre en esta sala" : "No quedan sillas libres en esta sala");
 
-  const seat = pool[Math.min(pool.length - 1, Math.max(0, Math.floor(random() * pool.length)))];
+  // Sala de demo: por orden de llegada (primer caso, segundo caso, Comité), para que el
+  // narrador sepa quién es quién. En las demás salas, al azar.
+  const seat = record.state.demo ? pool[0] : pool[Math.min(pool.length - 1, Math.max(0, Math.floor(random() * pool.length)))];
   const joined = engine.markRoleJoined(record.state, seat, now, { assigned: "random" });
   if (!joined.ok) return settle(roomId, record, joined);
   const fresh = newToken();
@@ -588,6 +628,7 @@ export function joinRandomSeat(roomId: string, rawBody: unknown, now: number = D
     if (left.ok) next = left.state;
   }
   record.state = next;
+  syncDemoTurn(roomId, record);
   emit(roomId);
   startDemoBots(roomId, record, now);
   scheduleDemoReset(roomId, record);
@@ -856,6 +897,7 @@ function runNextStep(roomId: string, record: RoomRecord, stepMs: number) {
   }
   record.state = state;
   touch(record);
+  syncDemoTurn(roomId, record, now);
   emit(roomId);
   scheduleNextStep(roomId, record, stepMs);
 }
@@ -896,6 +938,56 @@ function startDemoBots(roomId: string, record: RoomRecord, now: number) {
   record.autopilot = { running: true, script, step: 0, lastStep: null, botSeats, timer: null };
   emit(roomId);
   scheduleNextStep(roomId, record, DEMO_BOT_STEP_MS);
+}
+
+function clearTurnTimer(record: RoomRecord) {
+  if (record.turnTimer) clearTimeout(record.turnTimer);
+  record.turnTimer = null;
+  record.turnKey = null;
+}
+
+/**
+ * Turno de la sala de demo. Cuando cambia (alguien presentó, el Comité vetó, entró
+ * la primera persona), anota cuándo empezó y programa el plan B: si a los
+ * turnTimeoutMs la misma persona no actuó, el piloto juega por ella. Se llama
+ * después de cada cambio de estado, antes de avisar a las pantallas.
+ */
+function syncDemoTurn(roomId: string, record: RoomRecord, now: number = Date.now()) {
+  if (!record.state.demo) return;
+  const turn = engine.demoTurn(record.state);
+  const key = turn?.key ?? null;
+  if (key === (record.turnKey ?? null)) return;
+  if (record.turnTimer) clearTimeout(record.turnTimer);
+  record.turnTimer = null;
+  record.turnKey = key;
+  record.state = { ...record.state, turnStartedAt: turn ? now : null };
+  const timeout = record.state.turnTimeoutMs ?? 0;
+  if (!turn || timeout <= 0) return;
+  record.turnTimer = setTimeout(() => playTurnAutomatically(roomId, record, key!), timeout);
+  record.turnTimer.unref?.();
+}
+
+/** Plan B: el piloto juega el turno de quien no actuó a tiempo. Queda en el acta con modo «automático». */
+function playTurnAutomatically(roomId: string, record: RoomRecord, key: string) {
+  record.turnTimer = null;
+  if (store.rooms.get(roomId) !== record || record.turnKey !== key) return;
+  const turn = engine.demoTurn(record.state);
+  if (!turn || turn.key !== key) return;
+  const now = Date.now();
+  const seconds = Math.round((record.state.turnTimeoutMs ?? 0) / 1000);
+  const detail = { modo: "automático", motivo: `${turn.label} no actuó en ${seconds} s` };
+  const result =
+    turn.action === "submit"
+      ? engine.submitCandidate(record.state, turn.seat, turn.caseId ?? undefined, now, detail)
+      : engine.sealAllocation(record.state, turn.seat, `Automático (plan B): el Comité no respondió en ${seconds} s; se acepta la propuesta de la regla.`, now, detail);
+  let state = result.state ?? record.state;
+  state = engine.recordAutopilotEvent(state, { phase: "turn", automatic: true, seat: tokenKey(turn.seat), action: turn.action, outcome: result.ok ? "ok" : "failed", ...(result.ok ? {} : { code: result.code }) }, now);
+  record.state = state;
+  touch(record);
+  record.turnKey = key;
+  syncDemoTurn(roomId, record, now);
+  emit(roomId);
+  scheduleDemoReset(roomId, record);
 }
 
 function clearResetTimer(record: RoomRecord) {

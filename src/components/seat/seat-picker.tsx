@@ -63,7 +63,7 @@ export function SeatPicker({ room, onJoin, children }: Props) {
             </div>
           ))}
           <Why label="¿Y el Comité?">
-            <p>Entra escaneando su código QR en la pantalla grande. Así nadie toma ese puesto por error.</p>
+            <p>{room.demo ? "En esta demo, la tercera persona que entra es el Comité: toca «Entrar»." : "Entra escaneando su código QR en la pantalla grande. Así nadie toma ese puesto por error."}</p>
           </Why>
         </section>
       </SeatMain>

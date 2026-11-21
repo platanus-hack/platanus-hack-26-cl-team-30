@@ -10,7 +10,7 @@
     cifras reales (pruebas: npm test; conexiones: docs/MEDICIONES.md; puntajes y
     p^n: el motor con las semillas), sin «0 bytes nube» (el deploy usa Claude),
     sin la compuerta de límite (la demo es de 3 personas), menos jerga en los
-    titulares y el QR hacia /stage/demo-cross. Solo carga fuentes de Google; el QR
+    titulares. El QR de la lámina 3 abre la sala /room/demo-cross (los roles se reparten por orden de llegada) y el botón abre /stage/demo-cross. Solo carga fuentes de Google; el QR
     se genera aquí mismo, sin otros servidores. Flechas o espacio para avanzar.
   -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -1187,8 +1187,9 @@
     }
 
     .qr-frame {
-      width: 214px;
-      height: 214px;
+      /* Grande: es el código que escanean las 3 personas de la demo. */
+      width: min(300px, 34vh);
+      height: min(300px, 34vh);
       padding: 12px;
       border-radius: 18px;
       background: #ffffff;
@@ -1985,9 +1986,9 @@
           <!-- Violet Spotlight QR Stage -->
           <div class="bezel bezel-violet qr-panel stagger-3">
             <div class="bezel-core">
-              <span class="pill pill-violet">ESCANEA AHORA · DEMO EN VIVO</span>
-              <div class="qr-title">3 personas · 3 toques</div>
-              <div class="qr-frame" id="qrMount" aria-label="Código QR hacia la demo en vivo"></div>
+              <span class="pill pill-violet">ESCANEA AHORA</span>
+              <div class="qr-title">Clínica · Hospital Rural · Comité</div>
+              <div class="qr-frame" id="qrMount" aria-label="Código QR para entrar a la sala de demo"></div>
               <a class="btn btn-violet" id="stageLaunchLink" href="#" target="_blank" rel="noopener">
                 <span id="stageLaunchLabel">Abrir /stage/demo-cross</span>
                 <span class="btn-icon" aria-hidden="true">↗</span>
@@ -2751,8 +2752,9 @@
       const base = cleanBaseUrl(cfg.baseUrl);
       
       const stageUrl = `${base}/stage/${encodeURIComponent(cfg.roomId)}`;
-      // El QR abre la pantalla grande de la demo: ahí está el código para tomar una silla.
-      const qrJoinUrl = stageUrl;
+      // El QR abre la sala de demo: el celular recibe su rol por orden de llegada
+      // (Clínica, Hospital Rural, Comité). El botón de abajo abre la pantalla grande.
+      const qrJoinUrl = `${base}/room/${encodeURIComponent(cfg.roomId)}`;
 
       document.title = `${brand} — Pitch Interactivo · Platanus Hack 26`;
       document.querySelectorAll("[data-brand]").forEach((el) => (el.textContent = brand));

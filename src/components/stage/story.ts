@@ -92,6 +92,8 @@ export function storyResource(room: ProjectedRoomState): { quantity: string; nam
 /** Tarjeta de un candidato (o de la organización, en una sala de una sola). */
 export type StoryCard = {
   id: string;
+  /** Organización del candidato (o la sala), para saber de quién es el turno. */
+  orgId: string;
   org: string;
   title: string;
   score: string | null;
@@ -115,6 +117,8 @@ export function storyCards(room: ProjectedRoomState): StoryCard[] {
   const scarcity = room.scarcity;
   // En la demo basta un candado por tarjeta: el costo, que es la idea central. El resto está en «Organizaciones».
   const demo = isDemoRoom(room);
+  // Y cada tarjeta lleva el rol de quien la juega: «Clínica», «Hospital Rural».
+  const shorts = new Map(stageSeats(room).map((seat) => [seat.id, seat.short]));
   if (allocation && scarcity) {
     return scarcity.candidates.map((candidate) => {
       const org = room.orgs.find((entry) => entry.orgId === candidate.orgId);
@@ -137,7 +141,8 @@ export function storyCards(room: ProjectedRoomState): StoryCard[] {
               : { tone: "plain", text: "Sin presentar" };
       return {
         id: candidate.caseId,
-        org: (demo && org ? shortLabel(org.orgName) : org?.orgName) ?? candidate.orgId,
+        orgId: candidate.orgId,
+        org: (demo ? (shorts.get(`${candidate.orgId}/${candidate.proposerRoleId}`) ?? (org ? shortLabel(org.orgName) : undefined)) : org?.orgName) ?? candidate.orgId,
         title: candidate.patientLabel,
         score: ranked ? formatScore(ranked.score) : null,
         proposed,
@@ -161,6 +166,7 @@ export function storyCards(room: ProjectedRoomState): StoryCard[] {
             : { tone: "plain", text: "Sin pendientes" };
     return {
       id: org.orgId,
+      orgId: org.orgId,
       org: org.orgName,
       title: rule.metricLabel,
       score: formatValue(gate.proposedValue, rule.unit),
@@ -174,7 +180,76 @@ export function storyCards(room: ProjectedRoomState): StoryCard[] {
 }
 
 /** La frase grande de abajo: lo que falta ahora y quién tiene que firmar. */
-export function storyMissing(room: ProjectedRoomState): { lead: "Falta" | "Listo"; text: string; who: string; whoConnected: boolean | null } {
+/** Lo que falta ahora. `scan`: en la demo, alguien tiene que entrar con el QR para que la sala siga. */
+export type StoryMissing = { lead: "Falta" | "Listo"; text: string; who: string; whoConnected: boolean | null; scan?: boolean };
+
+/**
+ * Turno de la demo pauteada: a quién le habla la pantalla grande ahora y qué tiene
+ * que apretar. El narrador lo dice en voz alta; la franja lo repite en grande.
+ * Si el servidor manda `turn`, manda ese turno (con su cuenta regresiva del plan B:
+ * al llegar a 0, el servidor juega ese turno solo). Si no viene (nadie entró
+ * todavía, o un servidor sin plan B), se deduce aquí: la primera silla libre, el
+ * primer caso pendiente por orden de llegada y después el Comité, sin cuenta regresiva.
+ */
+export type DemoTurn = {
+  seatId: string;
+  /** Orden de llegada de esa persona (no se muestra). */
+  order: number;
+  /** El rol que se muestra: «Clínica», «Hospital Rural», «Comité». */
+  who: string;
+  /** «presenta a tu paciente», «¿aceptas o rechazas?» o «escanea el QR». */
+  text: string;
+  /** La persona todavía no entra: hay que mostrarle el código. */
+  scan: boolean;
+  /** Cuenta regresiva del servidor (plan B). totalMs 0: no hay plan B y no se muestra. */
+  remainingMs: number | null;
+  totalMs: number;
+};
+
+/** Turno que puede mandar el servidor en el estado de la sala (opcional). */
+type ServerTurn = { orgId: string; roleId: string; seatOrder?: number; label?: string; action?: "submit" | "decide"; remainingMs?: number; totalMs?: number } | null | undefined;
+
+export function demoTurn(room: ProjectedRoomState): DemoTurn | null {
+  if (!isDemoRoom(room) || !room.allocation || !room.scarcity) return null;
+  const allocation = room.allocation;
+  if (allocation.status === "SEALED") return null;
+  const seats = stageSeats(room).filter((seat) => seat.human && seat.order);
+  const make = (seatId: string, action: "submit" | "decide" | "join", server?: ServerTurn): DemoTurn | null => {
+    const seat = seats.find((entry) => entry.id === seatId);
+    if (!seat || !seat.order) return null;
+    const scan = !seat.connected;
+    const text = scan ? "escanea el QR" : action === "decide" ? "¿aceptas o rechazas?" : action === "submit" ? "presenta a tu paciente" : "escanea el QR";
+    return { seatId, order: seat.order, who: server?.label ?? seat.short, text, scan, remainingMs: scan ? null : (server?.remainingMs ?? null), totalMs: scan ? 0 : (server?.totalMs ?? 0) };
+  };
+  // Mientras falta gente, el turno es de la primera silla libre: que escanee. (El
+  // servidor ya puede tener el turno de presentar de quien entró, pero aún no se juega.)
+  if (!roomStarted(room)) {
+    const free = seats.find((seat) => !seat.connected);
+    return free ? make(free.id, "join") : null;
+  }
+  const server = room.turn as ServerTurn;
+  if (server) {
+    const turn = make(`${server.orgId}/${server.roleId}`, server.action ?? (server.orgId === room.scarcity.arbiter.orgId ? "decide" : "submit"), server);
+    if (turn) return turn;
+  }
+  if (allocation.status === "PROPOSED") {
+    const arbiter = room.scarcity.arbiter;
+    return make(`${arbiter.orgId}/${arbiter.roleId}`, "decide");
+  }
+  const pending = room.scarcity.candidates
+    .filter((candidate) => allocation.pendingCaseIds.includes(candidate.caseId))
+    .map((candidate) => seats.find((seat) => seat.id === `${candidate.orgId}/${candidate.proposerRoleId}`))
+    .filter((seat): seat is NonNullable<typeof seat> => !!seat)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  return pending[0] ? make(pending[0].id, "submit") : null;
+}
+
+/** En la demo: queda alguna silla de persona libre (los bots cuentan como conectados). */
+export function freeHumanSeat(room: ProjectedRoomState): boolean {
+  return isDemoRoom(room) && stageSeats(room).some((seat) => seat.human && !seat.connected);
+}
+
+export function storyMissing(room: ProjectedRoomState): StoryMissing {
   const allocation = room.allocation;
   const scarcity = room.scarcity;
   const orgOf = (orgId?: string | null) => room.orgs.find((org) => org.orgId === orgId);
@@ -187,6 +262,8 @@ export function storyMissing(room: ProjectedRoomState): { lead: "Falta" | "Listo
       return { lead: "Listo", text: `${shown ?? winner?.patientLabel ?? "El caso"} recibe el recurso`, who: "Acta lista", whoConnected: null };
     }
     if (allocation.status === "PROPOSED") {
+      // En la demo, si el Comité todavía no entra, lo que falta es que alguien escanee el código.
+      if (isDemoRoom(room) && !scarcity.arbiter.connected) return { lead: "Falta", text: "escanea el QR", who: "Comité", whoConnected: false, scan: true };
       return { lead: "Falta", text: "el Comité decide", who: isDemoRoom(room) ? "Comité" : scarcity.arbiter.title, whoConnected: scarcity.arbiter.connected };
     }
   }

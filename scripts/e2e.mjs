@@ -17,10 +17,12 @@
 //   sorteo      QR único: POST /api/rooms/:id/seat entrega una silla libre al azar,
 //               «sortear otro rol» cambia de silla y libera la anterior, el Comité
 //               solo entra con su clave y, sin sillas libres, responde 409.
-//   demo        sala de demo (3 personas, 3 toques): el sorteo reparte solo quien
-//               presenta en cada organización y el Comité; al entrar la primera
-//               persona, bots sellan el límite y firman; el reloj parte en 0;
-//               «Nueva ronda» (reinicio del anfitrión) la deja limpia.
+//   demo        sala de demo (3 personas sin clave, 3 toques): el sorteo reparte a
+//               quien presenta en cada organización y al Comité; al entrar la
+//               primera persona, bots sellan el límite y firman; el reloj parte en
+//               0; con el acta cerrada, «Nueva ronda» no pide token de anfitrión.
+//   plan B      demo pauteada: los asientos llegan en orden (Clínica, Hospital
+//               Rural, Comité) y si nadie actúa, el piloto juega cada turno.
 //   frase       POST /api/rooms con description crea una sala nueva ya mutada.
 //               Intenta el modelo (máximo 15 s) y acepta la semilla de respaldo:
 //               el resultado no depende del modelo, pero contra el deploy gasta una
@@ -337,9 +339,17 @@ const hostHeaders = (roomId) => ({ "x-host-token": hosts.get(roomId)?.hostToken 
  * caso inicial y los tokens anteriores dejan de servir. La sala se borra sola
  * de la memoria tras un rato sin actividad.
  */
-async function discardRoom(roomId, someone = null) {
+async function discardRoom(roomId, someone = null, { sealedDemo = false } = {}) {
   if (!roomId) return;
-  await step(`reiniciar la sala ${roomId}: sin token de anfitrión 403; con él vuelve al inicio y los tokens dejan de servir`, async () => {
+  const name = sealedDemo
+    ? `reiniciar la sala de demo ${roomId} con el acta cerrada: no pide token («Nueva ronda» para el siguiente grupo)`
+    : `reiniciar la sala ${roomId}: sin token de anfitrión 403; con él vuelve al inicio y los tokens dejan de servir`;
+  await step(name, async () => {
+    if (sealedDemo) {
+      const res = await request(baseUrl, "DELETE", `/api/rooms/${roomId}`);
+      check(res.status === 200, `Con el acta cerrada, DELETE sin token debía responder 200 en la demo: ${describeResponse(res)}`);
+      return;
+    }
     expectError(await request(baseUrl, "DELETE", `/api/rooms/${roomId}`), 403, "HOST_ONLY");
     const res = await request(baseUrl, "DELETE", `/api/rooms/${roomId}`, undefined, hostHeaders(roomId));
     check(res.status === 200, `DELETE con x-host-token debía responder 200: ${describeResponse(res)}`);
@@ -1215,7 +1225,6 @@ async function demoJourney() {
   try {
     roomId = await createRoom("cross_org", { demo: true });
     stage = new Participant(roomId, "pantalla general");
-    const key = hosts.get(roomId).committeeKey;
     const roleOf = (state, orgId, roleId) => orgOf(state, orgId)?.roles.find((role) => role.id === roleId);
 
     await step("la sala dice que es de demo, el reloj marca 0 y no hay bots hasta que entra alguien", async () => {
@@ -1226,24 +1235,24 @@ async function demoJourney() {
     });
 
     const seats = [];
-    await step("el sorteo reparte solo a quien presenta en cada organización; sin la clave del Comité, 409", async () => {
-      for (let i = 0; i < 2; i++) {
+    await step("3 personas sin ninguna clave: el sorteo reparte a quien presenta en cada organización y al Comité; la cuarta, 409", async () => {
+      for (let i = 0; i < 3; i++) {
         const res = await drawSeat(roomId);
         expectOk(res);
         seats.push({ ...res.data.seat, token: res.data.token });
       }
       const ids = seats.map(seatId);
-      const presenters = stage.state.scarcity.candidates.map((candidate) => `${candidate.orgId}/${candidate.proposerRoleId}`);
-      check([...ids].sort().join() === [...presenters].sort().join(), `Debían tocar ${presenters.join(", ")} y tocaron ${ids.join(", ")}`);
+      // Demo pauteada: por orden de llegada, no al azar (primer caso, segundo caso, Comité).
+      const humans = [...stage.state.scarcity.candidates.map((candidate) => `${candidate.orgId}/${candidate.proposerRoleId}`), seatId(stage.state.scarcity.arbiter)];
+      check(ids.join() === humans.join(), `Debían tocar, en orden, ${humans.join(", ")} y tocaron ${ids.join(", ")}`);
       expectError(await drawSeat(roomId), 409, "NO_FREE_SEAT");
+      return ids.join(", ");
     });
 
-    await step("con la clave del QR, el Comité es el tercer asiento", async () => {
-      const res = await drawSeat(roomId, { committeeKey: key });
-      expectOk(res);
+    await step("tomar el Comité a mano sin la clave sigue dando 403, y la ronda en curso no se puede reiniciar sin anfitrión", async () => {
       const arbiter = stage.state.scarcity.arbiter;
-      check(seatId(res.data.seat) === seatId(arbiter), `Debía tocar el Comité y tocó ${describeResponse(res)}`);
-      seats.push({ ...res.data.seat, token: res.data.token });
+      expectError(await request(baseUrl, "POST", `/api/rooms/${roomId}/action`, { type: "JOIN_ROLE", orgId: arbiter.orgId, roleId: arbiter.roleId }), 403, "COMMITTEE_KEY_REQUIRED");
+      expectError(await request(baseUrl, "DELETE", `/api/rooms/${roomId}`), 403, "HOST_ONLY");
     });
 
     for (const seat of seats) {
@@ -1259,6 +1268,13 @@ async function demoJourney() {
       await stage.waitFor((state) => state.orgs.every((org) => !org.conflict.hasConflict && org.gate.outcome === "approved"), "los bots sellan el límite y firman", 15_000);
       check(stage.state.stakes.elapsedMs > 0, "Con gente adentro el reloj debía avanzar");
       return `${bots.length} bots`;
+    });
+
+    await step("los asientos traen su nombre corto y el turno es de la Clínica, con su cuenta regresiva", async () => {
+      const labels = [...stage.state.orgs.flatMap((org) => org.roles.filter((role) => role.seatLabel).map((role) => `${role.seatOrder}:${role.seatLabel}`)), `${stage.state.scarcity.arbiter.seatOrder}:${stage.state.scarcity.arbiter.seatLabel}`];
+      check(labels.join() === "1:Clínica,2:Hospital Rural,3:Comité", `Nombres de los asientos inesperados: ${labels.join(", ")}`);
+      const turn = stage.state.turn;
+      check(turn?.label === "Clínica" && turn.action === "submit" && turn.totalMs > 0 && turn.remainingMs <= turn.totalMs, `El turno debía ser de la Clínica: ${JSON.stringify(turn)}`);
     });
 
     let touches = 0;
@@ -1281,9 +1297,9 @@ async function demoJourney() {
       return `${touches} toques`;
     });
 
-    await step("«Nueva ronda»: el reinicio del anfitrión deja la sala de demo limpia, sin bots y con el reloj en 0", async () => {
-      const res = await request(baseUrl, "DELETE", `/api/rooms/${roomId}`, undefined, hostHeaders(roomId));
-      check(res.status === 200, `DELETE con x-host-token debía responder 200: ${describeResponse(res)}`);
+    await step("«Nueva ronda» sin token de anfitrión (acta cerrada): la sala de demo queda limpia, sin bots y con el reloj en 0", async () => {
+      const res = await request(baseUrl, "DELETE", `/api/rooms/${roomId}`);
+      check(res.status === 200, `Con el acta cerrada, DELETE sin token debía responder 200 en la demo: ${describeResponse(res)}`);
       await stage.waitFor(
         (state) => state.demo === true && state.allocation?.status === "PENDING" && state.stakes.elapsedMs === 0 && state.orgs.every((org) => org.roles.every((role) => role.bot !== true)),
         "sala de demo limpia",
@@ -1295,6 +1311,33 @@ async function demoJourney() {
     stage?.close();
     for (const person of people) person.close();
     await discardRoom(roomId);
+  }
+}
+
+// --- Demo pauteada: plan B ---------------------------------------------------------------
+
+async function demoPlanBJourney() {
+  title("demo pauteada: si nadie actúa, el piloto juega cada turno (plan B) y el acta lo dice");
+  let roomId = null;
+  let stage = null;
+  try {
+    roomId = await createRoom("cross_org", { demo: true, turnMs: 1500 });
+    stage = new Participant(roomId, "pantalla general");
+    await stage.listen();
+    await step("entra una sola persona y nadie aprieta nada: la demo igual llega al acta", async () => {
+      expectOk(await drawSeat(roomId));
+      await stage.waitFor((state) => state.allocation?.status === "SEALED", "asignación sellada por el plan B", 20_000);
+    });
+    await step("los tres turnos quedan en el acta como automáticos", async () => {
+      const acta = await request(baseUrl, "GET", `/api/rooms/${roomId}/acta`);
+      check(acta.status === 200, `El acta debía responder 200: ${describeResponse(acta)}`);
+      const automatic = acta.data.auditLog.filter((event) => event.detail?.modo === "automático");
+      check(automatic.length === 3, `Se esperaban 3 turnos automáticos (2 presentaciones y la firma del Comité) y hay ${automatic.length}`);
+      check(/^Automático \(plan B\)/.test(acta.data.decisions.at(-1)?.reason ?? ""), "La razón del Comité debía decir que fue automática");
+    });
+  } finally {
+    stage?.close();
+    await discardRoom(roomId, null, { sealedDemo: true });
   }
 }
 
@@ -1333,6 +1376,7 @@ async function main() {
   if (!ONLY) await scenarioJourney("construccion");
   if (!ONLY) await seatDrawJourney();
   if (!ONLY) await demoJourney();
+  if (!ONLY) await demoPlanBJourney();
   if (!ONLY) await mutatedRoomJourney();
 
   console.log(`\nResultado: ${passed} pasos OK, ${failures.length} con FALLA.`);
