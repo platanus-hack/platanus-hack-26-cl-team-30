@@ -30,7 +30,7 @@ vi.mock("@kapso/whatsapp-cloud-api", () => ({
 }));
 
 import { openCommitteeSession } from "../src/integrations/committee-channel";
-import { actaVoiceText, caseVoiceText, noteInbound, sendCommitteeVoiceNote, synthesizeSpeech, windowOpen, WHATSAPP_WINDOW_MS } from "../src/integrations/voice-notes";
+import { actaVoiceText, caseVoiceText, MAX_VOICE_WORDS, noteInbound, sendCommitteeVoiceNote, spokenWords, synthesizeSpeech, windowOpen, WHATSAPP_WINDOW_MS } from "../src/integrations/voice-notes";
 import { applyAction, createRoom, getHostCredentials, getRoom, projectRoom } from "../src/lib/store/rooms";
 import { POST as kapsoWebhook } from "../src/app/api/integrations/kapso/webhook/route";
 import { POST as actionRoute } from "../src/app/api/rooms/[roomId]/action/route";
@@ -124,8 +124,9 @@ describe("el texto: solo lo que ve el Comité, y para cualquier escenario", () =
     expect(text).toContain("La regla propone a Paciente B");
     expect(text).toContain("Hospital Rural Valle Sur");
     for (const secret of SECRETS) expect(text).not.toContain(secret);
-    // Unos 20 s: a lo más 55 palabras.
-    expect(text.split(" ").length).toBeLessThanOrEqual(55);
+    // Unos 30 s: a lo más MAX_VOICE_WORDS palabras habladas, sin cortar el cierre.
+    expect(spokenWords(text)).toBeLessThanOrEqual(MAX_VOICE_WORDS);
+    expect(text).toContain("Gracias.");
   });
 
   it("en construcción habla de obras y de la grúa, no de pacientes ni camas", async () => {
@@ -158,7 +159,7 @@ describe("audio y envío", () => {
     expect(String(url)).toMatch(/^https:\/\/api\.elevenlabs\.io\/v1\/text-to-speech\/[^/?]+\?output_format=opus_48000_64$/);
     expect(init.method).toBe("POST");
     expect(init.headers["xi-api-key"]).toBe("clave-eleven");
-    expect(JSON.parse(init.body)).toMatchObject({ model_id: "eleven_multilingual_v2" });
+    expect(JSON.parse(init.body)).toMatchObject({ model_id: "eleven_v3" });
     expect(kapso.upload).toHaveBeenCalledWith(expect.objectContaining({ phoneNumberId: "pn-1", type: "audio/ogg", fileName: "sculptor.ogg" }));
     expect(kapso.sendAudio).toHaveBeenCalledWith({ phoneNumberId: "pn-1", to: PHONE, audio: { id: "media-123", voice: true } });
   });

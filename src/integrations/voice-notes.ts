@@ -20,7 +20,7 @@
 // Variables de entorno:
 //   NEXO_VOICE_NOTES=1     activa las notas de voz (apagadas por defecto)
 //   ELEVENLABS_API_KEY     obligatoria para sintetizar
-//   ELEVENLABS_VOICE_ID    opcional: voz a usar (por defecto, una voz prediseñada multilingüe)
+//   ELEVENLABS_VOICE_ID    opcional: voz a usar (por defecto, Ignacio, voz chilena de la biblioteca)
 //   KAPSO_*                las mismas del canal de WhatsApp (ver kapso.ts)
 
 import type { ProjectedRoomState } from "@/lib/genome/schema";
@@ -29,12 +29,21 @@ import { closeSession, getWhatsAppSessionForRoom } from "./committee-channel";
 import { sendAudioMessage, uploadAudio, whatsappStatus } from "./kapso";
 
 const TTS_API = "https://api.elevenlabs.io/v1/text-to-speech";
-/** Voz prediseñada (George) que el plan gratis puede usar por la API y que habla español con el modelo multilingüe. */
-const DEFAULT_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb";
-/** Modelo multilingüe: detecta el español por el texto (no admite language_code, según la referencia de la API). */
-const TTS_MODEL = "eleven_multilingual_v2";
-/** Unos 20 s de voz pausada. */
-export const MAX_VOICE_WORDS = 55;
+/** Ignacio: voz chilena, cálida y conversacional, de la biblioteca de voces de ElevenLabs. */
+const DEFAULT_VOICE_ID = "mfeDHx0s0qg3oU90BXRF";
+/**
+ * Eleven v3: el modelo más expresivo. Entiende etiquetas de actuación entre corchetes
+ * ([warmly], [breathes], [short pause]) que no se leen en voz alta: así respira, hace
+ * pausas y suena como una persona y no como un lector de texto.
+ */
+const TTS_MODEL = "eleven_v3";
+/** Estabilidad media: natural sin volverse impredecible. */
+const VOICE_SETTINGS = { stability: 0.5, similarity_boost: 0.85 };
+/** Unos 30 s de voz pausada. Cuentan solo las palabras habladas, no las etiquetas. */
+export const MAX_VOICE_WORDS = 75;
+
+/** Palabras que se dicen en voz alta: las etiquetas entre corchetes no se leen. */
+export const spokenWords = (text: string) => text.replace(/\[[^\]]*\]/g, " ").split(/\s+/).filter(Boolean).length;
 export const WHATSAPP_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export function voiceNotesEnabled(): boolean {
@@ -58,11 +67,18 @@ export function windowOpen(phone: string, now: number = Date.now()): boolean {
 
 // --- Texto del resumen ----------------------------------------------------------
 
-/** Recorta a un máximo de palabras, cerrando con punto. */
+/** Recorta a un máximo de palabras habladas (las etiquetas no cuentan), cerrando con punto. */
 function limitWords(text: string, max = MAX_VOICE_WORDS): string {
   const words = text.replace(/\s+/g, " ").trim().split(" ");
-  if (words.length <= max) return words.join(" ");
-  return `${words.slice(0, max).join(" ").replace(/[,;:]$/, "")}.`;
+  let spoken = 0;
+  const kept: string[] = [];
+  for (const word of words) {
+    const isTag = /^\[.*\]$/.test(word) || /^\[/.test(word) || /\]$/.test(word);
+    if (!isTag) spoken += 1;
+    if (spoken > max) return `${kept.join(" ").replace(/[,;:.]*$/, "")}.`;
+    kept.push(word);
+  }
+  return kept.join(" ");
 }
 
 const score = (value: number) => value.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -82,12 +98,13 @@ export function caseVoiceText(view: ProjectedRoomState): string | null {
   const orgName = (orgId: string) => view.orgs.find((org) => org.orgId === orgId)?.orgName ?? orgId;
   const [first, second] = allocation.ranking;
   const parts = [
-    `Sculptor. Caso para el Comité: ${resourceName(view)}.`,
-    `La regla propone a ${first.patientLabel}, de ${orgName(first.orgId)}, con puntaje ${score(first.score)}.`,
-    second ? `Le sigue ${second.patientLabel}, de ${orgName(second.orgId)}, con ${score(second.score)}.` : "",
-    allocation.tieBreakApplied ? "Quedaron casi empatados y el desempate da prioridad a quien tiene más necesidad sin cubrir." : "",
-    "Los costos de cada organización no se comparten.",
-    "Para decidir, use los botones y escriba su razón.",
+    "[warmly] Hola, te hablo de Sculptor. [breathes]",
+    `Mira... hay un caso para el Comité: ${resourceName(view)}.`,
+    `La regla propone a ${first.patientLabel}, de ${orgName(first.orgId)}, con ${score(first.score)}... [short pause]`,
+    second ? `Le sigue ${second.patientLabel}, de ${orgName(second.orgId)}.` : "",
+    allocation.tieBreakApplied ? "Están casi empatados: gana quien tiene más necesidad sin cubrir." : "",
+    "Los costos de cada uno no se comparten. [breathes]",
+    "Toca Aprobar o Vetar... y escríbeme tu razón. [softly] Gracias.",
   ];
   return limitWords(parts.filter(Boolean).join(" "));
 }
@@ -103,14 +120,15 @@ export function actaVoiceText(view: ProjectedRoomState): string | null {
   const reason = decision.reason.replace(/\s*\(vía [^)]*\)\s*$/, "");
   return limitWords(
     [
-      `Sculptor. Acta de la decisión: ${resourceName(view)} se asigna a ${winner.patientLabel}, de ${orgName}.`,
+      "[warmly] Listo, ya hay decisión. [short pause]",
+      `Acta de la decisión: ${resourceName(view)} se asigna a ${winner.patientLabel}, de ${orgName}.`,
       `Firmó el ${view.scarcity.arbiter.title}. Razón: ${reason}`.replace(/\.?$/, "."),
-      seconds !== null ? `Se decidió en ${seconds} segundos.` : "",
-      "El acta completa queda en la sala.",
+      seconds !== null ? `[breathes] Se decidió en ${seconds} segundos.` : "",
+      "El acta completa queda en la sala... [softly] Gracias por decidir.",
     ]
       .filter(Boolean)
       .join(" "),
-    70,
+    95,
   );
 }
 
@@ -127,8 +145,9 @@ async function tts(text: string, outputFormat: string): Promise<Uint8Array> {
   const res = await fetch(`${TTS_API}/${encodeURIComponent(voiceId)}?output_format=${outputFormat}`, {
     method: "POST",
     headers: { "xi-api-key": apiKey, "Content-Type": "application/json", Accept: "audio/*" },
-    body: JSON.stringify({ text, model_id: TTS_MODEL }),
-    signal: AbortSignal.timeout(20_000),
+    body: JSON.stringify({ text, model_id: TTS_MODEL, voice_settings: VOICE_SETTINGS }),
+    // v3 tarda más que los modelos rápidos; es un audio informativo, no una conversación.
+    signal: AbortSignal.timeout(45_000),
   });
   if (!res.ok) throw new Error(`ElevenLabs ${res.status}: ${(await res.text()).slice(0, 200)}`);
   return new Uint8Array(await res.arrayBuffer());
