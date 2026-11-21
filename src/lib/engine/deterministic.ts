@@ -1208,6 +1208,30 @@ export function recordCommitteeDecision(state: RoomState, actor: ActorRef, input
   if (resolution.ranking.length < 2) {
     return fail(409, "ALLOCATION_NOT_READY", "No se puede vetar al último candidato: el recurso no puede quedar sin asignar");
   }
+
+  // Sala de demo con dos candidatos: rechazar la propuesta asigna el recurso al otro
+  // en un solo paso (la razón sigue siendo obligatoria). En las salas normales, el
+  // veto saca al propuesto y el Comité vuelve a decidir sobre el nuevo orden.
+  if (state.demo && resolution.ranking.length === 2) {
+    const vetoed: RoomState = { ...state, decisions: [...state.decisions, decision] };
+    const after = resolveRoomAllocation(vetoed)!;
+    const other = after.ranking.find((entry) => entry.caseId === after.winnerCaseId)!;
+    const otherOrg = findGenome(state, other.orgId)?.orgName ?? other.orgId;
+    const summary = `El Comité rechazó la propuesta de la regla; el recurso va a ${other.patientLabel} (${otherOrg}).`;
+    const sealed: RoomState = { ...vetoed, allocationStatus: "SEALED", decisionSealedAt: nowTs };
+    const events: NewEvent[] = [
+      { type: "HITL_VETOED", orgId: actor.orgId, roleId: actor.roleId, detail: { scope: "allocation", by: title, reason, vetoedCaseId: winner.caseId, vetoedOrgId: winner.orgId, ...(input.automatic ? { automatic: true } : {}), ...input.detail } },
+      {
+        type: "ALLOCATION_SEALED",
+        orgId: actor.orgId,
+        roleId: actor.roleId,
+        detail: { by: title, reason, message: summary, vetoAssignsOther: true, winnerCaseId: other.caseId, winnerOrgId: other.orgId, patientLabel: other.patientLabel, score: other.score, vetoedCaseId: winner.caseId, ...(input.automatic ? { automatic: true } : {}) },
+      },
+      { type: "STAKES_CONTAINED", detail: { timeToDecisionMs: waitedMs(state, nowTs) } },
+    ];
+    return { ok: true, state: commit(state, sealed, events, nowTs) };
+  }
+
   const next: RoomState = { ...state, decisions: [...state.decisions, decision] };
   const events: NewEvent[] = [
     { type: "HITL_VETOED", orgId: actor.orgId, roleId: actor.roleId, detail: { scope: "allocation", by: title, reason, vetoedCaseId: winner.caseId, vetoedOrgId: winner.orgId } },
@@ -1414,6 +1438,9 @@ export function renderActaMarkdown(acta: AuditActa): string {
       lines.push(`| ${entry.rank} | ${entry.patientLabel} (${entry.caseId}) | ${entry.orgId} | ${decimal(entry.score)} | ${decimal(entry.unmetNeedScore)} |`);
     }
     if (acta.allocation.vetoedCaseIds.length > 0) lines.push("", `Casos vetados por el Comité: ${acta.allocation.vetoedCaseIds.join(", ")}.`);
+    // Sala de demo: el rechazo del Comité asignó el recurso al otro candidato en un solo paso.
+    const vetoSeal = acta.auditLog.findLast((event) => event.type === "ALLOCATION_SEALED" && event.detail.vetoAssignsOther === true);
+    if (vetoSeal && typeof vetoSeal.detail.message === "string") lines.push("", vetoSeal.detail.message);
     if (acta.crossOrgReliability) lines.push("", `Confiabilidad de la cadena entre organizaciones: ${percent(acta.crossOrgReliability.current)}. ${acta.crossOrgReliability.formula}`);
   }
   // Las decisiones del piloto automático (bots o plan B) van aparte: nunca se presentan como de una persona.

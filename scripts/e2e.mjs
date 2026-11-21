@@ -1314,6 +1314,45 @@ async function demoJourney() {
   }
 }
 
+// --- Demo: rechazar asigna el recurso al otro ------------------------------------------
+
+async function demoVetoJourney() {
+  title("sala de demo: «Rechazar» del Comité asigna el recurso al otro caso en un solo paso");
+  let roomId = null;
+  let stage = null;
+  try {
+    roomId = await createRoom("cross_org", { demo: true, turnMs: 0 });
+    stage = new Participant(roomId, "pantalla general");
+    await stage.listen();
+    const seats = [];
+    for (let i = 0; i < 3; i++) {
+      const res = await drawSeat(roomId);
+      expectOk(res);
+      seats.push({ ...res.data.seat, token: res.data.token });
+    }
+    const act = (seat, type, payload = {}) => request(baseUrl, "POST", `/api/rooms/${roomId}/action`, { type, ...seat, ...payload });
+    let proposed = null;
+    await step("los dos hospitales presentan y la regla propone un caso", async () => {
+      for (const seat of seats.slice(0, 2)) expectOk(await act(seat, "SUBMIT_CANDIDATE"));
+      const state = await stage.waitFor((current) => current.allocation?.status === "PROPOSED", "asignación propuesta");
+      proposed = state.allocation.winnerCaseId;
+    });
+    await step("sin razón, 400; con razón, el rechazo sella al otro caso de una vez", async () => {
+      const committee = seats[2];
+      expectError(await act(committee, "COMMITTEE_VETO", { reason: " " }), 400, "REASON_REQUIRED");
+      expectOk(await act(committee, "COMMITTEE_VETO", PAYLOADS.committeeVeto("Se rechaza la propuesta para revisar el caso.")));
+      const state = await stage.waitFor((current) => current.allocation?.status === "SEALED", "asignación sellada tras el rechazo");
+      check(state.allocation.winnerCaseId !== proposed, `El recurso debía ir al otro caso y quedó en ${state.allocation.winnerCaseId}`);
+      const acta = await request(baseUrl, "GET", `/api/rooms/${roomId}/acta?format=md`);
+      check(/El Comité rechazó la propuesta de la regla; el recurso va a/.test(acta.text), "El acta debía decir que el Comité rechazó la propuesta y a quién va el recurso");
+      return `va a ${state.allocation.winnerCaseId}`;
+    });
+  } finally {
+    stage?.close();
+    await discardRoom(roomId, null, { sealedDemo: true });
+  }
+}
+
 // --- Demo pauteada: plan B ---------------------------------------------------------------
 
 async function demoPlanBJourney() {
@@ -1378,6 +1417,7 @@ async function main() {
   if (!ONLY) await seatDrawJourney();
   if (!ONLY) await demoJourney();
   if (!ONLY) await demoPlanBJourney();
+  if (!ONLY) await demoVetoJourney();
   if (!ONLY) await mutatedRoomJourney();
 
   console.log(`\nResultado: ${passed} pasos OK, ${failures.length} con FALLA.`);

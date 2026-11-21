@@ -2,6 +2,7 @@ import { readJsonBody } from "@/lib/store/http";
 import { rateLimited } from "@/lib/store/rate-limit";
 import { applyAction } from "@/lib/store/rooms";
 import { sendActaAfterWebSeal } from "@/integrations/voice-notes";
+import { summaryRecipients } from "@/integrations/committee-summary";
 
 // POST /api/rooms/:roomId/action  body { type, orgId, roleId, token, ...datos }
 // Única puerta para cambiar una sala. La forma del body está en ActionSchema
@@ -22,7 +23,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ roo
   // afectar la respuesta: el audio solo informa (src/integrations/voice-notes.ts).
   const type = (body.value as { type?: unknown } | null)?.type;
   if (status === 200 && type === "ALLOCATION_SEAL") {
-    void sendActaAfterWebSeal(roomId).then((note) => {
+    void sendActaAfterWebSeal(roomId, Date.now(), summaryRecipients(roomId)).then((note) => {
       if (!note.sent && note.reason === "error") console.error("[nota de voz]", note.message);
     });
   }

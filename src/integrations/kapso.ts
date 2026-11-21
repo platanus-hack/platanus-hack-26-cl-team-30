@@ -105,6 +105,31 @@ export async function sendCommitteeCase(
   });
 }
 
+/** true si hay una plantilla aprobada configurada (permite escribir fuera de la ventana de 24 h). */
+export function templateConfigured(): boolean {
+  return Boolean(kapsoConfig().templateName);
+}
+
+/**
+ * Envía un resumen por la plantilla configurada (KAPSO_TEMPLATE_NAME), a cualquier
+ * número y fuera de la ventana de 24 h: {{1}} = sala, {{2}} = el resumen. Solo
+ * parámetros del cuerpo: los botones de respuesta rápida de la plantilla quedan
+ * con su texto por defecto.
+ */
+export async function sendSummaryTemplate(to: string, room: string, summary: string): Promise<void> {
+  const config = kapsoConfig();
+  if (!config.phoneNumberId || !config.templateName) throw new Error("Falta KAPSO_PHONE_NUMBER_ID o KAPSO_TEMPLATE_NAME");
+  await whatsapp().messages.sendTemplate({
+    phoneNumberId: config.phoneNumberId,
+    to: to.replace(/\D/g, ""),
+    template: {
+      name: config.templateName,
+      language: { code: config.templateLang },
+      components: [{ type: "body", parameters: [{ type: "text", text: templateParam(room, 40) }, { type: "text", text: templateParam(summary, 200) }] }],
+    },
+  });
+}
+
 /**
  * Sube un audio a los medios de WhatsApp (vía Kapso) y devuelve su id. Es el
  * mismo endpoint de medios de la API de WhatsApp (POST /{phone_number_id}/media).

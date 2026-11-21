@@ -241,11 +241,12 @@ function EdgeLabel({ at, tone, stage, children }: { at: Point; tone: "bleed" | "
   );
 }
 
+// Texto sobre el color de estado: blanco en claro, casi negro en oscuro (token del celular, --st-done-ink).
 function CenterNode({ at, tone, title, status, stage }: { at: Point; tone: "bleed" | "calm" | "ink"; title: string; status: string; stage: boolean }) {
   return (
     <div
       className={cn(
-        "absolute w-[36%] max-w-72 -translate-x-1/2 -translate-y-1/2 rounded-md px-2.5 py-2 text-center text-white",
+        "absolute w-[36%] max-w-72 -translate-x-1/2 -translate-y-1/2 rounded-md px-2.5 py-2 text-center text-[var(--st-done-ink,#fff)]",
         tone === "bleed" && "bg-bleed",
         tone === "calm" && "bg-calm",
         tone === "ink" && "bg-foreground",

@@ -48,3 +48,30 @@
   .cs-lock { animation: none; background: rgb(224 168 145 / 22%); color: #e0a891; }
   .cs-node, .cs-bento-card { transition: none; }
 }
+
+/* ── Ronda 17: escala tipográfica y ritmo de las páginas de caso ───────────
+   Solo Manrope. Una escala clara (titular, sección, entrada, cuerpo) y mucho
+   aire entre secciones. Nada menor a 16 px. */
+.cs-h1 { font-size: clamp(2.7rem, 1rem + 7.6vw, 8.6rem); font-weight: 800; line-height: .92; letter-spacing: -.055em; text-wrap: balance; }
+.cs-h2 { font-size: clamp(2.4rem, 1.4rem + 3.6vw, 4.6rem); font-weight: 780; line-height: 1; letter-spacing: -.045em; text-wrap: balance; }
+.cs-lede { font-size: clamp(1.2rem, 1rem + .6vw, 1.5rem); line-height: 1.4; }
+.cs-body { font-size: 1.0625rem; line-height: 1.5; }
+.cs-big { display: block; font-size: clamp(4.6rem, 3rem + 6vw, 9rem); font-weight: 800; line-height: .85; letter-spacing: -.06em; font-variant-numeric: tabular-nums; }
+.cs-step-num { display: inline-grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: 999px; border: 1.5px solid currentColor; font-weight: 800; font-size: 1.05rem; color: var(--brand); }
+.cs-section { padding-block: clamp(6rem, 3.5rem + 8vw, 11rem); }
+.cs-cta { background: var(--brand-ink); color: var(--background); }
+.cs-cta .cs-lede { color: color-mix(in srgb, var(--background) 82%, transparent); }
+.cs-cta .btn-primary { background: var(--background); color: var(--brand-ink); }
+.cs-cta .btn-primary:hover:not([disabled]) { background: var(--brand-soft); }
+/* Tabla oscura de «lo ajeno nunca llega». */
+.cs-matrix th, .cs-matrix td { padding: 1.1rem 1.2rem; font-size: 1.0625rem; border-bottom: 1px solid var(--cs-line); }
+.cs-matrix thead th { font-size: 1.25rem; font-weight: 800; color: var(--cs-ink); }
+.cs-matrix tbody th { font-weight: 600; color: var(--cs-fog); }
+.cs-matrix td { font-weight: 700; }
+.cs-matrix td[data-locked="true"] { background: repeating-linear-gradient(-52deg, rgb(224 168 145 / 12%) 0 2px, transparent 2px 8px); }
+/* En el celular la tabla cabe sin desplazarse: el candado solo (con su texto para lectores de pantalla). */
+@media (max-width: 640px) {
+  .cs-matrix th, .cs-matrix td { padding: .9rem .5rem; font-size: 1rem; }
+  .cs-matrix thead th { font-size: 1rem; }
+  .cs-matrix .cs-lock-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}

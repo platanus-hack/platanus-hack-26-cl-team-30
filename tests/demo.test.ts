@@ -404,14 +404,35 @@ describe("demo pauteada: orden de los asientos, turno y plan B", () => {
     expect(submitted[0]!.detail.modo).toBeUndefined();
   });
 
-  it("si el Comité rechaza, vuelve a ser su turno con el otro caso y la cuenta empieza de nuevo", async () => {
+  it("si el Comité rechaza, la cama va al otro caso en un solo paso y el acta lo dice", async () => {
     const roomId = demo();
     const [clinic, rural, committee] = [draw(roomId), draw(roomId), draw(roomId)];
     await act(roomId, clinic, "SUBMIT_CANDIDATE");
     await act(roomId, rural, "SUBMIT_CANDIDATE");
-    vi.advanceTimersByTime(15_000);
+    const proposed = stage(roomId).allocation!.winnerCaseId;
+    // La razón sigue siendo obligatoria.
+    expect(await act(roomId, committee, "COMMITTEE_VETO", { reason: "  " })).toMatchObject({ status: 400, body: { code: "REASON_REQUIRED" } });
     expect((await act(roomId, committee, "COMMITTEE_VETO", { reason: "Se rechaza la propuesta para revisar el caso." })).status).toBe(200);
-    expect(turnOf(roomId)).toMatchObject({ label: "Comité", action: "decide", remainingMs: 20_000 });
+    const view = stage(roomId);
+    expect(view.allocation!.status).toBe("SEALED");
+    expect(view.allocation!.winnerCaseId).not.toBe(proposed);
+    expect(view.stakes.status).toBe("CONTAINED");
+    expect(turnOf(roomId)).toBeNull();
+    // Una sola decisión del Comité (el rechazo), no dos.
+    expect(getRoom(roomId)!.decisions.filter((decision) => decision.scope === "allocation").map((decision) => decision.decision)).toEqual(["VETO"]);
+    const markdown = getActa(roomId)!.markdown;
+    expect(markdown).toMatch(/El Comité rechazó la propuesta de la regla; el recurso va a Paciente [AB] \(/);
+  });
+
+  it("en una sala normal, el veto sigue obligando a decidir de nuevo sobre el otro caso", async () => {
+    const roomId = createRoom({ mode: "cross_org" }).roomId;
+    const a = await join(roomId, CLINIC, "role_a");
+    const b = await join(roomId, RURAL, "role_a");
+    const c = await join(roomId, ARBITER.orgId, ARBITER.roleId, keyOf(roomId));
+    await act(roomId, a, "SUBMIT_CANDIDATE");
+    await act(roomId, b, "SUBMIT_CANDIDATE");
+    expect((await act(roomId, c, "COMMITTEE_VETO", { reason: "Revisar el caso." })).status).toBe(200);
+    expect(stage(roomId).allocation!.status).toBe("PROPOSED");
   });
 
   it("con el plan B apagado (turnTimeoutMs 0) nadie juega por la persona", () => {

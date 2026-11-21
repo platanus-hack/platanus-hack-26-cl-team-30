@@ -204,9 +204,11 @@ export async function sendCommitteeVoiceNote(kind: VoiceNoteKind, roomId: string
  * Si el Comité decidió por WhatsApp, el webhook ya envió el acta y cerró la sesión,
  * así que aquí no se repite.
  */
-export async function sendActaAfterWebSeal(roomId: string, now: number = Date.now()): Promise<VoiceNoteResult> {
+export async function sendActaAfterWebSeal(roomId: string, now: number = Date.now(), skipPhones: string[] = []): Promise<VoiceNoteResult> {
   const session = getWhatsAppSessionForRoom(roomId);
   if (!session?.phone) return { sent: false, reason: "no_phone" };
   closeSession(session);
+  // Si ese número también pidió el resumen (wa.me o a mano), el acta ya le llega por ahí.
+  if (skipPhones.includes(session.phone)) return { sent: false, reason: "nothing_to_say" };
   return sendCommitteeVoiceNote("acta", roomId, session.phone, now);
 }

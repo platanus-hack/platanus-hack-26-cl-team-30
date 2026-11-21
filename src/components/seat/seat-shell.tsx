@@ -6,6 +6,7 @@ import "@fontsource-variable/manrope";
 import type { ConnectionStatus } from "@/lib/client/use-room";
 import type { AccentColor, StakesView } from "@/lib/genome/schema";
 import { Mark } from "@/components/landing/mark";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { formatClock } from "@/components/organs/format";
 import "./seat.css";
 
@@ -70,6 +71,8 @@ export function SeatShell({ who, stakes, status, tab, onTab, turnPending = false
             </span>
           )
         )}
+        {/* Modo claro/oscuro, el mismo botón de todas las pantallas; se recuerda entre páginas. */}
+        <ThemeToggle size={18} className="st-theme" />
       </header>
 
       <Ecg beating={waiting} />

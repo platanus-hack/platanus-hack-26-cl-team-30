@@ -1,6 +1,7 @@
 import { buildCommitteeBrief, closeSession, decideAsCommittee, getSession, getSessionByPhone, setPendingDecision } from "@/integrations/committee-channel";
 import { extractIncomingMessages, parseButtonId, sendText, verifyWebhook } from "@/integrations/kapso";
 import { noteInbound, sendCommitteeVoiceNote, type VoiceNoteKind } from "@/integrations/voice-notes";
+import { registerSummaryRecipient, roomCodeFromText, summaryRecipients } from "@/integrations/committee-summary";
 
 /**
  * Nota de voz informativa, en segundo plano: la respuesta al webhook no espera a
@@ -59,6 +60,21 @@ export async function POST(request: Request) {
       }
 
       if (message.text) {
+        const pending = getSessionByPhone(message.from)?.pendingDecision;
+        // «Hola, soy el Comité de la sala <código>» (botón wa.me del celular): este
+        // número recibirá el acta de esa sala. Si tiene una decisión a medias, el
+        // texto es su razón y no un código.
+        const code = pending ? null : roomCodeFromText(message.text);
+        if (code) {
+          const registered = registerSummaryRecipient(code, message.from, "wame");
+          await sendText(
+            message.from,
+            registered.ok
+              ? `Listo: cuando el Comité decida, le llegará aquí el acta de la sala ${code}. (Demostración simulada de Sculptor.)`
+              : `No encontré la sala ${code}. Revise el código en la pantalla grande y vuelva a escribir.`,
+          );
+          continue;
+        }
         const session = getSessionByPhone(message.from);
         if (!session) continue;
         if (!session.pendingDecision) {
@@ -71,7 +87,8 @@ export async function POST(request: Request) {
           closeSession(session);
           await sendText(message.from, "Decisión registrada con su razón. Ya aparece en todas las pantallas y en el acta.");
           // (b) Si quedó sellada, el acta en audio al Comité (acaba de escribir: ventana abierta).
-          if (decision === "approve") voiceNoteInBackground("acta", session.roomId, message.from);
+          // Si este número pidió el resumen (wa.me o a mano), el acta ya le llega por ahí.
+          if (decision === "approve" && !summaryRecipients(session.roomId).includes(message.from)) voiceNoteInBackground("acta", session.roomId, message.from);
         } else {
           await sendText(message.from, `No se pudo registrar: ${decided.message}.`);
         }

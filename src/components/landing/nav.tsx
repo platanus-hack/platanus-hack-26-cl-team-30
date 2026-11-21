@@ -5,6 +5,7 @@ import { useRef } from "react";
 import { MonitorPlay } from "lucide-react";
 import { MOTION_OK, gsap, useGSAP } from "./gsap";
 import { Logo } from "./mark";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const LINKS = [
   { href: "#como-funciona", label: "Cómo funciona" },
@@ -39,7 +40,8 @@ export function Nav() {
             </a>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-4">
+        <div className="ml-auto flex items-center gap-3 sm:gap-4">
+          <ThemeToggle />
           <a href="#acceso" className="small hidden font-medium text-muted-foreground transition-colors hover:text-foreground sm:inline">
             Pedir acceso
           </a>

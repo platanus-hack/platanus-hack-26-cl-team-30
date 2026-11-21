@@ -3,6 +3,7 @@ import { Instrument_Serif, JetBrains_Mono } from "next/font/google";
 // Una sans para toda la app: Manrope, la misma de la pantalla grande y del teléfono.
 import "@fontsource-variable/manrope";
 import "./globals.css";
+import { THEME_SCRIPT } from "@/components/ui/theme-script";
 
 // La segunda voz: serif itálica para la parte humana de un título y para la razón de un veto.
 const instrument = Instrument_Serif({
@@ -42,7 +43,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es-CL" className={`${instrument.variable} ${jetbrains.variable} h-full`}>
+    // suppressHydrationWarning: THEME_SCRIPT pone data-theme en <html> antes de que React hidrate.
+    <html lang="es-CL" className={`${instrument.variable} ${jetbrains.variable} h-full`} suppressHydrationWarning>
+      <head>
+        {/* Tema antes del primer pintado: sin destello blanco en modo oscuro (src/components/ui/theme.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );

@@ -11,6 +11,13 @@ Formato de cada entrada:
 
 ---
 
+## Un solo tema para toda la app, en data-theme de <html>
+
+- **Decisión:** el tema claro u oscuro es uno para toda la app: `data-theme` en `<html>`, fijado por un script en el `<head>` antes de pintar (lo elegido en `localStorage`, clave `sculptor:theme`, o la preferencia del sistema). Cada pantalla tiene el mismo botón (`ThemeToggle`) y lo lee con `useTheme()`. El deck estático repite el script.
+- **Alternativa descartada:** que cada pantalla guardara su propio tema (la pantalla grande tenía `nexo:stage-theme` y partía en oscuro), o un proveedor de React que lo aplicara después de cargar.
+- **Por qué:** la elección se comparte entre páginas y pestañas, y como el atributo está antes del primer pintado no hay destello blanco en oscuro. Un proveedor de React lo aplicaría tarde.
+- **Costo:** el `<html>` lleva `suppressHydrationWarning`, porque el servidor no sabe el tema; el ícono del botón se corrige al montar.
+
 ## Los componentes de 21st.dev se adaptan con CSS y GSAP, sin framer-motion
 
 - **Decisión:** las cuatro piezas elegidas de 21st.dev (`docs/diseno/21st/`) se reescribieron para las páginas de caso: tipografía cinética y foco con CSS (`kinetic-hero.tsx`), rayos SVG animados con CSS (`how-beam.tsx`), marco 3D con GSAP ScrollTrigger (`stage-scroll.tsx`) y bento oscuro con CSS (`seen-bento.tsx`). Con `prefers-reduced-motion` todo queda quieto y completo. Los íconos son de lucide: sin logos de terceros, tampoco el de WhatsApp. La captura de la pantalla grande de cada caso es real: una sala de demo de ese escenario jugada hasta el paso Comité (`public/casos/`).
@@ -340,4 +347,16 @@ Formato de cada entrada:
 
 - **Decisión:** toda decisión que toma el piloto automático (bots del ensayo o de la demo, y el plan B por tiempo) lleva `automatic: true` en `HumanDecision`, `automatic: true` y `modo: "automático"` en el evento de la bitácora, y el acta Markdown la lista en «Decisiones automáticas», separada de «Decisiones humanas» (`renderActaMarkdown`).
 - **Por qué:** el ensayo final del agente de los jueces encontró que esas decisiones quedaban como decisiones humanas, sin marca, y que el acta las mezclaba con las de las personas. Eso contradecía el principio de no presentar nunca algo simulado como real.
+
+## En la demo, «Rechazar» asigna el recurso al otro en un solo paso
+
+- **Decisión:** en las salas de demo con dos candidatos, el veto del Comité sella la asignación al otro caso de una vez. La razón sigue siendo obligatoria y queda una sola decisión del Comité (el VETO); el acta agrega «El Comité rechazó la propuesta de la regla; el recurso va a <otro>».
+- **Por qué:** Sebastián lo jugó con Ramón y Nahum: con dos candidatos, vetar obligaba a decidir dos veces sobre algo que ya era obvio. En las salas normales el veto se mantiene como antes (saca al propuesto y el Comité vuelve a decidir), porque con más candidatos o reglas reales no hay un «otro» evidente.
+
+## El acta por WhatsApp para el Comité del celular, abriendo la conversación con wa.me
+
+- **Decisión:** el celular del Comité ofrece «Recibir resumen por WhatsApp», que abre WhatsApp con «Hola, soy el Comité de la sala <código>» ya escrito. Ese mensaje abre la ventana de 24 h y el webhook asocia el número a la sala; al decidir le llega el acta (texto y nota de voz). Alternativa: escribir el número a mano, con el token del Comité. Si hay plantilla aprobada, se usa primero.
+- **Por qué:** fuera de una conversación abierta, WhatsApp solo deja enviar plantillas aprobadas por Meta, y la aprobación podía no llegar a tiempo para la demo. Si la persona escribe primero, se le puede responder en texto y audio sin plantilla.
+- **Privacidad:** el número vive solo en la memoria del servidor durante la ronda; un reinicio de la sala lo olvida. Nunca entra al estado de la sala, así que no viaja a ninguna pantalla (`tests/committee-summary.test.ts` lo comprueba).
+- **Riesgo:** quien conozca el código de una sala puede asociar su número y recibir el acta de esa sala. El acta no trae datos reservados (sale de la vista del Comité), así que se acepta en las salas de demo.
 

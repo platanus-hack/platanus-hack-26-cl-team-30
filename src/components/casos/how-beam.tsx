@@ -26,7 +26,7 @@ function Circle({ refEl, label, icon, hub = false }: { refEl: RefObject<HTMLDivE
       >
         {icon}
       </div>
-      <span className={`small max-w-[9rem] text-center font-semibold leading-tight ${hub ? "text-foreground" : "text-muted-foreground"}`}>{label}</span>
+      <span className={`max-w-[6.5rem] text-center text-base font-semibold leading-tight sm:max-w-[9rem] ${hub ? "text-foreground" : "text-muted-foreground"}`}>{label}</span>
     </div>
   );
 }

@@ -48,6 +48,8 @@ import { hostRequest, type ConnectionStatus, type HostCredentials } from "@/lib/
 import type { AuditEvent, ProjectedRoomState } from "@/lib/genome/schema";
 import { CROSS_ORG_SCENARIOS, CROSS_ORG_SCENARIO_IDS } from "@/lib/genome/scenarios";
 import { SUGGESTIONS, answer } from "./ask";
+import { GuideAssistant } from "@/components/ui/guide-assistant";
+import { setTheme, useTheme } from "@/components/ui/theme";
 import { commandStyles } from "./command-styles";
 import { Dialog, Dock, NewRoundButton, Panel, State, type ViewId, type ViewInfo } from "./command-parts";
 import { Galaxy } from "./galaxy";
@@ -66,7 +68,6 @@ const VIEWS: ViewInfo[] = [
 ];
 
 const SCENARIO_SHORT: Record<string, string> = { hospitales: "Hospitales", construccion: "Construcción", logistica: "Logística" };
-const THEME_KEY = "nexo:stage-theme";
 const noopSubscribe = () => () => {};
 /** Tiempo que el paso «Unirse» sigue a la vista después de completarse, para que se vea la esfera armada. */
 const JOIN_LINGER_MS = 2600;
@@ -91,31 +92,15 @@ type Props = {
 
 export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props) {
   const [view, setView] = useState<ViewId>("mando");
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  // El tema es el de toda la app (src/components/ui/theme.ts): lo elegido en cualquier página, o el del sistema.
+  const theme = useTheme("dark");
   const [modal, setModal] = useState<"ask" | "notify" | null>(null);
   const [logOpen, setLogOpen] = useState(false);
   const integrations = useIntegrations();
   const baseUrl = useSyncExternalStore(noopSubscribe, publicBaseUrl, () => null);
   const logRef = useRef<HTMLDetailsElement>(null);
 
-  // Parte en oscuro; si la persona eligió claro antes en este equipo, se respeta.
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(THEME_KEY);
-      if (saved === "light") queueMicrotask(() => setTheme("light"));
-    } catch {
-      // Sin almacenamiento: queda en oscuro.
-    }
-  }, []);
-  const toggleTheme = () => {
-    const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    try {
-      window.localStorage.setItem(THEME_KEY, next);
-    } catch {
-      // Sin almacenamiento: el cambio dura hasta recargar.
-    }
-  };
+  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
 
   const cross = room.mode === "cross_org" && !!room.scarcity && !!room.allocation;
   // La galaxia sale de los asientos reales de la sala: un nodo por rol conectado.
@@ -224,6 +209,8 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
       </div>
 
       {modal === "ask" && <AskDialog room={room} close={() => setModal(null)} />}
+      {/* La guía sabe qué sala es: así puede decir a quién le toca (solo lo público). */}
+      <GuideAssistant page="la pantalla grande" roomId={room.roomId} />
       {modal === "notify" && host && (
         <Dialog title="Avisar al Comité" close={() => setModal(null)} light>
           <CommitteeNotify room={room} credentials={host} />

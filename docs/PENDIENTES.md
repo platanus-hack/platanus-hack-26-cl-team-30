@@ -89,3 +89,8 @@ Actualizado el 21 de noviembre de 2026.
 - **Probar contra los servicios reales:** activar `NEXO_VOICE_NOTES=1` en Render con el número de producción y confirmar que (a) ElevenLabs entrega el Opus en OGG y WhatsApp lo muestra como nota de voz, y (b) el audio del caso llega al tocar un botón y el del acta al escribir la razón.
 - **Resuelto (ronda 15): el acta en audio también llega si el Comité sella desde la web,** siempre que a esa sala se le haya enviado el caso por WhatsApp y la conversación esté abierta (`sendActaAfterWebSeal`, llamada desde la ruta de acciones). Falta el caso del plan B: si el piloto sella solo en una sala de demo, no se envía audio.
 
+## Agregado en la ronda 18 (veto en un paso, resumen por WhatsApp, espera con flujo)
+
+- **Probar el botón wa.me contra el número real** (+1 208 485 0157): que el webhook de Kapso reciba «Hola, soy el Comité de la sala <código>», responda la confirmación y, al decidir, llegue el acta en texto y nota de voz (con `NEXO_VOICE_NOTES=1`).
+- **Plantilla para el acta:** si `KAPSO_TEMPLATE_NAME` está configurada, el acta se envía por esa plantilla con {{1}} = sala y {{2}} = resumen. La plantilla del caso fue pensada para el caso con botones; si el texto no calza, conviene aprobar una plantilla propia para el acta.
+

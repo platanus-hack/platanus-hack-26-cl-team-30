@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { SculptorGlassReveal } from "@/components/brand/glass-logo-reveal";
 import { SculptorLogo } from "@/components/brand/sculptor-logo";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export const metadata: Metadata = {
   title: "Sculptor · Marca",
@@ -12,7 +13,11 @@ export const metadata: Metadata = {
 // arma solo con SVG y CSS (pasa el mouse para repetir) y los tamaños pequeños.
 export default function MarcaPage() {
   return (
-    <main style={{ minHeight: "100svh", background: "#0e1110", color: "#f2efe8" }}>
+    // El fondo sigue el tema de toda la app (bg-background); el revelado de vidrio trae su propio fondo.
+    <main className="relative min-h-svh bg-background text-foreground">
+      <div className="absolute top-4 right-4 z-10">
+        <ThemeToggle />
+      </div>
       <SculptorGlassReveal style={{ height: "70svh", minHeight: 420, width: "100%" }} />
       <div
         style={{

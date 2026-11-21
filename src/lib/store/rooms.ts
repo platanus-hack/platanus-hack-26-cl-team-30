@@ -64,6 +64,8 @@ type RoomRecord = {
   busy: Set<string>;
   /** Sala de demo con el acta cerrada: reinicio automático tras DEMO_RESET_IDLE_MS sin actividad. */
   resetTimer?: ReturnType<typeof setTimeout> | null;
+  /** Ronda de la sala: sube con cada reinicio. Lo usan los canales para olvidar datos de la ronda anterior. */
+  round?: number;
   /** Sala de demo: turno actual (demoTurn().key) y su plan B. */
   turnKey?: string | null;
   turnTimer?: ReturnType<typeof setTimeout> | null;
@@ -286,6 +288,15 @@ function lookup(roomId: string): RoomRecord | undefined {
   return store.rooms.get(roomId);
 }
 
+/**
+ * Identificador de la ronda actual de una sala: cambia con cada reinicio (aunque
+ * ocurra en el mismo milisegundo) y si la sala se borra y renace. undefined si no existe.
+ */
+export function roomRound(roomId: string): string | undefined {
+  const record = store.rooms.get(roomId);
+  return record ? `${record.round ?? 0}:${record.state.caseOpenedAt}` : undefined;
+}
+
 /** Estado completo de una sala (con secretos). Solo para código del servidor; nunca se envía a un cliente. */
 export function getRoom(roomId: string): RoomState | undefined {
   return lookup(roomId)?.state;
@@ -307,6 +318,7 @@ export function resetRoom(roomId: string, now: number = Date.now()): boolean {
   record.autopilot = null;
   record.tokens.clear();
   record.busy.clear();
+  record.round = (record.round ?? 0) + 1;
   record.state = initialState(roomId, record.origin, now);
   touch(record);
   emit(roomId);

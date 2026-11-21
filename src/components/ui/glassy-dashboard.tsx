@@ -11,6 +11,7 @@
 // de un string en saveCsv.
 
 import { useEffectEvent, useId, useState, type CSSProperties, type ReactNode, useEffect, useRef, type MouseEvent } from "react";
+import { setTheme as setAppTheme, useTheme } from "./theme";
 
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Box, CircleDollarSign, Clock3, Download, Ellipsis, Eye, Filter, ListChecks, Search, ShieldCheck, ShoppingBag, TriangleAlert, Users, Zap, ArrowDownToLine, BarChart3, Bell, BriefcaseBusiness, ChevronRight, Command, LayoutDashboard, Moon, Sun, TrendingUp, X } from "lucide-react";
 
@@ -1185,12 +1186,9 @@ function GlassyDashboard({
   const [view, setView] = useState<View>(routeFromHash);
   const [active, setActive] = useState(view);
   const [period, setPeriod] = useState<Period>("30 days");
-  const [theme, setTheme] = useState(initialTheme);
-  const [lastInitialTheme, setLastInitialTheme] = useState(initialTheme);
-  if (lastInitialTheme !== initialTheme) {
-    setLastInitialTheme(initialTheme);
-    setTheme(initialTheme);
-  }
+  // El tema es el de toda la app (src/components/ui/theme.ts); initialTheme solo vale en el servidor.
+  const theme = useTheme(initialTheme);
+  const setTheme = setAppTheme;
   const [modal, setModal] = useState<Modal>(null);
   const [work, setWork] = useState(initialWork);
   const [readNotices, setReadNotices] = useState(false);
@@ -1296,8 +1294,8 @@ function GlassyDashboard({
           <span className="gd-orb" aria-hidden="true" /><span className="gd-prompt" key={view}>{current.prompt}</span><Search aria-hidden="true" className="gd-ask-search" />
         </button>
         <div className="gd-top-actions">
-          <button title={theme === "light" ? "Switch to dark theme" : "Switch to light theme"} type="button" className="gd-icon-button"
-            aria-label={theme === "light" ? "Switch to dark theme" : "Switch to light theme"} onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
+          <button title={theme === "light" ? "Cambiar a modo oscuro" : "Cambiar a modo claro"} type="button" className="gd-icon-button"
+            aria-label={theme === "light" ? "Cambiar a modo oscuro" : "Cambiar a modo claro"} onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
             {theme === "light" ? <Moon aria-hidden="true" /> : <Sun aria-hidden="true" />}
           </button>
           <button type="button" className="gd-icon-button gd-notices" aria-label="Notifications" onClick={() => { setReadNotices(true); setModal("notifications"); }}>

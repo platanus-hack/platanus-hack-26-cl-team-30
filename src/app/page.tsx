@@ -1,3 +1,4 @@
+import { GuideAssistant } from "@/components/ui/guide-assistant";
 import { Access } from "@/components/landing/access";
 import { clinicProjections, landingExample, reliabilityTable } from "@/components/landing/data";
 import { Example } from "@/components/landing/example";
@@ -29,6 +30,8 @@ export default function Home() {
         <Access />
       </main>
       <Footer />
+      {/* Guía conversacional (src/components/ui/guide-assistant.tsx): solo se monta aquí, la portada es de Ramón. */}
+      <GuideAssistant page="la portada" />
     </>
   );
 }

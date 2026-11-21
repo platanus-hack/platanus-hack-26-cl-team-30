@@ -168,7 +168,7 @@ export default function RoomClient() {
   if (demoSeat) {
     return (
       <SeatShell who={{ title: demoSeat.label, org: arbiter ? undefined : myOrg?.orgName, accent: demoSeat.accent }} stakes={room.stakes} status={status} alert={alert}>
-        <DemoSeatView room={room} me={me} act={act} acta={{ md: actaUrl(roomId, "md") }} />
+        <DemoSeatView room={room} me={me} act={act} acta={{ md: actaUrl(roomId, "md") }} session={session} />
       </SeatShell>
     );
   }

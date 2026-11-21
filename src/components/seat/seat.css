@@ -64,8 +64,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * Modo oscuro («night»): sigue la misma regla que globals.css. Oscuro si el
+ * usuario lo eligió (data-theme="dark" en <html>, que pone el botón de tema y el
+ * script del head antes de pintar), o si el sistema es oscuro y no eligió claro.
+ */
 @media (prefers-color-scheme: dark) {
-  .seat {
+  :root:not([data-theme="light"]) .seat {
     --st-ink: #fffdf8;
     --st-soft: #b4b4ac;
     --st-line: rgb(255 253 248 / 13%);
@@ -97,7 +102,42 @@
     --st-amber: #e0a891;
     --st-violet: #b9aaf0;
     color-scheme: dark;
+  
   }
+}
+:root[data-theme="dark"] .seat {
+  --st-ink: #fffdf8;
+  --st-soft: #b4b4ac;
+  --st-line: rgb(255 253 248 / 13%);
+  --st-line-strong: rgb(255 253 248 / 28%);
+  --st-bg: #151515;
+  --st-wash:
+    radial-gradient(circle at 10% 8%, rgb(111 175 155 / 18%), transparent 46%),
+    radial-gradient(circle at 92% 88%, rgb(197 143 123 / 12%), transparent 46%),
+    linear-gradient(165deg, #1b1b1a, #151515 60%, #10100f);
+  --st-card: rgb(34 34 32 / 78%);
+  --st-raised: #2c2c2a;
+  --st-inner: rgb(255 253 248 / 7%);
+  --st-rim: rgb(255 253 248 / 14%);
+  --st-rail: rgb(26 26 25 / 86%);
+  --st-shadow: 0 0 0;
+  --st-primary: #6faf9b;
+  --st-primary-ink: #151515;
+  --st-now: #e1ff00;
+  --st-now-ink: #151515;
+  --st-wait: #fca5a5;
+  --st-wait-soft: rgb(252 165 165 / 13%);
+  --st-done: #86efac;
+  --st-done-soft: rgb(134 239 172 / 13%);
+  --st-done-fill: #86efac;
+  --st-done-ink: #10100f;
+  --st-warn: #e0a891;
+  --st-warn-soft: rgb(224 168 145 / 13%);
+  --st-emerald: #8fd3bd;
+  --st-amber: #e0a891;
+  --st-violet: #b9aaf0;
+  color-scheme: dark;
+  
 }
 
 .seat::before {
@@ -218,6 +258,23 @@
 .st-timer svg {
   inline-size: 15px;
   block-size: 15px;
+}
+
+.st-theme {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--st-ink);
+  background: var(--st-card);
+  box-shadow: inset 0 0 0 1px var(--st-line-strong);
+}
+.st-theme:hover {
+  background: var(--st-raised);
 }
 
 /* ── Pulso: rojo y latiendo mientras se espera; verde y plano al sellar ──── */
@@ -1199,10 +1256,133 @@
   block-size: 28px;
 }
 
+/* ── Espera con flujo: los hospitales mientras el Comité decide ──────────── */
+.st-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.st-flow-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 22px;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+.st-flow-spinner {
+  flex: none;
+  inline-size: 26px;
+  block-size: 26px;
+  border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--st-violet) 25%, transparent);
+  border-block-start-color: var(--st-violet);
+  animation: st-spin 0.9s linear infinite;
+}
+@keyframes st-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.st-flow-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.st-flow-steps li {
+  padding: 6px 0 0;
+  border-block-start: 4px solid var(--st-line-strong);
+  font-size: 12.5px;
+  font-weight: 750;
+  color: var(--st-soft);
+  text-align: center;
+}
+.st-flow-steps li[data-state="done"] {
+  border-color: var(--st-done);
+  color: var(--st-done);
+}
+.st-flow-steps li[data-state="now"] {
+  border-color: var(--st-now);
+  color: var(--st-ink);
+  animation: st-pulse 1.4s ease-in-out infinite;
+}
+@keyframes st-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+.st-flow .st-duel {
+  margin-block-start: 0;
+}
+.st-flow-timer {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 750;
+  color: var(--st-soft);
+}
+.st-flow-timer i {
+  display: block;
+  block-size: 6px;
+  border-radius: 999px;
+  background: var(--st-wait);
+  transition: inline-size 900ms linear;
+}
+
+/* Transición clara al resultado cuando el Comité decide. */
+.st-reveal {
+  animation: st-reveal 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes st-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+}
+
+/* ── Resumen por WhatsApp (Comité) ───────────────────────────────────────── */
+.st-wa {
+  display: grid;
+  gap: 4px;
+}
+.st-wa .st-btn {
+  min-block-size: 52px;
+  font-size: 16px;
+}
+.st-wa-form {
+  display: flex;
+  gap: 8px;
+}
+.st-wa-input {
+  flex: 1;
+  min-inline-size: 0;
+  min-block-size: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 16px;
+  color: var(--st-ink);
+  background: var(--st-raised);
+  box-shadow: inset 0 0 0 1.5px var(--st-line-strong);
+}
+.st-wa-result {
+  font-size: 14.5px;
+  font-weight: 700;
+}
+.st-wa-result[data-tone="done"] {
+  color: var(--st-done);
+}
+.st-wa-result[data-tone="wait"] {
+  color: var(--st-warn);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .st-ecg-beat,
   .st-dots i,
-  .st-denied {
+  .st-denied,
+  .st-flow-spinner,
+  .st-flow-steps li,
+  .st-reveal {
     animation: none;
   }
   .st-ecg svg,

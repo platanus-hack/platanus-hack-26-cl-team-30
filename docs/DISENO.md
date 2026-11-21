@@ -6,7 +6,16 @@ Guía para cualquier persona o agente (Claude, Gemini, Antigravity) que cambie c
 
 El producto se llama **Sculptor** (antes «Nexo»). En pantalla se escribe «Sculptor», y en mayúsculas espaciadas «SCULPTOR» en el encabezado de la pantalla grande. Los identificadores internos siguen diciendo `nexo` y no se cambian: variables `NEXO_*`, encabezados `x-nexo-*`, ids como `nexo:approve`, la carpeta `src/components/nexo/`, el repo y la URL del deploy.
 
-El logo oficial es un cubo isométrico (`src/components/brand/sculptor-logo.tsx`, vista previa en `/marca`): cara superior marfil, dos caras en eucalipto y un triángulo lima. En los encabezados (pantalla grande, celular, portada y páginas de caso) va sin animación a través de `Mark` (`src/components/landing/mark.tsx`), con un contorno muy suave para que la cara marfil no se pierda en modo claro. El ícono de la pestaña es `src/app/icon.svg` (SCULPTOR_MARK). La animación grande de vidrio líquido (`SculptorGlassReveal`) es solo para la landing general.
+El logo oficial es la galaxia NGC 253 en píxeles, con el nombre «sculptor» en minúsculas (`src/components/brand/sculptor-logo.tsx`, vista previa en `/marca`). En los encabezados (pantalla grande, celular, portada y páginas de caso) va sin animación a través de `Mark` (`src/components/landing/mark.tsx`), con un contorno muy suave para que los píxeles marfil del núcleo no se pierdan en modo claro. A tamaños muy chicos (26 px) la galaxia se lee como una mancha de puntos: falta una variante simple para esos tamaños. El ícono de la pestaña es `src/app/icon.svg` (SCULPTOR_MARK). La animación grande de vidrio líquido (`SculptorGlassReveal`) es solo para la landing general.
+
+## Tema claro u oscuro
+
+Todas las pantallas (portada, casos, pantalla grande, celular, pitch, `/marca` y `/centro`) tienen un botón de modo claro u oscuro, `ThemeToggle` (`src/components/ui/theme-toggle.tsx`).
+
+- Por defecto se sigue la preferencia del sistema. Lo que la persona elige se guarda en `localStorage` con la clave `sculptor:theme` y vale para todas las páginas (también entre pestañas).
+- El tema vive en un solo lugar: `data-theme` en `<html>`. Lo leen `globals.css`, la pantalla grande, el celular y el deck. Se lee con `useTheme()` y se cambia con `setTheme()` (`src/components/ui/theme.ts`).
+- Sin destello blanco: un script en el `<head>` (`THEME_SCRIPT`, `src/components/ui/theme-script.ts`) fija `data-theme` antes del primer pintado. El deck (`public/pitch/index.html`) lleva el mismo script, con la misma clave.
+- La pantalla grande ya no arranca siempre en oscuro: sigue el mismo tema que el resto.
 
 ## A quién le hablamos
 
@@ -135,6 +144,14 @@ Vienen del mentor («bombardean con texto todo, eso no aporta») y valen para to
 4. Las explicaciones van detrás de un «¿Por qué?» que se despliega, o se eliminan.
 5. Un solo aviso de «demostración simulada» por pantalla, pequeño, en el pie.
 6. Las etiquetas de candado llevan una o dos palabras.
+
+## Páginas de caso (/casos/*)
+
+Una idea por sección y mucho aire entre ellas. El orden es: héroe con la pantalla grande real enderezándose al bajar; cómo funciona (rayos); la regla con sus pesos (la única sección con puntajes); lo que ve cada persona (una sola tabla oscura, con candados); por qué firma una persona (dos números grandes); otros rubros (enlaces simples, sin tarjetas); y el llamado final a todo el ancho.
+
+- Se alternan secciones angostas (máximo unos 64 rem) y franjas a todo el ancho.
+- Solo Manrope, con una escala propia (`cs-h1`, `cs-h2`, `cs-lede`, `cs-body` en `src/components/casos/casos.css`) y nada menor a 16 px.
+- Sin etiqueta sobre el título ni flechas en los enlaces. El único momento de movimiento al cargar es el titular, que aparece palabra por palabra.
 
 ## Teléfonos
 

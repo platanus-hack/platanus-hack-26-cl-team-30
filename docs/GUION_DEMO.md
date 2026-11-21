@@ -23,10 +23,10 @@ Las cifras son las del motor con las semillas: Clínica 0,52, Hospital Rural 0,5
 | 0:00–0:12 | «Necesito tres personas. Saquen el celular y escaneen este código. La primera en entrar es la Clínica, la segunda el Hospital Rural y la tercera el Comité.» | Nadie todavía: escanean | «Unirse»: el contador sube de 0/3 a 3/3. Cada asiento («Clínica», «Hospital Rural», «Comité») se enciende con su color y aparece un nodo en la galaxia. |
 | 0:12–0:24 | «Clínica: usted tiene un paciente grave y compite contra el Hospital Rural por la última cama UCI. Apriete Presentar.» | Clínica: **Presentar** | La franja dice «Clínica: presenta a tu paciente» y su tarjeta se resalta. Al apretar, aparece su puntaje: **0,52**. |
 | 0:24–0:38 | «Hospital Rural, su turno: apriete Presentar.» (cuando aparece el puntaje) «Ninguno ve el costo del otro: la regla ordena solo con lo clínico. 0,52 contra 0,53: casi empate, y gana quien más necesita.» | Hospital Rural: **Presentar** | La franja pasa a «Hospital Rural: presenta a tu paciente». Al apretar, aparece **0,53** con la estrella de propuesto. |
-| 0:38–0:55 | «Comité: la regla propone al Hospital Rural. ¿Acepta o rechaza? Su razón ya está escrita; tóquela si quiere otra.» | Comité: **Aceptar** o **Rechazar** | La franja dice «Comité: ¿aceptas o rechazas?» con la cuenta regresiva. Si rechaza, la regla propone al otro y vuelve a ser su turno. |
+| 0:38–0:55 | «Comité: la regla propone al Hospital Rural. ¿Acepta o rechaza? Su razón ya está escrita; tóquela si quiere otra.» | Comité: **Aceptar** o **Rechazar** | La franja dice «Comité: ¿aceptas o rechazas?» con la cuenta regresiva. Si rechaza, la cama va al otro hospital en ese mismo toque. |
 | 0:55–1:10 | «Listo. En el mismo segundo, todas las pantallas cambiaron. El pulso se volvió verde y quedó el acta: quién decidió, cuándo y por qué.» | Nadie | «Listo: Hospital Rural recibe el recurso». El pulso rojo pasa a una línea verde y plana, el reloj se detiene y aparece «Nueva ronda». |
 
-Si el Comité rechaza, se agregan unos 10 s: «El Comité rechazó. La regla propone ahora a la Clínica. Comité, ¿acepta o rechaza?».
+Si el Comité rechaza, la asignación se sella en ese mismo toque a favor del otro hospital (la Clínica). El narrador dice: «El Comité rechazó la propuesta de la regla: la cama va a la Clínica, y la razón queda en el acta». No se agrega tiempo.
 
 ## Plan B
 
@@ -71,7 +71,7 @@ Cambios respecto del guion de Nahum: el nombre es Sculptor; la demo es de 3 pers
 4. **Comité (17 s)** — «Comité: la regla propone al Hospital Rural. ¿Acepta o rechaza? Su razón ya está escrita.» → Aceptar o Rechazar.
 5. **Acta (15 s)** — «Todas las pantallas cambiaron en el mismo segundo. El pulso está verde y quedó el acta: quién decidió, cuándo y por qué.»
 
-**Si rechaza:** «La regla propone ahora a la Clínica. Comité, ¿acepta o rechaza?» (+10 s)
+**Si rechaza:** «El Comité rechazó la propuesta: la cama va a la Clínica, y la razón queda en el acta.» (sin tiempo extra)
 
 **Plan B**
 - No aprieta → repetir una vez. A los 20 s el sistema juega solo y lo marca «automático».

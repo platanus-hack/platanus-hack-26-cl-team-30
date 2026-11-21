@@ -224,6 +224,26 @@ export async function mutateRoom(roomId: string, description: string): Promise<M
   }
 }
 
+/**
+ * El Comité pide el acta por WhatsApp escribiendo su número (alternativa al botón
+ * wa.me). deliverable: si hoy se le puede escribir; si no, hay que escribir «hola»
+ * al número de Sculptor y volver a intentar. El número no queda en el navegador.
+ */
+export async function requestCommitteeSummary(roomId: string, session: RoomSession, phone: string): Promise<{ ok: true; deliverable: boolean } | { ok: false; error: string }> {
+  try {
+    const res = await fetch(`/api/rooms/${encodeURIComponent(roomId)}/committee/summary`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...session, phone }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && typeof data.deliverable === "boolean") return { ok: true, deliverable: data.deliverable };
+    return { ok: false, error: typeof data.error === "string" ? data.error : `El servidor respondió ${res.status}` };
+  } catch {
+    return { ok: false, error: "No se pudo llegar al servidor." };
+  }
+}
+
 /** Dirección del acta de decisión para descargar. */
 export function actaUrl(roomId: string, format: "json" | "md"): string {
   return `/api/rooms/${encodeURIComponent(roomId)}/acta?format=${format}`;

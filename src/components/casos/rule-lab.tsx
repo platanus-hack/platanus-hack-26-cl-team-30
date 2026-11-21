@@ -49,7 +49,7 @@ export function RuleLab({ scarcity, labels, orgLabels }: { scarcity: SharedScarc
                   {orgLabels[entry.orgId] ?? entry.orgId}
                   {winner && <Star className="size-5 fill-current text-calm" aria-label="Va primero" />}
                 </span>
-                <span className={`serif tabular ${winner ? "text-calm" : ""}`} style={{ fontSize: "clamp(2.4rem, 2rem + 1.6vw, 3.4rem)", lineHeight: 0.9 }}>
+                <span className={`tabular font-extrabold tracking-tight ${winner ? "text-calm" : ""}`} style={{ fontSize: "clamp(2.4rem, 2rem + 1.6vw, 3.4rem)", lineHeight: 0.9, letterSpacing: "-0.05em" }}>
                   {d2.format(entry.score)}
                 </span>
               </div>
@@ -59,7 +59,7 @@ export function RuleLab({ scarcity, labels, orgLabels }: { scarcity: SharedScarc
             </div>
           );
         })}
-        <p className="small text-muted-foreground">{result.tieBreakApplied ? "Casi empate: gana quien más necesita." : "Gana el puntaje más alto."} El costo no entra.</p>
+        <p className="text-base text-muted-foreground">{result.tieBreakApplied ? "Casi empate: gana quien más necesita." : "Gana el puntaje más alto."} El costo no entra.</p>
       </div>
     </div>
   );
