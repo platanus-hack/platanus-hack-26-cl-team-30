@@ -38,6 +38,23 @@ Toda llamada a un modelo pasa por `src/lib/llm.ts`. No llamar a un proveedor dir
 - `npm run build` y `npm run lint`: correr antes de cada deploy
 - `GET /api/health`: dice si el modelo y Supabase están configurados
 
+## Documentación técnica
+
+Los jueces revisan este repositorio con un agente de IA mientras el equipo presenta, y después hacen preguntas sobre la estructura de la solución. Por eso la documentación se mantiene al día durante todo el desarrollo, no al final.
+
+- `docs/ARQUITECTURA.md`: componentes, flujo de un dato, agentes, modelos, integraciones y qué es real o simulado.
+- `docs/DECISIONES.md`: por qué se eligió cada cosa y qué se descartó.
+- `docs/PREGUNTAS.md`: preguntas probables del jurado con respuestas de 20 segundos.
+
+Reglas para cualquier cambio:
+
+1. Si un cambio agrega, quita o modifica un componente, un agente, una integración o el flujo de datos, actualizar `docs/ARQUITECTURA.md` en el mismo commit.
+2. Si se toma una decisión técnica entre dos alternativas, agregar una entrada en `docs/DECISIONES.md`.
+3. Si un cambio responde o altera una pregunta de `docs/PREGUNTAS.md`, actualizar la respuesta.
+4. Cada agente vive en su propio archivo bajo `src/agents/`, con su instrucción y su formato de salida a la vista.
+5. Lo simulado se marca como simulado en el código y en la tabla de "Qué es real y qué es simulado". Nunca presentar algo simulado como real.
+6. La documentación describe lo que existe. No escribir lo que se planea como si ya estuviera hecho.
+
 ## Entrega
 
 - Completar `platanus-hack-project.jsonc` (nombre, resumen, descripción y URL del deploy) y `project-description.md` antes de enviar.
