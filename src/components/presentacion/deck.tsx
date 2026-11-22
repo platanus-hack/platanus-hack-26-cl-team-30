@@ -2,7 +2,7 @@
 
 // Presentación web de 3:00 (ver slides.ts). Una lámina a la vez, en modo oscuro y
 // con letra grande, como pidió la charla del evento.
-//   → / Av Pág / clic: siguiente   ← / Re Pág: anterior   1–7: ir a una lámina
+//   → / Av Pág / clic: siguiente   ← / Re Pág: anterior   1–8: ir a una lámina
 //   T: iniciar o pausar el reloj de 3:00   R: reiniciar el reloj
 //   N: notas del orador   F: pantalla completa
 // La lámina actual queda en la URL (#3) para volver al mismo lugar si se recarga.
@@ -25,7 +25,7 @@ const clock = (ms: number) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 };
 
-export function Deck({ autonomous, steps, accuracy, remote }: { autonomous: number; steps: number; accuracy: number; remote: string | null }) {
+export function Deck({ autonomous, steps, accuracy }: { autonomous: number; steps: number; accuracy: number }) {
   const root = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
   const [notes, setNotes] = useState(false);
@@ -190,12 +190,13 @@ export function Deck({ autonomous, steps, accuracy, remote }: { autonomous: numb
         <div key={slide.id} data-slide={index} className="w-full">
           {slide.id === "hola" && <Hola />}
           {slide.id === "problema" && <Problema autonomous={autonomous} steps={steps} accuracy={accuracy} />}
+          {slide.id === "validacion" && <Validacion />}
           {slide.id === "solucion" && <Solucion onNext={() => go(index + 1)} />}
           {slide.id === "desarrollo" && <Desarrollo />}
           {slide.id === "cierre" && <Cierre />}
           {slide.id === "equipo" && <Equipo />}
         </div>
-        {demoMounted && <LiveDemo active={slide.id === "demo"} remote={remote} />}
+        {demoMounted && <LiveDemo active={slide.id === "demo"} />}
       </main>
 
       <footer className="flex items-center justify-between px-8 pb-5 font-mono text-[11px] tracking-[0.16em] text-(--piedra)/70 uppercase">
@@ -271,6 +272,82 @@ function Problema({ autonomous, steps, accuracy }: { autonomous: number; steps: 
           <span className="text-(--eucalipto)">No es inteligencia: es caos más rápido.</span>
         </p>
         <p className="mt-4 font-mono text-xs tracking-[0.12em] text-(--piedra) uppercase">Modelo ilustrativo · pⁿ</p>
+      </div>
+    </div>
+  );
+}
+
+/** Audio de WhatsApp a 1,5×, con un botón grande y su barra de avance. */
+function AudioCard({ src, label, quote }: { src: string; label: string; quote: string }) {
+  const audio = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const toggle = () => {
+    const el = audio.current;
+    if (!el) return;
+    if (el.paused) {
+      document.querySelectorAll("audio").forEach((other) => other !== el && other.pause());
+      el.playbackRate = 1.5;
+      void el.play();
+    } else el.pause();
+  };
+  return (
+    <div className="flex items-center gap-5 rounded-[24px] border border-(--basalto) bg-(--grafito)/80 p-5 backdrop-blur-md">
+      <button
+        type="button"
+        onClick={toggle}
+        className="grid size-16 shrink-0 place-items-center rounded-full bg-(--cincel) text-2xl text-(--obsidiana) transition-transform hover:scale-105"
+        aria-label={playing ? "Pausar audio" : "Reproducir audio a 1,5×"}
+      >
+        {playing ? "❚❚" : "▶"}
+      </button>
+      <div className="min-w-0 flex-1">
+        <p className="flex justify-between font-mono text-xs tracking-[0.14em] text-(--eucalipto) uppercase">
+          <span>{label}</span>
+          <span className="text-(--piedra)">1,5×</span>
+        </p>
+        <p className="mt-2 text-[clamp(1.05rem,1.5vw,1.5rem)] leading-snug text-(--marmol)">{quote}</p>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-(--basalto)">
+          <div className="h-full rounded-full bg-(--cincel)" style={{ width: `${progress * 100}%` }} />
+        </div>
+      </div>
+      <audio
+        ref={audio}
+        src={src}
+        preload="auto"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => {
+          setPlaying(false);
+          setProgress(1);
+        }}
+        onTimeUpdate={(e) => setProgress(e.currentTarget.duration ? e.currentTarget.currentTime / e.currentTarget.duration : 0)}
+      />
+    </div>
+  );
+}
+
+function Validacion() {
+  return (
+    <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr]">
+      <div>
+        <p data-in className={KICK}>
+          Un caso real · TopSol
+        </p>
+        <h2 data-in className={`mt-6 ${H2}`}>
+          ¿Y tiene <span className="font-serif font-normal text-(--eucalipto) italic [font-stretch:100%]">posibilidad?</span>
+        </h2>
+        <div className="mt-10 space-y-4">
+          <div data-in>
+            <AudioCard src="/presentacion/validacion/problema.m4a" label="El problema" quote="«No sabemos qué es prioridad en el presupuesto anual.»" />
+          </div>
+          <div data-in>
+            <AudioCard src="/presentacion/validacion/respuesta.m4a" label="Después de probarlo" quote="«Nos juntamos con el equipo a evaluar el sistema y pudimos organizar todo.»" />
+          </div>
+        </div>
+      </div>
+      <div data-in className="mx-auto w-full max-w-[440px] overflow-hidden rounded-[24px] border border-(--basalto)">
+        <Image src="/presentacion/validacion/whatsapp.jpg" alt="Conversación por WhatsApp con TopSol: el audio del problema y el acceso al sistema." width={908} height={1070} sizes="440px" className="h-auto w-full" />
       </div>
     </div>
   );

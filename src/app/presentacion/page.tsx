@@ -4,7 +4,6 @@ import { Deck } from "@/components/presentacion/deck";
 import { Atmosphere } from "@/components/sculptor/atmosphere";
 import { sculptorData } from "@/components/sculptor/data";
 import { SCULPTOR_PALETTE } from "@/components/sculptor/theme";
-import { remoteDemoBase } from "@/lib/presentacion/remote";
 import "../sculptor.css";
 
 // Presentación de 3:00 para el domingo 22. Guion y tiempos en
@@ -23,7 +22,7 @@ export default function PresentacionPage() {
   return (
     <div style={SCULPTOR_PALETTE} className={`${archivo.variable} h-svh overflow-hidden bg-(--obsidiana) text-(--marmol) antialiased`}>
       <Atmosphere />
-      <Deck autonomous={single.autonomous} steps={single.n} accuracy={single.p} remote={remoteDemoBase()} />
+      <Deck autonomous={single.autonomous} steps={single.n} accuracy={single.p} />
     </div>
   );
 }

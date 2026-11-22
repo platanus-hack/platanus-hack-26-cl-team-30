@@ -5,17 +5,20 @@ La presentación del domingo es una página de la app: **`/presentacion`**. Sigu
 | # | Lámina | Tramo | Qué se muestra |
 | --- | --- | --- | --- |
 | 1 | Hola | 0:00–0:07 | Nombre, una línea y el equipo |
-| 2 | Problema | 0:07–0:27 | 1 cama UCI, 2 hospitales; pⁿ de agentes solos (modelo ilustrativo, calculado por el motor) |
-| 3 | Solución | 0:27–0:42 | «Los agentes conversan. El código gobierna.» y el botón que abre la pantalla grande |
-| 4 | En vivo | 0:42–2:40 | Las 6 fases de la demo; la demo corre en `/stage/demo-cross` |
-| 5 | Desarrollo | 2:40–2:50 | Dos páginas del mismo deploy lado a lado que bajan solas, sección por sección, con una pausa en cada una (por defecto la portada `/` y `/sculptor`; cada panel tiene un selector y se detiene con el mouse encima) y el stack |
-| 6 | Cierre | 2:50–3:00 | NGC 253, «Somos Sculptor» |
-| 7 | Equipo | Preguntas | Foto, nombres y roles mientras responden |
+| 2 | Problema | 0:07–0:27 | Una organización es un choque de fuerzas; pⁿ de agentes que tiran cada uno para su lado (modelo ilustrativo, calculado por el motor) |
+| 3 | ¿Y tiene posibilidad? | 0:27–0:50 | Un caso real (TopSol): el audio del problema, el audio después de probarlo (los dos a 1,5×) y la captura del chat, sin editar |
+| 4 | Solución | 0:50–1:02 | «Los agentes conversan. El código gobierna.» y el botón que pasa a la demo |
+| 5 | En vivo | 1:02–2:45 | La pantalla grande real con su QR y, al lado, la galaxia sin textos: un punto por persona que entra, pulsos en el debate y, con el acta, los puntos se funden en la galaxia |
+| 6 | Desarrollo | 2:45–2:52 | Dos páginas del mismo deploy lado a lado que bajan solas, sección por sección |
+| 7 | Cierre | 2:52–3:00 | NGC 253, «Somos Sculptor» |
+| 8 | Equipo | Preguntas | Foto, nombres y roles mientras responden |
 
-Teclas: `→` o clic avanza, `←` retrocede, `1`–`7` salta, `T` inicia o pausa el reloj de 3:00 (se pone lima a los 2:40 y rojo a los 3:00), `R` lo reinicia, `N` muestra las notas del orador con lo que dice Nahum y lo que hacen Ramón y Sebastián, `F` pantalla completa.
+Teclas: `→` o clic avanza, `←` retrocede, `1`–`8` salta, `T` inicia o pausa el reloj de 3:00 (se pone lima a los 2:40 y rojo a los 3:00), `R` lo reinicia, `N` muestra las notas del orador con lo que dice Nahum y lo que hacen Ramón y Sebastián, `F` pantalla completa.
 
 Todo va en modo oscuro: la charla avisó que el modo claro se quema en el proyector. Las páginas dentro de «Desarrollo» siguen el modo del computador; si el proyector está en modo claro, la portada `/` se ve clara.
 
-En la lámina 4: `P` pausa o reanuda el debate, `S` adelanta un paso y `B` abre una sala nueva (ronda nueva). La sala se abre en `PRESENTACION_DEMO_URL` si está definido (por ejemplo `https://nexo-og8m.onrender.com`), para que el QR sea escaneable aunque la presentación corra en localhost; si no, en el mismo servidor de la presentación. Ese deploy tiene que tener la versión de la ronda 20: con una versión anterior la sala sigue el flujo viejo (Límites, Casos, Comité) y no la negociación que cuenta el guion.
+En la lámina 5: `P` pausa o reanuda el debate, `S` adelanta un paso y `B` abre una sala nueva (ronda nueva). La sala se abre en `PRESENTACION_DEMO_URL` si está definido (por ejemplo `https://nexo-og8m.onrender.com`), para que el QR sea escaneable aunque la presentación corra en localhost; si no, en el mismo servidor de la presentación. Ese deploy tiene que tener la versión de la ronda 20: con una versión anterior la sala sigue el flujo viejo (Límites, Casos, Comité) y no la negociación que cuenta el guion.
 
 El deck anterior del equipo sigue en `/pitch/index.html` como respaldo.
+
+Los audios y la captura de la lámina 3 (`public/presentacion/validacion/`) no están en el repo: son de una persona externa y se publican solo con su permiso. Sin esos archivos la lámina muestra los reproductores vacíos.

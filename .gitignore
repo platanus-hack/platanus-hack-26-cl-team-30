@@ -45,3 +45,6 @@ next-env.d.ts
 
 # capturas y registros de Playwright MCP
 .playwright-mcp/
+
+# Audios y captura de un caso real (TopSol): no se publican sin el consentimiento de quien habla.
+/public/presentacion/validacion/
