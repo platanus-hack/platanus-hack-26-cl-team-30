@@ -36,9 +36,17 @@ export function resourceWord(state: Pick<RoomState, "scenarioId">): string {
   return "el recurso";
 }
 
-/** Los asientos de organización (los que fijan postura y cuyos agentes debaten). El Comité no. */
+/**
+ * Los asientos de organización (los que fijan postura y cuyos agentes debaten). El
+ * Comité no. Van agrupados por organización (Urgencias, Administración de la Clínica,
+ * Turno, Administración del Hospital Rural), que es el orden del debate, aunque al
+ * llegar se repartan primero los dos casos y el Comité.
+ */
 export function negotiatingSeats(state: RoomState): DemoSeat[] {
-  return demoSeats(state).filter((entry) => entry.action !== "decide");
+  const orgIndex = (orgId: string) => state.scarcity?.candidates.findIndex((candidate) => candidate.orgId === orgId) ?? 0;
+  return demoSeats(state)
+    .filter((entry) => entry.action !== "decide")
+    .sort((a, b) => orgIndex(a.seat.orgId) - orgIndex(b.seat.orgId) || (a.action === "submit" ? 0 : 1) - (b.action === "submit" ? 0 : 1));
 }
 
 /** «Clínica · Urgencias» → «Agente de Urgencias · Clínica». */

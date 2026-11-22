@@ -38,12 +38,19 @@ function draw(roomId: string): Seat {
   if (res.status !== 200 || !res.body.seat || !res.body.token) throw new Error(`El sorteo falló: ${JSON.stringify(res)}`);
   return { ...res.body.seat, token: res.body.token };
 }
+/** Orden de los asientos por organización (como en el debate), no por llegada. */
+const ORG_ORDER = ["clinica_andes/role_a", "clinica_andes/role_b", "hospital_rural/role_a", "hospital_rural/role_b", "comite_red/role_c"];
+/** Las 5 personas entran (por orden de llegada) y se devuelven por organización: Urgencias, Adm. Clínica, Turno, Adm. Rural, Comité. */
+function drawAll(roomId: string): Seat[] {
+  const seats = [draw(roomId), draw(roomId), draw(roomId), draw(roomId), draw(roomId)];
+  return ORG_ORDER.map((key) => seats.find((seat) => id(seat) === key)!);
+}
 const act = (roomId: string, seat: Seat, type: string, payload: Record<string, unknown> = {}) => applyAction(roomId, { type, ...seat, ...payload });
 const optionsOf = (roomId: string, seat: Seat) => projectRoom(roomId, seat)!.negotiation!.myOptions ?? [];
 
 /** Las 5 personas entran y las 4 de organización eligen su primera postura. */
 async function fullRoom(roomId: string): Promise<Seat[]> {
-  const seats = [draw(roomId), draw(roomId), draw(roomId), draw(roomId), draw(roomId)];
+  const seats = drawAll(roomId);
   await vi.advanceTimersByTimeAsync(10);
   for (const seat of seats.slice(0, 4)) expect((await act(roomId, seat, "SET_POSITION", { optionId: optionsOf(roomId, seat)[0]!.id })).status).toBe(200);
   return seats;
@@ -98,10 +105,10 @@ describe("escala de 1 a 50", () => {
 });
 
 describe("asientos y consejo privado", () => {
-  it("5 asientos por orden de llegada; el sexto, 409", () => {
+  it("5 asientos por orden de llegada (Urgencias, Turno, Comité, Adm. Clínica, Adm. Rural); el sexto, 409", () => {
     const roomId = room();
     const order = [1, 2, 3, 4, 5].map(() => id(draw(roomId)));
-    expect(order).toEqual(["clinica_andes/role_a", "clinica_andes/role_b", "hospital_rural/role_a", "hospital_rural/role_b", "comite_red/role_c"]);
+    expect(order).toEqual(["clinica_andes/role_a", "hospital_rural/role_a", "comite_red/role_c", "clinica_andes/role_b", "hospital_rural/role_b"]);
     expect(joinRandomSeat(roomId, {})).toMatchObject({ status: 409, body: { code: "NO_FREE_SEAT" } });
     const labels = stage(roomId).orgs.flatMap((org) => org.roles.filter((role) => role.seatLabel).map((role) => role.seatLabel));
     expect(labels).toEqual(["Clínica · Urgencias", "Clínica · Administración", "Hospital Rural · Turno", "Hospital Rural · Administración"]);
@@ -109,12 +116,12 @@ describe("asientos y consejo privado", () => {
 
   it("el consejo de cada agente llega solo al celular de su rol, nunca a otro ni a la pantalla grande", async () => {
     const roomId = room();
-    const [clinic, admin] = [draw(roomId), draw(roomId)];
+    const [clinic, rural] = [draw(roomId), draw(roomId)];
     await vi.advanceTimersByTimeAsync(10);
     const mine = projectRoom(roomId, clinic)!.negotiation!.messages.filter((message) => message.kind === "advice");
     expect(mine).toHaveLength(1);
     expect(mine[0]).toMatchObject({ orgId: clinic.orgId, roleId: clinic.roleId });
-    expect(projectRoom(roomId, admin)!.negotiation!.messages.filter((message) => message.kind === "advice").map(id)).toEqual([id(admin)]);
+    expect(projectRoom(roomId, rural)!.negotiation!.messages.filter((message) => message.kind === "advice").map(id)).toEqual([id(rural)]);
     expect(nego(roomId).messages.filter((message) => message.kind === "advice")).toEqual([]);
     expect(optionsOf(roomId, clinic).length).toBeGreaterThanOrEqual(2);
     expect(nego(roomId).myOptions).toBeUndefined();
@@ -122,7 +129,7 @@ describe("asientos y consejo privado", () => {
 
   it("cada rol recibe su pregunta concreta y la postura que le recomienda su agente, calculada con lo que ve", async () => {
     const roomId = room();
-    const [clinic, clinicAdmin, rural, ruralAdmin, committee] = [draw(roomId), draw(roomId), draw(roomId), draw(roomId), draw(roomId)];
+    const [clinic, clinicAdmin, rural, ruralAdmin, committee] = drawAll(roomId);
     await vi.advanceTimersByTimeAsync(10);
     const prompt = (seat: Seat) => projectRoom(roomId, seat)!.negotiation!.myPrompt;
     // Casi empate (0,52 contra 0,53): desempata la necesidad sin cubrir, que es pública.
@@ -151,7 +158,7 @@ describe("asientos y consejo privado", () => {
   it("el consejo de respaldo dice «Te recomiendo», sin datos que su rol no ve", async () => {
     agents.writeNegotiationLine.mockRejectedValue(new Error("sin modelo"));
     const roomId = room();
-    const [clinic, clinicAdmin, rural, ruralAdmin] = [draw(roomId), draw(roomId), draw(roomId), draw(roomId)];
+    const [clinic, clinicAdmin, rural, ruralAdmin] = drawAll(roomId);
     await vi.advanceTimersByTimeAsync(10);
     const advice = (seat: Seat) => projectRoom(roomId, seat)!.negotiation!.messages.find((message) => message.kind === "advice")!.text;
     expect(advice(clinic)).toMatch(/^Te recomiendo «Pedirla, pero aceptar otra salida», porque/);
@@ -163,7 +170,7 @@ describe("asientos y consejo privado", () => {
 
   it("el Comité no fija postura", async () => {
     const roomId = room();
-    const seats = [draw(roomId), draw(roomId), draw(roomId), draw(roomId), draw(roomId)];
+    const seats = drawAll(roomId);
     expect(await act(roomId, seats[4]!, "SET_POSITION", { optionId: "now" })).toMatchObject({ status: 403 });
     expect(await act(roomId, seats[0]!, "SET_POSITION", { optionId: "inventada" })).toMatchObject({ status: 400 });
   });

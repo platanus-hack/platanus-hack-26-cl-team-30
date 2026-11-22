@@ -153,3 +153,8 @@ Lo encontraron tres revisores sin contexto leyendo el código; las respuestas pa
 - **La telemetría informa la configuración, no lo observado,** y no cuenta lo que sale a ElevenLabs ni a Kapso.
 - ~~**El prompt de la guía describe la demo de 3 personas** y `guide-status.ts` dice que la propuesta sale «con el resultado del debate», lo que no es cierto.~~ **Resuelto (22 nov):** `GUIDE_PROMPT` describe la demo de 5 personas, el texto de `guide-status.ts` dice que la propuesta sale de la regla visible y no del debate, y el agente ya creado en ElevenLabs se actualizó por la API (`PATCH`, verificado con `GET`).
 - **Resuelto (22 nov): textos de la portada.** `src/components/sculptor/content.ts` ya no dice «Ningún agente cambia el estado» ni «en el mismo segundo», «97/97» pasó a «142/142» y la barra (`chrome.tsx`) dice «Ver un caso» en vez de «Ejemplo real». «500 conexiones» sigue, con «en un notebook» al lado.
+
+## Agregado con «tres jueces escanean a la vez» (22 de noviembre)
+
+- **El escaneo simultáneo está probado contra un build local, no contra Render.** `tests/tres-jueces.test.ts`, `node scripts/e2e.mjs` y `scripts/novato-demo.mjs --iniciar` (3 navegadores a la vez) pasaron en `next start` local. Falta repetirlo con 3 celulares reales contra el deploy, en el wifi de la sede (también por el límite de peticiones por IP).
+- **El botón de WhatsApp del Comité se revisó con capturas a 390 px, pero las pruebas no lo tocan**: abrir wa.me en un celular real y que llegue el acta al decidir sigue dependiendo de Kapso en el deploy (ver i5).

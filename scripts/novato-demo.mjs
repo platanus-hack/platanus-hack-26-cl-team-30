@@ -16,11 +16,14 @@
 //   4. Espera la negociación sin acelerarla, para medir el ritmo real. Con
 //      --rapido aprieta «Siguiente» del narrador en la pantalla grande.
 //
-// Con --iniciar entran solo 2 personas y el narrador toca «Iniciar» en la
-// pantalla grande: los 3 asientos libres los toma un bot (marcado como
-// automático) y la negociación arranca sin esperar a nadie más. El Comité es un
-// bot y decide el plan B. Revisa que el contador diga «2/5» antes y
-// «2/5 · 3 automáticos» después, y captura ambos momentos.
+// Con --iniciar es el pitch: 3 personas escanean el QR AL MISMO TIEMPO (Clínica ·
+// Urgencias, Hospital Rural · Turno y Comité, por orden de llegada) y el narrador
+// toca «Iniciar» en la pantalla grande: las 2 Administraciones las toma un bot
+// (marcado como automático) y la negociación arranca sin esperar a nadie más. El
+// Comité es una persona y decide. Revisa que los 3 reciban asientos distintos, que
+// el celular del Comité muestre «Recibir resumen por WhatsApp» desde que entra
+// hasta que decide, y que el contador diga «3/5» antes y «3/5 · 2 automáticos»
+// después; captura ambos momentos.
 //
 // Con --grabar <carpeta> la misma corrida queda en video (recordVideo de
 // Playwright): la pantalla grande a 1920x1080 y cada celular a 390x844, todos en
@@ -54,7 +57,7 @@
 //        [--grabar <carpeta>] [--final 8]
 //
 //   --rapido         aprieta «Siguiente» del narrador en cuanto se puede.
-//   --iniciar        entran 2 personas y el narrador toca «Iniciar» (bots en los 3 asientos libres).
+//   --iniciar        entran 3 personas a la vez y el narrador toca «Iniciar» (bots en las 2 Administraciones).
 //   --comite         qué hace el Comité (por defecto aceptar).
 //   --atasco         segundos sin cambios en una pantalla para dar a alguien por trabado (60).
 //   --limite         tope total de la prueba en segundos (900).
@@ -83,8 +86,8 @@ const baseUrl = (positional[0] ?? "").replace(/\/$/, "");
 const outDir = positional[1] ? resolve(positional[1]) : "";
 const RAPIDO = Boolean(flags.rapido);
 const INICIAR = Boolean(flags.iniciar);
-/** Personas que entran: 5, o 2 con --iniciar (el resto lo llenan los bots). */
-const PEOPLE = INICIAR ? 2 : 5;
+/** Personas que entran: 5, o 3 a la vez con --iniciar (las Administraciones las llenan los bots). */
+const PEOPLE = INICIAR ? 3 : 5;
 const COMITE = flags.comite === "rechazar" ? "rechazar" : "aceptar";
 const STUCK_MS = Number(flags.atasco ?? 60) * 1000;
 const LIMIT_MS = Number(flags.limite ?? 900) * 1000;
@@ -160,7 +163,7 @@ const SEL = {
   reject: /^\s*Rechazar\s*$/,
   /** Botón «Iniciar» del paso Unirse en la pantalla grande, por su texto. */
   start: /^\s*Iniciar\s*$/,
-  /** Contador de personas de la pantalla grande («2/5 personas · 3 automáticos»). */
+  /** Contador de personas de la pantalla grande («3/5 personas · 2 automáticos»). */
   peopleCount: ".nx-ng-count",
   /** Botón «Siguiente» del narrador, por su texto. [R20] */
   next: /^\s*Siguiente\s*$/,
@@ -169,7 +172,9 @@ const SEL = {
 };
 
 /** Asientos esperados, en orden de llegada (docs/DECISIONES.md, ronda 20). Se comparan con lo que manda el servidor. */
-const EXPECTED_SEATS = ["Clínica · Urgencias", "Clínica · Administración", "Hospital Rural · Turno", "Hospital Rural · Administración", "Comité"];
+const EXPECTED_SEATS = ["Clínica · Urgencias", "Hospital Rural · Turno", "Comité", "Clínica · Administración", "Hospital Rural · Administración"];
+/** Botón del Comité para recibir el acta por WhatsApp (demo-view.tsx): el enlace wa.me con el mensaje ya escrito. */
+const WA_NUMBER = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "12084850157").replace(/\D/g, "");
 
 const PHASE_NAMES = { join: "Unirse", positions: "Posturas", debate: "Debate", proposal: "Propuesta", decision: "Comité", done: "Acta" };
 const PHASE_ORDER = ["join", "positions", "debate", "proposal", "decision", "done"];
@@ -458,6 +463,42 @@ async function capture(device, name) {
   return file;
 }
 
+/**
+ * El botón «Recibir resumen por WhatsApp» del Comité: visible, apuntando a wa.me
+ * con el número de Sculptor y «Hola, soy el Comité de la sala <código>», y dentro
+ * de la primera pantalla del celular (sin desplazarse). No lo toca: abriría WhatsApp.
+ */
+async function whatsAppButton(page, roomId) {
+  const link = page.getByRole("link", { name: /Recibir resumen por WhatsApp/ }).first();
+  if (!(await link.isVisible().catch(() => false))) return { ok: false, why: "el botón no está a la vista" };
+  const href = (await link.getAttribute("href").catch(() => "")) ?? "";
+  const url = (() => {
+    try {
+      return new URL(href);
+    } catch {
+      return null;
+    }
+  })();
+  const text = url?.searchParams.get("text") ?? "";
+  const expected = `Hola, soy el Comité de la sala ${roomId}`;
+  if (!url || url.hostname !== "wa.me" || url.pathname !== `/${WA_NUMBER}` || text !== expected) return { ok: false, href, why: `el enlace es «${href}», se esperaba wa.me/${WA_NUMBER} con «${expected}»` };
+  // A la vista de verdad: dentro de la pantalla y sin nada encima (la barra fija de Aceptar/Rechazar, por ejemplo).
+  const aboveFold = await link
+    .evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      if (box.top < 0 || box.bottom > window.innerHeight) return false;
+      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      return !!hit && el.contains(hit);
+    })
+    .catch(() => false);
+  const why = await page
+    .locator(".st-wa-why")
+    .first()
+    .innerText({ timeout: 1000 })
+    .catch(() => "");
+  return { ok: true, href, aboveFold, why: why.trim() || null };
+}
+
 /** Toca el primer botón visible y habilitado que calce con el texto (o el locator). */
 async function tapButton(device, matcher, why) {
   const locator = typeof matcher === "string" ? device.page.locator(matcher) : device.page.getByRole("button", { name: matcher });
@@ -602,7 +643,7 @@ async function main() {
   }
   const { browser, from } = chromiumInfo;
   log(`Playwright: ${from}`);
-  log(`Servidor: ${baseUrl} · modo ${modeLabel()} · Comité: ${INICIAR ? "bot (plan B)" : COMITE}`);
+  log(`Servidor: ${baseUrl} · modo ${modeLabel()} · Comité: ${COMITE}`);
 
   const deadline = setTimeout(() => {
     failures.push(`TIEMPO: la prueba pasó los ${LIMIT_MS / 1000} s sin llegar al acta (fase ${PHASE_NAMES[currentPhase()]}).`);
@@ -715,9 +756,9 @@ async function main() {
     })();
     watcher.catch(() => {}); // la falla se lee en failures; esto evita un rechazo sin atender mientras entran las personas
 
-    // 2. Las personas (5, o 2 con --iniciar) entran por el QR, en orden.
+    // 2. Las personas entran por el QR: 5 en orden, o 3 en el mismo instante con --iniciar.
     const people = [];
-    for (let i = 0; i < PEOPLE; i++) {
+    const joinPerson = async (i) => {
       const context = await browser.newContext({
         viewport: PHONE_SIZE,
         deviceScaleFactor: 2,
@@ -765,12 +806,34 @@ async function main() {
       device.label = `Persona ${i + 1} (${seat?.label ?? `${device.seat.orgId}/${device.seat.roleId}`})`;
       device.seatLabel = seat?.label ?? null;
       device.joinMs = Date.now() - scanAt;
-      if (seat && seats.indexOf(seat) !== i) notes.push(`${device.label} recibió el asiento ${seats.indexOf(seat) + 1}, no el ${i + 1}: el sorteo no siguió el orden de llegada.`);
+      if (!INICIAR && seat && seats.indexOf(seat) !== i) notes.push(`${device.label} recibió el asiento ${seats.indexOf(seat) + 1}, no el ${i + 1}: el sorteo no siguió el orden de llegada.`);
       mark(`${device.label} entró en ${(device.joinMs / 1000).toFixed(1)} s`);
       await sleep(800);
       const screen = await page.evaluate(readScreenInPage).catch(() => null);
       device.byPhase.entrada = { title: screen?.title ?? "", titlePx: screen?.titlePx ?? 0, words: screen?.words ?? 0, scrolls: !!screen?.scrolls, buttons: screen?.buttons ?? [], tapsSoFar: device.taps, file: await capture(device, `entrada-${device.id}`) };
-      await sleep(JOIN_GAP_MS);
+      if (device.seat.orgId === observed.scarcity?.arbiter?.orgId) {
+        device.whatsapp = { entrada: await whatsAppButton(page, roomId) };
+        if (!device.whatsapp.entrada.ok) notes.push(`El celular del Comité no muestra «Recibir resumen por WhatsApp» al entrar: ${device.whatsapp.entrada.why}`);
+        else {
+          mark(`Comité: «Recibir resumen por WhatsApp» a la vista${device.whatsapp.entrada.aboveFold ? " sin desplazarse" : " (hay que desplazarse)"} · «${device.whatsapp.entrada.why ?? "sin línea de para qué sirve"}»`);
+          if (!device.whatsapp.entrada.aboveFold) notes.push("El botón de WhatsApp del Comité queda bajo el pliegue a 390 px: hay que desplazarse para verlo.");
+          if (!device.whatsapp.entrada.why) notes.push("El botón de WhatsApp del Comité no trae la línea que dice para qué sirve.");
+        }
+      }
+    };
+    if (INICIAR) {
+      // El pitch: los 3 jueces escanean en el mismo segundo.
+      await Promise.all(Array.from({ length: PEOPLE }, (_, i) => joinPerson(i)));
+      const got = people.map((device) => device.seatLabel);
+      if (new Set(got).size !== PEOPLE || got.includes(null)) fail(`Con ${PEOPLE} escaneos simultáneos los asientos se repitieron o alguien quedó sin silla: ${got.join(", ")}`);
+      const wanted = EXPECTED_SEATS.slice(0, PEOPLE);
+      if ([...got].sort().join("|") !== [...wanted].sort().join("|")) notes.push(`Con ${PEOPLE} escaneos simultáneos tocaron «${got.join(", ")}», no «${wanted.join(", ")}».`);
+      mark(`Escaneo simultáneo: ${got.join(", ")}`);
+    } else {
+      for (let i = 0; i < PEOPLE; i++) {
+        await joinPerson(i);
+        await sleep(JOIN_GAP_MS);
+      }
     }
     mark(`Las ${PEOPLE} personas entraron`);
 
@@ -818,6 +881,12 @@ async function main() {
           if (tapped) positioned = true;
         }
         if (device === committee && !decided && (await device.page.getByRole("button", { name: SEL.approve }).count()) > 0) {
+          if (!device.whatsapp?.decision) {
+            device.whatsapp = { ...device.whatsapp, decision: await whatsAppButton(device.page, roomId) };
+            await capture(device, `comite-decide-${device.id}`);
+            if (!device.whatsapp.decision.ok) notes.push(`Al decidir, el Comité ya no ve «Recibir resumen por WhatsApp»: ${device.whatsapp.decision.why}`);
+            else if (!device.whatsapp.decision.aboveFold) notes.push("Al decidir, el botón de WhatsApp del Comité queda fuera de la pantalla o tapado por la barra de Aceptar/Rechazar.");
+          }
           const tapped = await tapWhenRead(device, COMITE === "aceptar" ? SEL.approve : SEL.reject, "decisión del Comité");
           if (tapped) decided = true;
         }
@@ -920,7 +989,7 @@ function writeReport(result) {
     leaks: leakList,
     notes,
     phases: durations,
-    devices: devices.map((device) => ({ id: device.id, label: device.label, seat: device.seatLabel ?? null, taps: device.taps, joinSeconds: device.joinMs ? Number((device.joinMs / 1000).toFixed(1)) : null, byPhase: device.byPhase })),
+    devices: devices.map((device) => ({ id: device.id, label: device.label, seat: device.seatLabel ?? null, whatsapp: device.whatsapp ?? null, taps: device.taps, joinSeconds: device.joinMs ? Number((device.joinMs / 1000).toFixed(1)) : null, byPhase: device.byPhase })),
     stats: result?.stats ?? null,
     timeline: timeline.map((entry) => ({ s: Number(since(entry.at)), event: entry.event })),
   };
@@ -928,7 +997,7 @@ function writeReport(result) {
 
   const lines = [];
   lines.push(`# Demo de novatos: ${ok ? "PASÓ" : "FALLÓ"}`, "");
-  lines.push(`- Servidor: ${baseUrl}`, `- Modo: ${modeLabel()} · Comité: ${INICIAR ? "bot (plan B)" : COMITE}`, `- Duración total: ${report.totalSeconds} s`);
+  lines.push(`- Servidor: ${baseUrl}`, `- Modo: ${modeLabel()} · Comité: ${COMITE}`, `- Duración total: ${report.totalSeconds} s`);
   if (report.counter) lines.push(`- Contador de la pantalla grande: «${report.counter.before}» antes de «Iniciar» → «${report.counter.after}» después`);
   if (result?.stats) {
     const s = result.stats;

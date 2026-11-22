@@ -171,7 +171,7 @@ export default function RoomClient() {
       <SeatShell who={{ title: demoSeat.label, org: arbiter ? undefined : myOrg?.orgName, accent: demoSeat.accent }} stakes={room.stakes} status={status} alert={alert}>
         {/* Negociación entre agentes: posturas, debate y propuesta en su vista; la decisión y el acta, en la de demo. */}
         {room.negotiation && ["positions", "debate", "proposal"].includes(room.negotiation.phase) ? (
-          <NegotiationSeatView room={room} me={me} act={act} />
+          <NegotiationSeatView room={room} me={me} act={act} session={session} />
         ) : (
           <DemoSeatView room={room} me={me} act={act} acta={{ md: actaUrl(roomId, "md") }} session={session} />
         )}
