@@ -590,6 +590,22 @@ const COLLAGE = [
   "/presentacion/sd/foto-2.webp",
   "/presentacion/sd/foto-3.webp",
   "/presentacion/sd/foto-4.webp",
+  "/presentacion/sd/foto-5.webp",
+  "/presentacion/sd/foto-6.webp",
+  "/presentacion/sd/foto-7.webp",
+  "/presentacion/sd/foto-8.webp",
+  "/presentacion/sd/foto-9.webp",
+  "/presentacion/sd/foto-10.webp",
+  "/presentacion/sd/foto-11.webp",
+  "/presentacion/sd/foto-12.webp",
+  "/presentacion/sd/foto-13.webp",
+  "/presentacion/sd/foto-14.webp",
+  "/presentacion/sd/foto-15.webp",
+  "/presentacion/sd/foto-16.webp",
+  "/presentacion/sd/foto-17.webp",
+  "/presentacion/sd/foto-18.webp",
+  "/presentacion/sd/foto-19.webp",
+  "/presentacion/sd/foto-20.webp",
 ];
 const COLUMNS = 5;
 
@@ -599,14 +615,13 @@ const COLUMNS = 5;
  * se note. Va oscurecido detrás de los nombres.
  */
 function Collage() {
-  const columns = Array.from({ length: COLUMNS }, (_, c) =>
-    Array.from({ length: 6 }, (_, i) => COLLAGE[(c * 5 + i * 3) % COLLAGE.length]),
-  );
+  // Todas las fotos repartidas entre las columnas (una de cada COLUMNS para cada una).
+  const columns = Array.from({ length: COLUMNS }, (_, c) => COLLAGE.filter((_, i) => i % COLUMNS === c));
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
       <div className="absolute inset-[-6%] flex rotate-[-6deg] gap-4 opacity-70">
         {columns.map((photos, c) => (
-          <div key={c} className={`collage-col flex flex-1 flex-col gap-4 ${c % 2 ? "down" : ""}`} style={{ animationDuration: `${70 + c * 9}s` }}>
+          <div key={c} className={`collage-col flex flex-1 flex-col gap-4 ${c % 2 ? "down" : ""}`} style={{ animationDuration: `${110 + c * 12}s` }}>
             {[...photos, ...photos].map((src, i) => (
               <div key={i} className="relative aspect-[4/5] w-full shrink-0 overflow-hidden rounded-2xl">
                 <Image src={src} alt="" fill sizes="20vw" className="object-cover saturate-[0.85]" />
