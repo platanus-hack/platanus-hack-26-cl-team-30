@@ -6,7 +6,7 @@ La presentación del domingo es una página de la app: **`/presentacion`**. Sigu
 
 | # | Lámina | Tramo | Qué se muestra |
 | --- | --- | --- | --- |
-| 1 | Hola | 0:00–0:07 | Nombre, una línea y el equipo |
+| 1 | Hola | 0:00–0:07 | Nombre, el lema «Donde el caos aprende a evolucionar» y el equipo (la descripción la dice Nahum) |
 | 2 | Problema | 0:07–0:27 | Una organización es un choque de fuerzas: dos hospitales, una cama UCI y datos que no pueden mostrarse; pⁿ de agentes que tiran cada uno para su lado (modelo ilustrativo, calculado por el motor) |
 | 3 | Solución | 0:27–0:45 | «Los agentes conversan. El código gobierna.», lo que está en juego («quién recibe la última cama», con acta) y el botón que pasa a la demo |
 | 4 | En vivo | 0:45–2:40 | La pantalla grande real con su QR y, al lado, el planeta 3D sin textos (solo el logo): dos nodos por persona que entra, convergencia en el debate y, con el acta, alejamiento hasta la galaxia. Un clic en el planeta hace un salto a velocidad luz hacia la lámina siguiente |

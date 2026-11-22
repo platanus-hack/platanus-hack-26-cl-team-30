@@ -255,9 +255,9 @@ function Hola() {
         <h1 data-in className="mt-6 font-sans text-[clamp(4.5rem,13vw,13rem)] leading-[0.85] font-extrabold tracking-[-0.06em] text-(--marmol)">
           sculptor
         </h1>
-        <p data-in className="mt-8 max-w-3xl text-[clamp(1.6rem,2.8vw,3rem)] leading-[1.1] text-(--marmol)">
-          Organizaciones que deciden juntas{" "}
-          <span className="font-serif text-(--eucalipto) italic">sin mostrarse sus datos.</span>
+        <p data-in className="mt-12 max-w-3xl text-[clamp(1.6rem,2.8vw,3rem)] leading-[1.1] text-(--marmol)">
+          Donde el caos aprende{" "}
+          <span className="font-serif text-(--eucalipto) italic">a evolucionar.</span>
         </p>
         <p data-in className="mt-10 font-mono text-[clamp(0.85rem,1.1vw,1.15rem)] tracking-[0.12em] text-(--piedra) uppercase">
           Nahum Díaz · Ramón Molina · Sebastián Vargas
