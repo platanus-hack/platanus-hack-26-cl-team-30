@@ -130,14 +130,14 @@ Es el peso del archivo de origen. Las páginas piden estas imágenes por `next/i
 ## Pruebas automáticas
 
 - **Qué:** `npm test` (Vitest, sin modelo).
-- **Dónde:** en un notebook (macOS), sobre `origin/main` (commit `4a06eab`).
-- **Cuándo:** 22 de noviembre de 2026, 02:08.
+- **Dónde:** en un notebook (macOS), sobre `origin/main` (commit `6e941d2`).
+- **Cuándo:** 22 de noviembre de 2026, 08:35.
 
 | Archivos de prueba | Pruebas | Resultado |
 | --- | --- | --- |
-| 17 | 516 | 516 pasan (48,7 s) |
+| 18 | 520 | 520 pasan |
 
-Ninguna llama a un modelo real: los agentes se reemplazan por dobles (`vi.mock`) o por un servidor simulado compatible con OpenAI. Son pruebas del motor, los permisos, el almacén y la API, no evaluaciones de la calidad del modelo. Antes: 507 en 16 archivos (21 de noviembre, noche), 415 en 11 (antes de la ronda 20); borradores del pitch citaban 216 y 80.
+Ninguna llama a un modelo real: los agentes se reemplazan por dobles (`vi.mock`) o por un servidor simulado compatible con OpenAI. Son pruebas del motor, los permisos, el almacén y la API, no evaluaciones de la calidad del modelo. Antes: 516 en 17 archivos (22 de noviembre, 02:08; el archivo nuevo es `tests/tres-jueces.test.ts`), 507 en 16 archivos (21 de noviembre, noche), 415 en 11 (antes de la ronda 20); borradores del pitch citaban 216 y 80.
 
 ## Canales del Comité contra los servicios reales (Kapso y ElevenLabs)
 

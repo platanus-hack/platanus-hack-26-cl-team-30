@@ -435,7 +435,7 @@ function Pane({ initial }: { initial: string }) {
 }
 
 function Desarrollo() {
-  const stack = ["Next.js 16 · React 19", "Tiempo real por SSE", "Motor determinista", "516 pruebas", "Una capa de modelos: Claude o local"];
+  const stack = ["Next.js 16 · React 19", "Tiempo real por SSE", "Motor determinista", "520 pruebas", "Una capa de modelos: Claude o local"];
   return (
     <div className="flex h-[78svh] flex-col">
       <div className="flex flex-wrap items-end justify-between gap-6">
