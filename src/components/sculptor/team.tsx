@@ -70,7 +70,7 @@ export function Team() {
 
         <div data-frame className="relative mt-14 overflow-hidden rounded-[28px] bg-(--grafito)">
           <Image
-            src="/sculptor/equipo/equipo-horizontal.jpg"
+            src="/sculptor/equipo/equipo-horizontal.webp"
             alt="El equipo 30 (Ramón, Sebastián y Nahum) frente al cartel de Platanus Hack 26."
             width={2000}
             height={1125}
@@ -78,7 +78,7 @@ export function Team() {
             className="hidden aspect-[16/9] w-full object-cover md:block"
           />
           <Image
-            src="/sculptor/equipo/equipo-vertical-1.jpg"
+            src="/sculptor/equipo/equipo-vertical-1.webp"
             alt="El equipo 30 (Ramón, Sebastián y Nahum) frente al cartel de Platanus Hack 26."
             width={1125}
             height={2000}

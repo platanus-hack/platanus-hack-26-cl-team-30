@@ -110,7 +110,7 @@ Revisión de la entrega. Los borradores del pitch que no coincidían con el cód
 
 - **Particle Galaxy (21st 18257) no se integró.** Necesita three.js, que suma más de 600 KB minificado aunque se cargue diferido con `next/dynamic`, sobre el límite de 200 KB que se fijó para la página. Si Ramón la quiere para el héroe de la landing general, habría que medir el bundle con three.js o rehacerla en canvas 2D.
 - **Si cambia la pantalla grande o el celular, hay que volver a sacar las capturas de `public/casos/`**: salen de salas de demo jugadas con Playwright (pasos 1 a 3 de la pantalla grande y los tres celulares de cada rubro).
-- **Ronda 20:** las capturas de la pantalla grande de `public/casos/` ya son de la demo con negociación (`<rubro>-negociacion-*.jpg`), y también los celulares (`<rubro>-negociacion-cel-*.jpg`, del celular de p3 en `src/components/seat/negotiation-view.tsx`). Los textos de las páginas de caso ya hablan de la demo de 5 personas con agentes («Pruébalo con cinco personas», «2 min aproximadamente, como máximo por ronda»).
+- **Ronda 20:** las capturas de la pantalla grande de `public/casos/` ya son de la demo con negociación (`<rubro>-negociacion-*.webp`), y también los celulares (`<rubro>-negociacion-cel-*.webp`, del celular de p3 en `src/components/seat/negotiation-view.tsx`). Los textos de las páginas de caso ya hablan de la demo de 5 personas con agentes («Pruébalo con cinco personas», «2 min aproximadamente, como máximo por ronda»).
 
 ## Agregado en la ronda 20 (negociación entre agentes)
 

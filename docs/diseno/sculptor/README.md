@@ -31,7 +31,7 @@ Un solo bloque de verdad, tallado distinto para cada rol.
 | `public/brand/sculptor-mark-light.svg` | Isotipo para fondo claro |
 | `public/brand/sculptor-mark-mono.svg` | Isotipo a una tinta (`currentColor`) |
 | `public/brand/sculptor-logo.svg` / `-light.svg` | Isotipo + nombre en horizontal (texto en Manrope) |
-| `public/brand/sculptor-logo-1000.png` | 1000×1000, 67 KB: sirve como `project-logo.png` de la entrega |
+| `public/brand/sculptor-logo-1000.webp` | 1000×1000, 14 KB (WebP). El PNG de la entrega es `project-logo.png`, en la raíz |
 
 ## Paleta
 

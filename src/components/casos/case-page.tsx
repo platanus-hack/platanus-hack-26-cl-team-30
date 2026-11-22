@@ -79,7 +79,7 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
         <KineticHero title={study.title} lede={study.lede}>
           <DemoButton room={view.demoRoom} large />
         </KineticHero>
-        <StageScroll src={`/casos/${slug}-negociacion-pantalla.jpg`} alt={`Pantalla grande de la demo de ${study.nav.toLowerCase()}: el Comité decide`} />
+        <StageScroll src={`/casos/${slug}-negociacion-pantalla.webp`} alt={`Pantalla grande de la demo de ${study.nav.toLowerCase()}: el Comité decide`} />
 
         {/* 2. Cómo se decide: tres pasos, cada uno con su captura real de la pantalla grande. */}
         <section className="cs-section" aria-labelledby="pasos-titulo">
@@ -92,7 +92,7 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
                 steps={study.steps.map((step, index) => ({
                   title: step.title,
                   detail: step.detail,
-                  src: `/casos/${slug}-negociacion-paso-${index + 1}.jpg`,
+                  src: `/casos/${slug}-negociacion-paso-${index + 1}.webp`,
                   alt: `Pantalla grande de la demo de ${study.nav.toLowerCase()}, paso ${index + 1}: ${step.title.toLowerCase()}`,
                 }))}
               />
@@ -112,7 +112,7 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
               <PhoneTrio
                 phones={view.viewers.map((viewer, index) => ({
                   label: viewer.label,
-                  src: `/casos/${slug}-negociacion-cel-${index + 1}.jpg`,
+                  src: `/casos/${slug}-negociacion-cel-${index + 1}.webp`,
                   alt: `Celular de ${viewer.label} en la demo`,
                   // El color de cada rol en su celular: eucalipto, arcilla y lavanda.
                   tone: ["#6faf9b", "#e0a891", "#b9aaf0"][index] ?? "#6faf9b",

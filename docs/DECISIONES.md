@@ -463,3 +463,10 @@ Al pasar la gravedad a la escala de 1 a 50, el campo reservado `triage_criticali
 - **Por qué:** con menos de 5 personas el narrador tenía que esperar los 60 s del plazo de posturas, o tener el token de anfitrión para «Siguiente». En el deploy la sala fija no entrega el token sin `NEXO_ADMIN_KEY` (ver «En la demo, el Comité entra sin clave…»), y presentar con 2 o 3 personas del público es lo normal.
 - **Riesgo y límite:** cualquiera con la pantalla grande abierta puede iniciar la ronda antes de que lleguen todos. Se acepta porque solo vale mientras nadie dio su postura (`isJoining`): no adelanta un debate, no reinicia una ronda en curso y no toca el acta (409 `ROUND_STARTED`). Lo dispara una persona y los bots quedan marcados como automáticos, igual que el plan B, así que no rompe «nada se mueve sin una persona». Un bot que no es el Comité no decide nada: solo pone la primera postura de su rol.
 - **Descartado:** pedir el token de anfitrión (en el deploy la pantalla grande de la sala fija no lo tiene) y reutilizar «Siguiente» del narrador (también es solo del anfitrión y en otras fases adelanta el debate, que sí debe quedar protegido).
+
+## Las imágenes de `public/` son WebP, salvo la que leen las redes sociales
+
+- **Decisión:** las capturas de `public/casos/`, las fotos de `public/sculptor/equipo/` y los logos de `public/brand/` se guardan en WebP (26 archivos; los JPG y PNG originales se borraron). `public/sculptor/logo.png` sigue en PNG.
+- **Por qué:** las fotos cargaban lento. El total de origen bajó de 4.033 KB a 2.104 KB (ver `docs/MEDICIONES.md`).
+- **La excepción:** `/sculptor/logo.png` es la imagen de `openGraph` y el ícono de pestaña de `/` (`src/app/page.tsx`), y las redes sociales no siempre leen WebP. No se muestra dentro de ninguna página, así que no tiene copia en WebP. `project-logo.png`, en la raíz, también sigue en PNG porque la entrega lo exige.
+- **Descartado:** WebP sin pérdida para los logos (pesa el triple que `-q 90` en estos archivos) y AVIF (no se probó; `cwebp` ya estaba instalado y WebP lo leen todos los navegadores de la demo).
