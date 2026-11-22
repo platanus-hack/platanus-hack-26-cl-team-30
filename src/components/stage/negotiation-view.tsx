@@ -337,10 +337,8 @@ function PeopleCount({ room, compact = false }: { room: ProjectedRoomState; comp
  * del piloto automático y la negociación arranca. No pide clave: el servidor solo
  * lo acepta mientras nadie dio su postura (POST /api/rooms/:id/start).
  */
-function StartButton({ room, onStart }: { room: ProjectedRoomState; onStart: () => Promise<void> }) {
+function StartButton({ onStart }: { room: ProjectedRoomState; onStart: () => Promise<void> }) {
   const [busy, setBusy] = useState(false);
-  const { people, total } = peopleCount(room);
-  const free = total - people;
   return (
     <div className="nx-ng-start">
       <button
@@ -358,7 +356,6 @@ function StartButton({ room, onStart }: { room: ProjectedRoomState; onStart: () 
       >
         <Play aria-hidden="true" /> {busy ? "Iniciando…" : "Iniciar"}
       </button>
-      <span className="nx-ng-start-note">{free > 0 ? `${free === 1 ? "El asiento libre lo toma" : `Los ${free} asientos libres los toma`} un bot automático.` : "Están todos: arranca la negociación."}</span>
     </div>
   );
 }
