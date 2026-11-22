@@ -72,6 +72,20 @@ export function stageStep(room: ProjectedRoomState, negotiation: Negotiation): S
   return !anyPosition && freeSeat ? "join" : "positions";
 }
 
+/**
+ * Contador de la pantalla grande: «3/5 · 2 automáticos». `people` son las sillas
+ * de persona con alguien conectado; los bots del piloto automático no cuentan
+ * como personas, van aparte en `bots`. `total` son las sillas de persona (5).
+ */
+export function peopleCount(room: ProjectedRoomState): { people: number; bots: number; total: number } {
+  const seats = stageSeats(room).filter((seat) => seat.human);
+  return {
+    people: seats.filter((seat) => seat.connected && !seat.bot).length,
+    bots: seats.filter((seat) => seat.connected && seat.bot).length,
+    total: seats.length,
+  };
+}
+
 /** Asiento de un mensaje o una postura, para darle su color. */
 export function seatOf(room: ProjectedRoomState, orgId: string, roleId: string): Seat | undefined {
   return stageSeats(room).find((seat) => seat.id === `${orgId}/${roleId}`);
