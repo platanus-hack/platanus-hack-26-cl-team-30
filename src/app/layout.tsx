@@ -25,7 +25,12 @@ const title = "Sculptor: decidir juntos sin mostrar los datos";
 const description =
   "Un lugar donde organizaciones que no pueden compartir su información deciden juntas a quién le toca lo que escasea: cada una ve solo lo suyo, una regla conocida ordena los casos y quien firma deja su razón.";
 
+// Base de las URL absolutas de metadata (imagen al compartir en redes): sin esto,
+// Next las arma con localhost y WhatsApp o LinkedIn no encuentran la imagen.
+const siteUrl = process.env.NEXO_PUBLIC_BASE_URL ?? "https://team-30-platanus-hack.onrender.com";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: { default: title, template: "%s · Sculptor" },
   description,
   openGraph: { title, description, type: "website", locale: "es_CL" },
