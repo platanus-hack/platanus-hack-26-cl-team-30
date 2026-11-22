@@ -31,7 +31,8 @@ const id = (seat: { orgId: string; roleId: string }) => `${seat.orgId}/${seat.ro
 
 type Seat = { orgId: string; roleId: string; token: string };
 
-const demo = () => createRoom({ mode: "cross_org", demo: true }).roomId;
+// Demo pauteada de 3 personas (sin negociación entre agentes, que tiene sus pruebas en tests/negotiation.test.ts).
+const demo = () => createRoom({ mode: "cross_org", demo: true, negotiation: false }).roomId;
 const keyOf = (roomId: string) => getHostCredentials(roomId)!.committeeKey;
 const stage = (roomId: string) => projectRoom(roomId, "stage")!;
 const role = (roomId: string, orgId: string, roleId: string) => stage(roomId).orgs.find((org) => org.orgId === orgId)!.roles.find((entry) => entry.id === roleId)!;
@@ -436,7 +437,7 @@ describe("demo pauteada: orden de los asientos, turno y plan B", () => {
   });
 
   it("con el plan B apagado (turnTimeoutMs 0) nadie juega por la persona", () => {
-    const roomId = createRoom({ mode: "cross_org", demo: true, turnTimeoutMs: 0 }).roomId;
+    const roomId = createRoom({ mode: "cross_org", demo: true, negotiation: false, turnTimeoutMs: 0 }).roomId;
     draw(roomId);
     expect(turnOf(roomId)).toMatchObject({ label: "Clínica", remainingMs: 0, totalMs: 0 });
     vi.advanceTimersByTime(120_000);
@@ -464,7 +465,7 @@ describe("demo pauteada: orden de los asientos, turno y plan B", () => {
 describe("plan B mientras los bots todavía firman", () => {
   it("el turno del Comité no se pierde si un bot firma la compuerta al mismo tiempo", () => {
     // Plan B corto: los turnos llegan antes de que los bots terminen (0,9 s por paso).
-    const roomId = createRoom({ mode: "cross_org", demo: true, turnTimeoutMs: 1500 }).roomId;
+    const roomId = createRoom({ mode: "cross_org", demo: true, negotiation: false, turnTimeoutMs: 1500 }).roomId;
     draw(roomId);
     vi.advanceTimersByTime(10_000);
     const state = getRoom(roomId)!;
@@ -476,7 +477,7 @@ describe("plan B mientras los bots todavía firman", () => {
 
 describe("el acta nunca presenta una decisión automática como de una persona", () => {
   it("las firmas de los bots y la decisión del plan B quedan marcadas y en su propia sección del acta", async () => {
-    const roomId = createRoom({ mode: "cross_org", demo: true, turnTimeoutMs: 1500 }).roomId;
+    const roomId = createRoom({ mode: "cross_org", demo: true, negotiation: false, turnTimeoutMs: 1500 }).roomId;
     draw(roomId);
     vi.advanceTimersByTime(10_000);
     const state = getRoom(roomId)!;

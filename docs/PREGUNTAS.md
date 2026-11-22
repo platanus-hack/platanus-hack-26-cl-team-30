@@ -18,7 +18,7 @@ En `src/lib/engine/deterministic.ts`, en dos funciones. `projectStateForOrgAndRo
 ## Agentes y modelos
 
 **4. ¿Cuántos agentes hay y qué hace cada uno?**
-Dos propios y un asistente externo. El agente de rol (`runRoleAgentTurn` en `src/agents/role-agent.ts`) propone el siguiente paso para un rol, con una frase y un valor sugerido. El agente de mutación (`mutateGenomeFromPrompt` en `src/agents/mutate-genome.ts`) convierte una frase como "una cooperativa de agua" en el genoma de una organización. Ninguno actúa solo: corren cuando una persona lo pide, y no se llaman entre sí. El tercero es el asistente de voz del Comité, un agente de ElevenLabs que solo explica el caso y transcribe la decisión que dicta la persona, por dos herramientas de nuestro servidor (`src/integrations/elevenlabs.ts`). Su modelo corre en ElevenLabs: es la única excepción a la capa de modelos, y está anotada en `docs/DECISIONES.md`.
+Tres propios y un asistente externo. El agente de negociación (`writeNegotiationLine` en `src/agents/negotiation-agent.ts`) es el de la demo: hay uno por persona; en el celular le aconseja una postura y en la pantalla grande la defiende con una frase. El orden, las fases y la propuesta los pone el código, y si el agente tarda más de 6 s o escribe un dato reservado, se publica un texto de respaldo. El agente de rol (`runRoleAgentTurn` en `src/agents/role-agent.ts`) propone el siguiente paso para un rol, con una frase y un valor sugerido. El agente de mutación (`mutateGenomeFromPrompt` en `src/agents/mutate-genome.ts`) convierte una frase como "una cooperativa de agua" en el genoma de una organización. Ninguno cambia la sala por su cuenta. El tercero es el asistente de voz del Comité, un agente de ElevenLabs que solo explica el caso y transcribe la decisión que dicta la persona, por dos herramientas de nuestro servidor (`src/integrations/elevenlabs.ts`). Su modelo corre en ElevenLabs: es la única excepción a la capa de modelos, y está anotada en `docs/DECISIONES.md`.
 
 **5. ¿Qué decide el modelo y qué decide el código?**
 El modelo redacta: el texto de una propuesta y el contenido de un genoma. El código decide todo lo demás: quién ve qué (`canViewField`), si hay choque (`detectRuleConflict`), si la compuerta bloquea (`evaluateGate`), quién recibe la cama (`resolveAllocation`), el contador y el acta. Todo eso está en `src/lib/engine/deterministic.ts`, que no importa la capa de modelos. La sala funciona completa sin modelo.
@@ -129,6 +129,17 @@ En el deploy, todo el servidor corre en Render. Van a la nube: el modelo del age
 
 **36. ¿Cómo escala?**
 Un solo proceso con todo en memoria (`globalThis` en `src/lib/store/rooms.ts`): salas, tokens, sesiones de los canales y el límite de peticiones. Topes: 200 salas creadas por usuarios, 200 conexiones SSE por sala y 1000 en total, bitácora acotada por sala y dos llamadas al modelo a la vez (`src/lib/llm.ts`). Mientras el contador corre, cada conexión recibe la sala completa una vez por segundo: lo primero que se satura es la CPU y el ancho de banda de Render gratis (ya vimos mensajes que tardaron hasta 3 s, `docs/MEDICIONES.md`). Varias instancias romperían el SSE y el estado; un reinicio borra las salas. Para escalar: persistencia y un bus compartido (por ejemplo, Redis), enviar solo los cambios y subir de plan.
+
+## Negociación entre agentes (ronda 20)
+
+**37. ¿Los agentes negocian de verdad o es un guion?**
+Los textos son de verdad: los redacta el modelo para cada rol, leyendo lo que ya dijeron los otros. El orden de los turnos y la propuesta no: los pone el código (`src/lib/engine/negotiation.ts` y `resolveRoomAllocation`). Así la propuesta es la misma con o sin modelo. Si el modelo no responde en 6 s, sale un texto de respaldo, marcado `fallback: true`; sin modelo configurado, todos salen así.
+
+**38. ¿Cómo evitan que un agente diga el costo del otro hospital en la pantalla grande?**
+De dos formas. El agente solo recibe la vista proyectada de su rol, así que el costo ajeno no está en su prompt. Además, antes de publicar, `containsReserved` busca en el texto cada valor reservado de la sala, también escrito como «2,4 millones» o «23 de 50». Si aparece uno, se publica el respaldo. Está probado en `tests/negotiation.test.ts` y en el recorrido `scripts/e2e.mjs`.
+
+**39. ¿Y si alguien no elige su postura?**
+A los 60 s de entrar la primera persona, un bot ocupa los asientos vacíos y pone la primera opción, marcada como automática en la pantalla y en el acta. El narrador puede adelantar ese plazo o pausar la negociación.
 
 ## Cuidado con estas afirmaciones
 

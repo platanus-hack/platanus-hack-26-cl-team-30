@@ -54,6 +54,8 @@ import { commandStyles } from "./command-styles";
 import { Dialog, Dock, NewRoundButton, Panel, State, type ViewId, type ViewInfo } from "./command-parts";
 import { Galaxy } from "./galaxy";
 import { JoinQr, JoinView } from "./join-view";
+import { readNegotiation } from "./negotiation";
+import { NegotiationView, type NarratorAction } from "./negotiation-view";
 import { isDemoRoom, shortLabel, stageSeats } from "./seats";
 import { demoTurn, freeHumanSeat, storyProgress } from "./story";
 import { StoryView } from "./story-view";
@@ -109,7 +111,9 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
   // En la demo la galaxia arma una esfera de personas; los asientos automáticos no son nodos.
   const seats = demo ? allSeats.filter((seat) => seat.human) : allSeats;
   const progress = storyProgress(room);
-  const joining = useLinger(progress.index === 0, JOIN_LINGER_MS);
+  // Demo con negociación entre agentes (5 personas): la vista principal es otra (negotiation-view.tsx).
+  const negotiation = readNegotiation(room);
+  const joining = useLinger(progress.index === 0, JOIN_LINGER_MS) && !negotiation;
   const sealed = progress.done;
   const canNotify = !!host && cross && !!integrations && (integrations.whatsapp || (integrations.voice && integrations.canCall));
   const current = VIEWS.find((entry) => entry.id === view)!;
@@ -124,11 +128,15 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
           setView("mando");
         }
       : undefined;
+  // Controles del narrador: solo quien abrió la sala (tiene el token de anfitrión).
+  const control = host && negotiation ? (action: NarratorAction) => void narratorControl(room.roomId, host, action) : undefined;
+  // «Nueva demo»: una sala nueva con código nuevo; el código de una sala no se reutiliza.
+  const newDemo = negotiation ? onOpenOwnRoom : undefined;
   // En la demo el código para entrar no desaparece mientras quede una silla de persona libre.
   // Si la franja de abajo ya lo muestra (falta el Comité), no se repite en la esquina.
   const turn = demoTurn(room);
   // En la demo con turno, el código chico va dentro de la franja del turno (turn-band.tsx).
-  const cornerQr = view === "mando" && !joining && !!baseUrl && freeHumanSeat(room) && !turn;
+  const cornerQr = view === "mando" && !joining && !negotiation && !!baseUrl && freeHumanSeat(room) && !turn;
   // Título: en la demo le habla a quien le toca al unirse; en los pasos siguientes lo dice la franja del turno.
   const title = view !== "mando" ? current.label : joining ? (demo && turn ? `${turn.who}: ${turn.text}` : "Escanea y entra") : demo ? null : current.label;
 
@@ -144,9 +152,10 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
       <div className="gd-surround">
         <header className="gd-top">
           <div className="gd-brand">
-            <Mark size={28} />
+            {/* La marca oficial: la galaxia en píxeles y «sculptor» en minúsculas. */}
+            <Mark size={34} />
             <div>
-              <strong>SCULPTOR</strong>
+              <strong className="gd-wordmark">sculptor</strong>
             </div>
           </div>
           <span aria-hidden="true" />
@@ -189,11 +198,17 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
 
               <div className="gd-content" data-view={view}>
                 {view === "mando" &&
-                  (joining ? <JoinView room={room} seats={allSeats} theme={theme} baseUrl={baseUrl} /> : <StoryView room={room} onNotify={canNotify ? () => setModal("notify") : undefined} onNewRound={newRound} baseUrl={baseUrl} />)}
+                  (negotiation ? (
+                    <NegotiationView room={room} negotiation={negotiation} theme={theme} baseUrl={baseUrl} onControl={control} onNewDemo={newDemo} />
+                  ) : joining ? (
+                    <JoinView room={room} seats={allSeats} theme={theme} baseUrl={baseUrl} />
+                  ) : (
+                    <StoryView room={room} onNotify={canNotify ? () => setModal("notify") : undefined} onNewRound={newRound} baseUrl={baseUrl} />
+                  ))}
                 {view === "ranking" && <RankingView room={room} />}
                 {view === "organizaciones" && <OrgsView room={room} baseUrl={baseUrl} committeeKey={host?.committeeKey ?? null} onOpenOwnRoom={onOpenOwnRoom} />}
                 {view === "acta" && (
-                  <ActaView room={room} acta={acta} host={host} onNotify={canNotify ? () => setModal("notify") : undefined} logOpen={logOpen} onLogToggle={setLogOpen} logRef={logRef} onNewRound={progress.done ? newRound : undefined} />
+                  <ActaView room={room} acta={acta} host={host} onNotify={canNotify ? () => setModal("notify") : undefined} logOpen={logOpen} onLogToggle={setLogOpen} logRef={logRef} onNewRound={progress.done ? (newDemo ?? newRound) : undefined} />
                 )}
               </div>
             </div>
@@ -221,6 +236,23 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
       {!(view === "mando" && joining) && !demo && <EventToasts room={room} />}
     </div>
   );
+}
+
+/**
+ * Pausa, reanuda o adelanta la negociación: POST /api/rooms/:id/negotiation con el
+ * token del anfitrión. El resultado llega por el SSE, como todo lo demás; si el
+ * servidor lo rechaza no cambia nada en pantalla.
+ */
+async function narratorControl(roomId: string, host: HostCredentials, action: NarratorAction): Promise<void> {
+  try {
+    await fetch(`/api/rooms/${encodeURIComponent(roomId)}/negotiation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-host-token": host.hostToken },
+      body: JSON.stringify({ action }),
+    });
+  } catch {
+    // Sin red: el indicador de conexión de arriba ya lo dice.
+  }
 }
 
 /**

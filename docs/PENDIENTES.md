@@ -98,4 +98,13 @@ Actualizado el 21 de noviembre de 2026.
 
 - **Particle Galaxy (21st 18257) no se integró.** Necesita three.js, que suma más de 600 KB minificado aunque se cargue diferido con `next/dynamic`, sobre el límite de 200 KB que se fijó para la página. Si Ramón la quiere para el héroe de la landing general, habría que medir el bundle con three.js o rehacerla en canvas 2D.
 - **Si cambia la pantalla grande o el celular, hay que volver a sacar las capturas de `public/casos/`**: salen de salas de demo jugadas con Playwright (pasos 1 a 3 de la pantalla grande y los tres celulares de cada rubro).
+- **Ronda 20:** las capturas de la pantalla grande de `public/casos/` ya son de la demo con negociación (`<rubro>-negociacion-*.jpg`), y también los celulares (`<rubro>-negociacion-cel-*.jpg`, del celular de p3 en `src/components/seat/negotiation-view.tsx`). Los textos de las páginas de caso ya hablan de la demo de 5 personas con agentes («Pruébalo con cinco personas», «2 min aproximadamente, como máximo por ronda»).
+
+## Agregado en la ronda 20 (negociación entre agentes)
+
+- **Los textos del modelo en la negociación no se han visto contra Claude real.** Las pruebas y los recorridos locales corren sin modelo, así que publicaron el respaldo (`fallback: true`). Falta una corrida en el deploy para ver si Claude responde en menos de 6 s y si sus frases caben en 110 caracteres sin cortarse. Si tarda, subir `NEGOTIATION_MODEL_TIMEOUT_MS` también obliga a subir `NEXO_NEGOTIATION_STEP_MS`.
+- **El filtro de datos reservados busca valores, no ideas.** Atrapa números de 3 o más cifras, «2,4 millones», «2.400 mil» y «23/50» o «23 de 50». No atrapa una paráfrasis como «cuesta más de dos millones»; la defensa principal sigue siendo que el agente solo recibe la vista de su rol.
+- **La demo pauteada de 3 personas sigue en el código** (`negotiation: false` en `POST /api/rooms`), con sus pruebas, pero ninguna pantalla la ofrece.
+- **Los códigos de sala no se reutilizan mientras vive el proceso.** Un reinicio del servidor en Render olvida la lista; con 32^5 (más de 33 millones) códigos posibles, repetir uno es muy improbable, pero no está garantizado entre reinicios.
+- **Sin capturas de la negociación en el celular** si el servidor local no podía levantarse; ver el resumen de la ronda.
 

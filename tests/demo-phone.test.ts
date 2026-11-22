@@ -21,7 +21,7 @@ const ARBITER = { orgId: "comite_red", roleId: "role_c" };
 const id = (seat: { orgId: string; roleId: string }) => `${seat.orgId}/${seat.roleId}`;
 type Seat = { orgId: string; roleId: string; token: string };
 
-const demo = () => createRoom({ mode: "cross_org", demo: true }).roomId;
+const demo = () => createRoom({ mode: "cross_org", demo: true, negotiation: false }).roomId;
 /** Lo que recibe por el SSE quien presenta estas credenciales: su rol si el token vale; si no, la vista general. */
 const viewOf = (roomId: string, seat: Seat) => projectRoom(roomId, resolveViewer(roomId, seat))!;
 const stage = (roomId: string) => projectRoom(roomId, "stage")!;

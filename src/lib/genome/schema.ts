@@ -290,6 +290,61 @@ export const TelemetrySchema = z.object({
   tokensPerSec: z.number(),
 });
 
+// --- Negociación entre agentes (salas de demo, ronda 20) ------------------------
+//
+// La IA escribe, el código decide: los textos los redacta el modelo (o el respaldo
+// determinista) y pasan un filtro de datos reservados antes de publicarse; las
+// fases, las posturas, la propuesta y los puntajes son código.
+
+export const NegotiationPhaseSchema = z.enum(["positions", "debate", "proposal", "decision", "done"]);
+export const NegotiationMessageKindSchema = z.enum(["advice", "position", "argument", "proposal", "system"]);
+
+export const NegotiationMessageSchema = z.object({
+  id: z.string(),
+  orgId: z.string(),
+  roleId: z.string(),
+  /** Quién habla, listo para mostrar: «Agente de Urgencias · Clínica». */
+  agentLabel: z.string(),
+  text: z.string(),
+  /** advice: consejo privado, solo para el celular de ese rol. El resto es público. */
+  kind: NegotiationMessageKindSchema,
+  ts: z.number(),
+  /** true si es el texto de respaldo (el modelo falló, tardó o su texto traía un dato reservado). */
+  fallback: z.boolean().optional(),
+});
+
+/** Estado de la negociación dentro de la sala (servidor). */
+export const NegotiationStateSchema = z.object({
+  phase: NegotiationPhaseSchema,
+  paused: z.boolean(),
+  /** Reloj del servidor (ms) del próximo paso. null en pausa o mientras se espera a una persona. */
+  nextAt: z.number().nullable(),
+  /** Pausa entre mensajes del debate. */
+  stepMs: z.number().int().min(0),
+  /** Agente cuyo mensaje se está redactando. */
+  typing: z.object({ orgId: z.string(), roleId: z.string(), agentLabel: z.string() }).nullable(),
+  /** Postura de cada asiento de organización. optionId null: todavía no la elige. */
+  positions: z.array(z.object({ orgId: z.string(), roleId: z.string(), optionId: z.string().nullable(), automatic: z.boolean() })),
+  messages: z.array(NegotiationMessageSchema),
+  /** Cuántos agentes ya hablaron en el debate. */
+  debateIndex: z.number().int().min(0),
+});
+
+/** Lo que viaja a un cliente: sin los consejos de otros roles y con las opciones del propio. */
+export const ProjectedNegotiationSchema = z.object({
+  phase: NegotiationPhaseSchema,
+  paused: z.boolean(),
+  nextAt: z.number().nullable(),
+  stepMs: z.number(),
+  typing: z.object({ orgId: z.string(), roleId: z.string(), agentLabel: z.string() }).nullable(),
+  positions: z.array(z.object({ orgId: z.string(), roleId: z.string(), seatLabel: z.string(), position: z.string().nullable(), automatic: z.boolean() })),
+  messages: z.array(NegotiationMessageSchema),
+  /** Solo para el rol que mira, en la fase positions: sus opciones de postura. */
+  myOptions: z.array(z.object({ id: z.string(), label: z.string() })).optional(),
+  /** Solo para el rol que mira: la postura que eligió (texto), o null. */
+  myPosition: z.string().nullable().optional(),
+});
+
 export const RoomStateSchema = z.object({
   roomId: z.string().min(1),
   mode: RoomModeSchema,
@@ -313,6 +368,8 @@ export const RoomStateSchema = z.object({
   clockStartedAt: z.number().nullable().optional(),
   /** Sala de demo: 3 asientos humanos y los roles administrativos los juega el piloto automático. */
   demo: z.boolean().optional(),
+  /** Sala de demo con negociación entre agentes. Si falta, la sala no la usa. */
+  negotiation: NegotiationStateSchema.optional(),
   /** Sala de demo: cuándo empezó el turno actual (lo fija el almacén al cambiar de turno). */
   turnStartedAt: z.number().nullable().optional(),
   /** Sala de demo: tras este tiempo sin que actúe la persona del turno, el piloto juega por ella. 0 o ausente: apagado. */
@@ -483,8 +540,12 @@ export const ProjectedRoomStateSchema = z.object({
   mode: RoomModeSchema,
   /** Escenario entre organizaciones de la sala, si lo tiene. */
   scenarioId: z.string().optional(),
-  /** true en una sala de demo (3 asientos humanos, los administrativos son bots). */
+  /** true en una sala de demo (asientos por orden de llegada; los vacíos los juegan bots). */
   demo: z.boolean().optional(),
+  /** Código de la sala para mostrar y dictar: el id de la sala (4 a 6 caracteres legibles en las salas nuevas). */
+  roomCode: z.string().optional(),
+  /** Negociación entre agentes, ya filtrada para quien mira. null o ausente si la sala no la usa. */
+  negotiation: ProjectedNegotiationSchema.nullable().optional(),
   /**
    * Sala de demo: a quién le toca ahora (primer caso, segundo caso, Comité). remainingMs
    * es lo que queda antes de que el piloto juegue ese turno; 0 y totalMs 0 si el plan B
@@ -559,3 +620,7 @@ export type ProjectedOrg = z.infer<typeof ProjectedOrgSchema>;
 export type ProjectedScarcity = z.infer<typeof ProjectedScarcitySchema>;
 export type ProjectedRoomState = z.infer<typeof ProjectedRoomStateSchema>;
 export type AutopilotView = z.infer<typeof AutopilotViewSchema>;
+export type NegotiationPhase = z.infer<typeof NegotiationPhaseSchema>;
+export type NegotiationMessage = z.infer<typeof NegotiationMessageSchema>;
+export type NegotiationState = z.infer<typeof NegotiationStateSchema>;
+export type ProjectedNegotiation = z.infer<typeof ProjectedNegotiationSchema>;

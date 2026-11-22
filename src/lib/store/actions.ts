@@ -152,6 +152,20 @@ export const RandomSeatRequestSchema = z.object({
 });
 export type RandomSeatRequest = z.infer<typeof RandomSeatRequestSchema>;
 
+/**
+ * Fijar la postura del asiento propio en la negociación entre agentes (salas de
+ * demo). Un toque por persona, entre las 2 o 3 opciones de su rol, y solo en la
+ * fase de posturas. El Comité no fija postura: decide al final.
+ */
+export const SetPositionActionSchema = z.object({
+  type: z.literal("SET_POSITION"),
+  ...actor,
+  optionId: id,
+});
+
+/** Controles del narrador sobre la negociación (POST /api/rooms/:id/negotiation, solo anfitrión). */
+export const NegotiationControlSchema = z.object({ action: z.enum(["pause", "resume", "advance"]) });
+
 export const ActionSchema = z.discriminatedUnion("type", [
   JoinRoleActionSchema,
   LeaveRoleActionSchema,
@@ -164,6 +178,7 @@ export const ActionSchema = z.discriminatedUnion("type", [
   SubmitCandidateActionSchema,
   AllocationSealActionSchema,
   CommitteeVetoActionSchema,
+  SetPositionActionSchema,
 ]);
 
 export type Action = z.infer<typeof ActionSchema>;
@@ -181,6 +196,7 @@ export type HitlDecisionAction = ActionOf<"HITL_DECISION">;
 export type SubmitCandidateAction = ActionOf<"SUBMIT_CANDIDATE">;
 export type AllocationSealAction = ActionOf<"ALLOCATION_SEAL">;
 export type CommitteeVetoAction = ActionOf<"COMMITTEE_VETO">;
+export type SetPositionAction = ActionOf<"SET_POSITION">;
 
 export const ACTION_TYPES = ActionSchema.options.map((option) => option.shape.type.value) as ActionType[];
 

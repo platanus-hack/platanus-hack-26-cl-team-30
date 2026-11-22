@@ -12,7 +12,7 @@ La idea en una línea: un solo estado por sala vive en el servidor, un motor de 
 | 2 | `src/lib/genome/seeds.ts` | Los datos simulados de la demo: tres escenarios entre organizaciones (hospitales y una cama, constructoras y una grúa, distribuidoras y un camión) y una distribuidora suelta. Se validan al cargar el módulo | `getInitialCrossOrgRoom` |
 | 3 | `src/lib/engine/deterministic.ts` (permisos) | Dónde se decide quién ve qué. Es la única salida de estado hacia un cliente: lo que un viewer no puede ver se elimina aquí y no viaja | `projectStateForOrgAndRole`, que usa `canViewField` y `canViewCoverageCost` |
 | 4 | `src/lib/engine/deterministic.ts` (reglas) | Las reglas, todas sin modelo y como funciones puras: choque de autoridad, compuerta, asignación con desempate de equidad, decisión del Comité, contador y acta | `resolveAllocation` y `recordCommitteeDecision` |
-| 5 | `src/lib/store/actions.ts` | Las 11 acciones que acepta el servidor, con su forma exacta y sus códigos de error | `ActionSchema` |
+| 5 | `src/lib/store/actions.ts` | Las 12 acciones que acepta el servidor, con su forma exacta y sus códigos de error | `ActionSchema` |
 | 6 | `src/lib/store/rooms.ts` | El almacén: salas en memoria, token por rol, token de anfitrión y clave del Comité, salas fijas (`demo`, `demo-cross`, `demo-construccion`, `demo-logistica`), reinicio, ensayo automático, topes de memoria y aviso de cambios. No decide reglas: valida, comprueba la identidad y delega en el motor | `applyAction` (y `resolveViewer` para el token, `startAutopilot` para el ensayo) |
 | 7 | `src/app/api/rooms/[roomId]/events/route.ts` | El tiempo real. Cada conexión SSE vuelve a resolver quién mira y envía su propia versión de la sala en cada cambio, y una vez por segundo mientras el contador corre | `GET` (su función interna `send`) |
 | 8 | `src/agents/role-agent.ts` | El agente de cada rol. Recibe la misma vista filtrada que el navegador de esa persona, así que hereda sus permisos. Propone; no decide | `runRoleAgentTurn` |
@@ -36,6 +36,8 @@ navegador ◀── data: ProjectedRoomState (sin los datos que no le correspond
 ```
 
 El agente de rol entra por la misma puerta: `RUN_ROLE_AGENT` llega a `applyAction`, que le pasa a `runRoleAgentTurn` la vista filtrada del rol. Lo que vuelve del modelo lo aplica el motor con `applyAgentProposal`, que solo puede cambiar el valor propuesto del caso.
+
+La negociación entre agentes de la demo sigue el mismo camino: `SET_POSITION` entra por `applyAction`, las reglas están en `src/lib/engine/negotiation.ts` (puras, sin modelo), el texto lo redacta `src/agents/negotiation-agent.ts` y los tiempos, el respaldo de 6 s y el filtro de datos reservados están en `writeNegotiationText` y las funciones vecinas de `src/lib/store/rooms.ts`. La prueba es `tests/negotiation.test.ts`.
 
 ## Si tienes más tiempo
 

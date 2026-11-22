@@ -107,6 +107,20 @@ En las salas de demo (`demo` en el estado de la sala) la pantalla grande se simp
 - Mientras quede una silla libre, el código para entrar sigue a la vista: grande en «Unirse», en la esquina en Casos («¿Falta alguien? Escanea») y en la franja cuando falta el Comité («Comité: escanea el QR»).
 - El guion del narrador, sincronizado con cada paso, está en `docs/GUION_DEMO.md`.
 
+### Sala de demo con negociación: 5 personas y sus agentes
+
+Desde la ronda 20 la demo por defecto es de 5 personas (Clínica · Urgencias, Clínica · Administración, Hospital Rural · Turno, Hospital Rural · Administración y Comité). La pantalla grande la muestra en `negotiation-view.tsx`, con 6 pasos:
+
+- **Unirse:** el código de la sala gigante (5 caracteres, de 88 a 236 px) junto al código QR, «N de 5 personas conectadas» y los 5 asientos en una fila. Se queda en este paso hasta que alguien da su postura o ya no quedan sillas libres.
+- **Posturas:** «Cada persona da su postura.» Cada asiento es una columna alta; al dar su postura se enciende con su color y la postura se lee grande. Si falta gente, el código y un QR chico siguen a la vista. Un asiento que juega un bot lleva el chip «automático».
+- **Debate:** a la izquierda, los 5 asientos con su postura en una columna angosta; al centro, la conversación. Cada mensaje es una burbuja grande (22–34 px, 2 líneas como máximo) con el nombre del agente en el color de su rol («Agente de Urgencias · Clínica»). La primera organización habla desde la izquierda y la segunda desde la derecha. Se ven los últimos 3 mensajes; el más nuevo entra desde abajo y los anteriores se apagan en el texto (la burbuja sigue opaca para tapar la galaxia). Abajo, el «escribiendo…» de quien sigue, con tres puntos en su color.
+- **Propuesta:** los dos últimos mensajes quedan chicos arriba y la tarjeta de la regla emerge debajo, con borde del color del paso actual: «Hospital Rural recibiría el recurso», «La calculó el código, no un agente.», y por caso su etiqueta pública («Paciente B»), el puntaje compuesto de la regla en escala de 1 a 50 (27/50) y los datos reservados de esa organización solo por su nombre, con candado. Nunca la gravedad sola: es un dato reservado y, aunque se calcule desde un número público, se lee como tal.
+- **Comité:** la tarjeta de la propuesta y la franja grande «Comité: ¿aceptas o rechazas?» con la cuenta regresiva del plan B.
+- **Acta:** «Listo: Hospital Rural recibe el recurso», «Nueva demo», y la tarjeta con lo que decidió el Comité y su razón entre comillas. Si decidió el plan B, dice «Decisión automática: nadie decidió a tiempo».
+- **Colores por bando:** en la negociación la organización da la familia de color, para seguir el debate de lejos: la Clínica en eucaliptos (Urgencias #6faf9b, Administración #8fd3bd en oscuro) y el Hospital Rural en ocre y arcilla (#f1be58 y #e0a891); el Comité en marfil o tinta.
+- **Narrador:** una fila discreta al pie (78 % de opacidad, 100 % al pasar el mouse): «Pausa»/«Reanudar», «Siguiente» y una barra delgada con el tiempo hasta el próximo mensaje (en ocre si está en pausa). Los botones solo los ve quien abrió la sala; la barra, todos. Atajos: espacio y flecha derecha.
+- Solo texto, sin audio.
+
 ### Paso «Unirse»: la galaxia
 
 Mientras falta gente, la pantalla grande no muestra la Historia sino esto:
@@ -147,7 +161,7 @@ Vienen del mentor («bombardean con texto todo, eso no aporta») y valen para to
 
 ## Páginas de caso (/casos/*)
 
-Una idea por sección y mucho aire entre ellas. El orden es: héroe con la pantalla grande real enderezándose al bajar; los tres pasos, con la captura real de la pantalla grande en cada uno (fija a un lado mientras se baja); los tres celulares reales; la regla con sus pesos (la única sección con puntajes, que cuentan al aparecer); lo que ve cada persona (una tabla oscura, con lo reservado cifrado); el acta como línea de tiempo; por qué firma una persona (dos números que cuentan); otros rubros (enlaces simples); y el llamado final a todo el ancho. Todas las capturas son de salas de demo jugadas y están en `public/casos/` (`<rubro>-paso-1..3.jpg`, `<rubro>-cel-1..3.jpg`, `<rubro>-pantalla.jpg`).
+Una idea por sección y mucho aire entre ellas. El orden es: héroe con la pantalla grande real enderezándose al bajar; los tres pasos, con la captura real de la pantalla grande en cada uno (fija a un lado mientras se baja); los tres celulares reales; la regla con sus pesos (la única sección con puntajes, que cuentan al aparecer); lo que ve cada persona (una tabla oscura, con lo reservado cifrado); el acta como línea de tiempo; por qué firma una persona (dos números que cuentan); otros rubros (enlaces simples); y el llamado final a todo el ancho. Todas las capturas son de salas de demo jugadas y están en `public/casos/` (`<rubro>-negociacion-pantalla.jpg`: el Comité decidiendo; `<rubro>-negociacion-paso-1..3.jpg`: el debate de los agentes, la propuesta del código y el acta, todas de la demo con negociación y con el logo de la galaxia en píxeles; y `<rubro>-negociacion-cel-1..3.jpg`: el celular de quien presenta en la primera organización con «Tu agente» y sus opciones, el de la segunda organización durante el debate, y el del Comité decidiendo). Al cambiar una captura se le cambia el nombre, para que ningún caché (el del optimizador de imágenes de Next, el del navegador o el del deploy) siga mostrando la anterior.
 
 - Se alternan secciones angostas (máximo unos 64 rem) y franjas a todo el ancho.
 - Solo Manrope, con una escala propia (`cs-h1`, `cs-h2`, `cs-lede`, `cs-body` en `src/components/casos/casos.css`) y nada menor a 16 px.
@@ -172,7 +186,7 @@ Reglas de texto (feedback del mentor: «bombardean con texto todo»): título de
 | Portada (landing) | `src/app/page.tsx` y `src/components/landing/` |
 | Casos de uso (salud, construcción, logística) | `src/app/casos/<rubro>/page.tsx` y `src/components/casos/` (texto en `content.ts`, cifras, nombres y acta del motor en `data.ts`; piezas adaptadas de 21st.dev sin dependencias: `kinetic-hero`, `stage-scroll`, `steps-scroll`, `phone-trio`, `ticker`, `encrypted-text`, `acta-feed`, `seen-bento`; capturas reales en `public/casos/`) |
 | Piezas de marca para la landing general | `src/components/brand/` (`dither-background`, `logo-particles`, `multiplayer-cursors`), a la vista en `/marca` |
-| Pantalla grande | `src/app/stage/[roomId]/stage-client.tsx` |
+| Pantalla grande | `src/app/stage/[roomId]/stage-client.tsx` y `src/components/stage/` (la negociación en `negotiation-view.tsx`, sus estilos en `negotiation-styles.ts`) |
 | Deck del pitch (6 láminas, flechas o espacio para avanzar; diseño v2 de Nahum con cifras del repo) | `public/pitch/index.html`, se abre en `/pitch/index.html` |
 | Teléfono de cada rol | `src/app/room/[roomId]/room-client.tsx` y `src/components/seat/` |
 | Piezas de sala (guía de turnos, QR, avisos, voz) | `src/components/nexo/` |

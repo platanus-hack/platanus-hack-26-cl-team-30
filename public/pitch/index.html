@@ -1168,6 +1168,113 @@
 
     .equity-strip strong { color: var(--emerald); }
 
+    /* Ronda 20 · 5 sillas con su agente. Colores por bando, como la pantalla grande. */
+    .seat-row {
+      --side-a: #6faf9b; --side-a2: #8fd3bd; --side-b: #f1be58; --side-b2: #e0a891; --side-c: #fffdf8;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+    [data-theme="light"] .seat-row { --side-a: #3f7f6b; --side-a2: #4f7c6d; --side-b: #9a6a12; --side-b2: #8f5743; --side-c: #24403a; }
+    .seat-card {
+      --tone: var(--side-a);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 168px;
+      padding: 18px 14px;
+      border-radius: 22px;
+      border: 1px solid color-mix(in srgb, var(--tone) 55%, transparent);
+      background: color-mix(in srgb, var(--tone) 12%, transparent);
+      box-shadow: inset 0 3px 0 var(--tone);
+    }
+    .seat-card[data-side="a2"] { --tone: var(--side-a2); }
+    .seat-card[data-side="b"] { --tone: var(--side-b); }
+    .seat-card[data-side="b2"] { --tone: var(--side-b2); }
+    .seat-card[data-side="c"] { --tone: var(--side-c); }
+    .seat-org {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: var(--tone);
+    }
+    .seat-role {
+      font-family: var(--font-display);
+      font-size: clamp(14px, 1.18vw, 20px);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      color: var(--ink);
+    }
+    .seat-agent {
+      margin-top: auto;
+      align-self: flex-start;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--violet);
+      background: var(--violet-soft);
+      border: 1px solid var(--violet-border);
+    }
+
+    .flow-row {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .flow-row li {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 18px 18px 20px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: rgba(8, 21, 36, 0.55);
+    }
+    [data-theme="light"] .flow-row li { background: rgba(255, 253, 248, 0.7); }
+    .flow-row strong {
+      font-family: var(--font-display);
+      font-size: clamp(17px, 1.5vw, 22px);
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      line-height: 1.15;
+    }
+    .flow-row li > span:last-child { font-size: 14px; color: var(--muted); }
+    .flow-num {
+      font-family: var(--font-display);
+      font-size: 34px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--violet);
+    }
+    .flow-row .flow-code { border-color: var(--emerald-border); }
+    .flow-row .flow-code .flow-num { color: var(--emerald); }
+    .flow-row .flow-human { border-color: var(--violet-border); }
+
+    .code-slots {
+      display: flex;
+      gap: 10px;
+      margin: 18px 0 2px;
+    }
+    .code-slots span {
+      width: clamp(44px, 4.4vw, 62px);
+      height: clamp(58px, 5.8vw, 80px);
+      border-radius: 14px;
+      border: 2px dashed var(--violet-border);
+      background: var(--violet-soft);
+    }
+    .code-caption {
+      font-size: 16px;
+      color: var(--ink-soft);
+      margin-bottom: 14px;
+    }
+
     /* Violet QR Spotlight */
     .qr-panel .bezel-core {
       display: flex;
@@ -1735,6 +1842,9 @@
     @media (max-width: 1024px) {
       .s1-grid, .s2-grid, .s3-grid, .s4-grid, .s5-split { grid-template-columns: 1fr; }
       .duel-row { grid-template-columns: 1fr; }
+      .seat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .seat-card { min-height: 0; }
+      .flow-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .proof-grid { grid-template-columns: repeat(2, 1fr); }
       .pillars-row { grid-template-columns: 1fr; }
       .closing-portal .bezel-core { flex-direction: column; align-items: flex-start; }
@@ -1905,21 +2015,18 @@
               <span class="s2-num">01</span>
               <div>
                 <h3>Información partida</h3>
-                <p>Secretos privados que no salen de cada org.</p>
               </div>
             </div>
             <div class="s2-row">
               <span class="s2-num">02</span>
               <div>
                 <h3>Sin regla visible</h3>
-                <p>Gana el WhatsApp más rápido, no la urgencia.</p>
               </div>
             </div>
             <div class="s2-row">
               <span class="s2-num">03</span>
               <div>
                 <h3>Error compuesto</h3>
-                <p>Agentes encadenados fallan en cascada.</p>
               </div>
             </div>
           </div>
@@ -1957,7 +2064,7 @@
                   <span id="pnBtnLabel">Activar freno humano (Espacio)</span>
                   <span class="btn-icon" aria-hidden="true">→</span>
                 </button>
-                <span class="pn-scope-hint">[S] 12,3% → 89,4%</span>
+                <span class="pn-scope-hint">Modelo ilustrativo</span>
               </div>
             </div>
           </div>
@@ -1971,83 +2078,42 @@
     <section class="slide" data-slide="3">
       <div class="slide-inner">
         <h2 class="h-title stagger-1">
-          Cada org ve sus cartas. <span class="c-violet">Ustedes tienen el veto.</span>
+          5 personas. 5 agentes. <span class="c-violet">1 cama.</span>
         </h2>
 
         <div class="s3-grid">
           <div class="arena-col stagger-2">
-            <!-- 3-Part Duel Row -->
-            <div class="duel-row">
-              <div class="bezel org-card">
-                <div class="bezel-core">
-                  <div class="org-head">
-                    <span class="org-name">Clínica Andes</span>
-                    <span class="pill" style="padding:3px 9px;">ORG A</span>
-                  </div>
-                  <div class="org-score-block">
-                    <span class="org-score-lbl">Puntaje de la regla</span>
-                    <span class="org-score">0,52</span>
-                  </div>
-                  <div class="org-rows">
-                    <div class="org-kv"><span>Gravedad</span><strong>18 / 40</strong></div>
-                    <div class="org-kv"><span>Costo cobertura</span><span class="redaction" aria-label="Dato sellado"></span></div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="uci-monolith">
-                <div class="uci-num">1</div>
-                <div class="uci-lbl">Cama UCI</div>
-                <div class="uci-time">18:00</div>
-              </div>
-
-              <div class="bezel bezel-emerald org-card">
-                <div class="bezel-core">
-                  <div class="org-head">
-                    <span class="org-name">Hosp. Valle Sur</span>
-                    <span class="pill pill-emerald" style="padding:3px 9px;">ORG B</span>
-                  </div>
-                  <div class="org-score-block">
-                    <span class="org-score-lbl">Equidad gana</span>
-                    <span class="org-score winner">0,53<span class="org-star" aria-hidden="true">★</span></span>
-                  </div>
-                  <div class="org-rows">
-                    <div class="org-kv"><span>Gravedad</span><strong>22 / 40</strong></div>
-                    <div class="org-kv"><span>Costo traslado</span><span class="redaction" aria-label="Dato sellado"></span></div>
-                  </div>
-                </div>
-              </div>
+            <!-- Ronda 20: las 5 sillas, cada una con su agente. Colores por bando, como en la pantalla grande. -->
+            <div class="seat-row" aria-label="Las 5 personas de la demo">
+              <div class="seat-card" data-side="a"><span class="seat-org">Clínica</span><span class="seat-role">Urgencias</span><span class="seat-agent">+ agente</span></div>
+              <div class="seat-card" data-side="a2"><span class="seat-org">Clínica</span><span class="seat-role">Administración</span><span class="seat-agent">+ agente</span></div>
+              <div class="seat-card" data-side="b"><span class="seat-org">Hospital Rural</span><span class="seat-role">Turno</span><span class="seat-agent">+ agente</span></div>
+              <div class="seat-card" data-side="b2"><span class="seat-org">Hospital Rural</span><span class="seat-role">Administración</span><span class="seat-agent">+ agente</span></div>
+              <div class="seat-card" data-side="c"><span class="seat-org">Decide</span><span class="seat-role">Comité</span><span class="seat-agent">+ agente</span></div>
             </div>
 
-            <!-- Interactive 403 RBAC_DENIED Shield -->
-            <div class="breach-bar" id="breachBanner">
-              <div class="breach-msg" id="breachText">
-                <span class="pill">DATO SELLADO</span> <span><strong>El secreto jamás viaja al navegador.</strong></span>
-              </div>
-              <button class="btn btn-crimson" id="breachBtn" type="button" style="padding:8px 8px 8px 16px;font-size:13px;">
-                <span id="breachBtnLabel">Probar lectura ajena (Espacio)</span>
-                <span class="btn-icon" aria-hidden="true">⚡</span>
-              </button>
-            </div>
-
-            <!-- Compact Deterministic Rule Strip -->
-            <div class="equity-strip">
-              <span>Diferencia 0,01: menos que el margen de 0,02 → empate</span>
-              <strong>Desempate por necesidad → Hospital Rural</strong>
-            </div>
+            <!-- El recorrido en 4 pasos: lo que se verá en la pantalla grande. -->
+            <ol class="flow-row" aria-label="Cómo se decide">
+              <li><span class="flow-num">1</span><strong>Postura</strong><span>1 toque</span></li>
+              <li><span class="flow-num">2</span><strong>Agentes negocian</strong><span>a la vista</span></li>
+              <li class="flow-code"><span class="flow-num">3</span><strong>La regla propone</strong><span>código, no IA</span></li>
+              <li class="flow-human"><span class="flow-num">4</span><strong>Comité decide</strong><span>acepta o rechaza</span></li>
+            </ol>
           </div>
 
-          <!-- Violet Spotlight QR Stage -->
+          <!-- La sala se abre en la pantalla grande con un código nuevo: aquí no hay QR fijo. -->
           <div class="bezel bezel-violet qr-panel stagger-3">
             <div class="bezel-core">
-              <span class="pill pill-violet">ESCANEA AHORA</span>
-              <div class="qr-title">Clínica · Hospital Rural · Comité</div>
-              <div class="qr-frame" id="qrMount" aria-label="Código QR para entrar a la sala de demo"></div>
+              <span class="pill pill-violet">AHORA USTEDES</span>
+              <div class="qr-title">Saquen el celular</div>
+              <div class="code-slots" aria-label="Código de sala de 5 caracteres">
+                <span></span><span></span><span></span><span></span><span></span>
+              </div>
+              <div class="code-caption">Código nuevo en cada demo</div>
               <a class="btn btn-violet" id="stageLaunchLink" href="#" target="_blank" rel="noopener">
-                <span id="stageLaunchLabel">Abrir /stage/demo-cross</span>
+                <span id="stageLaunchLabel">Abrir la pantalla grande</span>
                 <span class="btn-icon" aria-hidden="true">↗</span>
               </a>
-              <div class="qr-url" id="qrUrlText"></div>
             </div>
           </div>
         </div>
@@ -2086,7 +2152,7 @@
               <div class="morph-quad">
                 <div class="m-cell">
                   <span class="m-lbl">Roles + Agentes</span>
-                  <span class="m-val" id="morphRoles">Urgencias · Turno · Comité</span>
+                  <span class="m-val" id="morphRoles">5 personas · 5 agentes</span>
                 </div>
                 <div class="m-cell">
                   <span class="m-lbl">Dato sellado</span>
@@ -2094,7 +2160,7 @@
                 </div>
                 <div class="m-cell">
                   <span class="m-lbl">En vivo</span>
-                  <span class="m-val" id="morphGate">3 personas · el resto, automático</span>
+                  <span class="m-val" id="morphGate">Agentes negocian a la vista</span>
                 </div>
                 <div class="m-cell">
                   <span class="m-lbl">Decide</span>
@@ -2193,15 +2259,15 @@
               </div>
               <div class="spec-pills">
                 <div class="spec-item violet-hit">
-                  <strong>Sala desde 1 frase</strong> <span>Se valida antes de usarse</span>
+                  <strong>Aconseja a su persona</strong> <span>Solo ve lo de su rol</span>
                 </div>
                 <div class="spec-item violet-hit">
-                  <strong>Redacción por rol</strong>
-                  <span>Solo vista filtrada</span>
+                  <strong>Negocia por texto</strong>
+                  <span>Se revisa antes de publicarse</span>
                 </div>
                 <div class="spec-item violet-hit">
-                  <strong>Frontera dura</strong>
-                  <span>No cambia nada sola · no ve secretos</span>
+                  <strong>Nunca decide</strong>
+                  <span>No mueve nada sola</span>
                 </div>
               </div>
             </div>
@@ -2222,7 +2288,7 @@
                   <strong>Regla conocida</strong> <span>0,52 vs 0,53 · desempate por necesidad</span>
                 </div>
                 <div class="spec-item emerald-hit">
-                  <strong>Funciona sin IA</strong> <span>Acta descargable</span>
+                  <strong>Funciona sin IA</strong> <span>Texto de respaldo · acta</span>
                 </div>
               </div>
             </div>
@@ -2232,7 +2298,7 @@
         <!-- 4 Oversized Proof Monoliths -->
         <div class="proof-grid stagger-3">
           <div class="proof-tile">
-            <div class="proof-num">429 pruebas ✓</div>
+            <div class="proof-num">+500 pruebas ✓</div>
             <div class="proof-sub">Motor, permisos y API · sin modelo</div>
           </div>
           <div class="proof-tile">
@@ -2240,8 +2306,8 @@
             <div class="proof-sub">p95 42 ms · cada una ve solo lo suyo</div>
           </div>
           <div class="proof-tile">
-            <div class="proof-num">3 personas</div>
-            <div class="proof-sub">Demo en vivo · el resto, automático y a la vista</div>
+            <div class="proof-num">0 datos filtrados</div>
+            <div class="proof-sub">En los mensajes de los agentes</div>
           </div>
           <div class="proof-tile highlight">
             <div class="proof-num" id="infraProofTitle">Claude + Spark</div>
@@ -2357,7 +2423,7 @@
       </div>
 
       <div class="cfg-field">
-        <label for="cfgBaseUrl">2. URL base en vivo (QR de la lámina 3)</label>
+        <label for="cfgBaseUrl">2. URL base en vivo (botón de la lámina 3)</label>
         <input class="cfg-input" id="cfgBaseUrl" type="url" value="https://team-30-platanus-hack.onrender.com" />
         <div class="preset-row">
           <button class="preset-chip" data-url-preset="https://team-30-platanus-hack.onrender.com" type="button">Render (default)</button>
@@ -2367,9 +2433,9 @@
       </div>
 
       <div class="cfg-field">
-        <label for="cfgRoom">3. Sala para el QR de Lámina 3</label>
+        <label for="cfgRoom">3. Sala que abre la lámina 3</label>
         <select class="cfg-input" id="cfgRoom">
-          <option value="demo-cross">demo-cross (2 hospitales · demo de 3 personas)</option>
+          <option value="demo-cross">demo-cross (sala nueva · 5 personas con sus agentes)</option>
           <option value="demo-construccion">demo-construccion (2 constructoras · 1 grúa)</option>
         </select>
       </div>
@@ -2724,12 +2790,12 @@
     };
 
     const SLIDE_NOTES = {
-      1: { time: "0:00–0:15", copy: "Pausa tras cada frase: 'Hay una cama. Dos hospitales. Y quien decide no ve el dato del otro.'" },
-      2: { time: "0:15–0:35", copy: "Espacio: de 43,4% a 96,1% con una persona que firma ([S]: 12,3% → 89,4% con dos hospitales). Es un modelo ilustrativo." },
-      3: { time: "0:35–0:55 → DEMO 0:55–2:25", copy: "Espacio: el servidor rechaza la lectura ajena. Pide 3 voluntarios: cada hospital presenta su caso y el Comité aprueba o veta con razón." },
-      4: { time: "2:25–2:40", copy: "Espacio: mismo motor en construcción y en una sala armada desde una frase. La IA propone el contenido; la interfaz es siempre la misma." },
-      5: { time: "2:40–3:00", copy: "'La IA escribe. El código decide.' 429 pruebas sin modelo, 200 conexiones medidas. El deploy usa Claude en la nube; en la sede, el Spark local. La pantalla dice cuál." },
-      6: { time: "3:00–3:20", copy: "'Solo funciona con más de una persona. Con Sculptor, el recurso deja de esperar.'" },
+      1: { time: "0:00–0:15", copy: "Pausa tras cada frase: 'Hay una cama. Dos hospitales. Y nadie ve los datos del otro.'" },
+      2: { time: "0:15–0:35", copy: "Espacio: de 43,4% a 96,1% con una persona que firma. Modelo ilustrativo, no medición." },
+      3: { time: "0:35–0:50 → DEMO 0:50–2:20", copy: "Clic en 'Abrir la pantalla grande' DESDE ESTE COMPUTADOR (solo aquí salen Pausa y Siguiente). Pide 5 personas por rol." },
+      4: { time: "2:20–2:35", copy: "Espacio: mismo motor en construcción y en una sala armada desde una frase." },
+      5: { time: "2:35–2:55", copy: "'La IA escribe. El código decide.' Si un agente escribe un dato reservado, se publica el texto de respaldo." },
+      6: { time: "2:55–3:15", copy: "'Solo funciona con más de una persona. Con Sculptor, el recurso deja de esperar.'" },
     };
 
     const MORPH_SCENARIOS = {
@@ -2737,9 +2803,9 @@
         tag: "SALUD · 2 HOSPITALES",
         key: "demo-cross",
         title: "Clínica Andes ↔ Hospital Rural Valle Sur",
-        roles: "Urgencias · Turno · Comité",
+        roles: "5 personas · 5 agentes",
         secret: 'Costo de cobertura <span class="redaction" style="min-width:48px;height:12px;"></span>',
-        gate: "3 personas · el resto, automático",
+        gate: "Agentes negocian a la vista",
         arbiter: "Comité Ético · razón obligatoria",
       },
       b2b: {
@@ -2806,23 +2872,13 @@
       const base = cleanBaseUrl(cfg.baseUrl);
       
       const stageUrl = `${base}/stage/${encodeURIComponent(cfg.roomId)}`;
-      // El QR abre la sala de demo: el celular recibe su rol por orden de llegada
-      // (Clínica, Hospital Rural, Comité). El botón de abajo abre la pantalla grande.
-      const qrJoinUrl = `${base}/room/${encodeURIComponent(cfg.roomId)}`;
+      // Sin QR en el deck: /stage/demo-cross abre una sala nueva con su propio
+      // código, y el QR para entrar aparece en la pantalla grande.
 
       document.title = `${brand} — Pitch Interactivo · Platanus Hack 26`;
       document.querySelectorAll("[data-brand]").forEach((el) => (el.textContent = brand));
 
-      const qrMount = document.getElementById("qrMount");
-      try {
-        qrMount.innerHTML = MiniQR.toSvg(qrJoinUrl, "#04101d");
-      } catch {
-        qrMount.innerHTML = `<div style="padding:12px;font-size:12px;color:#be123c;">URL inválida para QR</div>`;
-      }
-
-      document.getElementById("qrUrlText").textContent = qrJoinUrl.replace(/^https?:\/\//, "");
       document.getElementById("stageLaunchLink").href = stageUrl;
-      document.getElementById("stageLaunchLabel").textContent = `Abrir /stage/${cfg.roomId}`;
       document.getElementById("homeLaunchLink").href = `${base}/#probar`;
       document.getElementById("closingStageLink").href = stageUrl;
       document.getElementById("closingUrl").textContent = base.replace(/^https?:\/\//, "");
@@ -2901,6 +2957,7 @@
 
     function renderBreach() {
       const banner = document.getElementById("breachBanner");
+      if (!banner) return; // la lámina 3 ya no trae la prueba de lectura ajena
       const text = document.getElementById("breachText");
       const btn = document.getElementById("breachBtn");
       banner.classList.toggle("denied", breachTriggered);
@@ -2973,11 +3030,6 @@
         renderPn(true);
         return;
       }
-      if (currentSlide === 3 && !breachTriggered) {
-        breachTriggered = true;
-        renderBreach();
-        return;
-      }
       if (currentSlide === 4 && morphIndex < MORPH_ORDER.length - 1) {
         renderMorph(MORPH_ORDER[morphIndex + 1], true);
         return;
@@ -3041,7 +3093,7 @@
       });
     });
 
-    document.getElementById("breachBtn").addEventListener("click", () => {
+    document.getElementById("breachBtn")?.addEventListener("click", () => {
       breachTriggered = !breachTriggered;
       renderBreach();
     });

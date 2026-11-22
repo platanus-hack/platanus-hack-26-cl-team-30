@@ -42,7 +42,12 @@ export function validPhone(phone: string): boolean {
  */
 export function roomCodeFromText(text: string): string | null {
   const match = /comit[eé]\s+de\s+la\s+sala\s+([A-Za-z0-9_-]{3,64})/i.exec(text);
-  return match ? match[1] : null;
+  if (!match) return null;
+  // Los códigos de sala nuevos van en mayúsculas (5 caracteres legibles); si la
+  // persona lo escribió en minúsculas, se reconoce igual. Las salas fijas
+  // («demo-cross») conservan su id tal cual.
+  const code = match[1];
+  return getRoom(code) || !getRoom(code.toUpperCase()) ? code : code.toUpperCase();
 }
 
 /** Texto prellenado del botón de WhatsApp del celular. */

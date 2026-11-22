@@ -23,7 +23,7 @@ export type Seat = {
   short: string;
   /**
    * En la demo: orden de llegada fijo de las personas (1 Clínica, 2 Hospital Rural,
-   * 3 Comité). Sirve para ordenar y para que el narrador sepa quién es quién; nunca
+   * 3 Comité; con negociación son 5 y el Comité es el último). Sirve para ordenar y para que el narrador sepa quién es quién; nunca
    * se muestra como número: en pantalla cada persona es su rol y su color.
    */
   order: number | null;
@@ -76,6 +76,7 @@ const OTHER_TONE = 5;
 export function stageSeats(room: ProjectedRoomState): Seat[] {
   const arbiter = room.scarcity?.arbiter;
   const demo = isDemoRoom(room);
+  const sides = demo && !!room.negotiation;
   const bots = botKeys(room);
   const seats: Seat[] = [];
   // Orden de llegada: el que manda el servidor; si no viene, el de la demo (cada organización y el Comité).
@@ -86,12 +87,17 @@ export function stageSeats(room: ProjectedRoomState): Seat[] {
       // En una sala entre organizaciones el Comité es el de la red, no el de cada una.
       if (role.isQrOptional && (arbiter || orgIndex > 0)) continue;
       const kind: SeatKind = role.isQrOptional ? "arbiter" : role.id === org.authorityRule.proposerRoleId ? "proposer" : role.id === org.authorityRule.approverRoleId ? "approver" : "other";
-      const tone = kind === "arbiter" ? ARBITER_TONE : kind === "other" ? OTHER_TONE : (orgIndex % 2) * 2 + (kind === "proposer" ? 0 : 1);
+      // En la negociación los colores van por bando, para leer el debate de lejos: la primera
+      // organización en eucaliptos y la segunda en ocre y arcilla. Fuera de ella, por tipo de rol.
+      const tone =
+        kind === "arbiter" ? ARBITER_TONE : kind === "other" ? OTHER_TONE : sides ? (orgIndex % 2) + (kind === "proposer" ? 0 : 2) : (orgIndex % 2) * 2 + (kind === "proposer" ? 0 : 1);
       const id = key(org.orgId, role.id);
-      // En la demo, cada organización pone una persona (quien presenta el caso); lo demás es automático.
-      const human = !demo || kind === "proposer" || kind === "arbiter";
-      // Quien presenta se nombra por su etiqueta corta («Urgencias»); el resto, por su título, que trae tildes.
+      // En la demo de 3, cada organización pone una persona (quien presenta el caso) y lo demás es
+      // automático. En la demo con negociación son 5: el servidor le da orden de llegada (`seatOrder`)
+      // a cada silla de persona, también a las dos de Administración.
       const mark = role as BotMark;
+      const human = !demo || kind === "proposer" || kind === "arbiter" || typeof mark.seatOrder === "number";
+      // Quien presenta se nombra por su etiqueta corta («Urgencias»); el resto, por su título, que trae tildes.
       const order = orderOf(mark.seatOrder, human && kind !== "arbiter");
       // En la demo cada persona es su rol: «Clínica», «Hospital Rural». Los automáticos llevan además su cargo.
       const short = order

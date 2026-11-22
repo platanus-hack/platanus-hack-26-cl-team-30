@@ -12,10 +12,39 @@ import { CROSS_ORG_SCENARIOS } from "@/lib/genome/scenarios";
 
 const FIXED_ROOMS = new Set(["demo", ...Object.values(CROSS_ORG_SCENARIOS).map((scenario) => scenario.fixedRoomId)]);
 
-// Pantalla grande. Mira la sala como "stage": recibe solo lo que todos pueden
-// ver, y lo muestra en el centro de mando (src/components/stage/command-center.tsx).
+// /stage/demo-cross ya no es una sala: abre una sala de demo nueva, con código
+// propio, y lleva a ella. Así el código de una sala no se reutiliza nunca.
+const NEW_DEMO_PATH = "demo-cross";
+let opening: Promise<string> | null = null;
+
 export default function StageClient() {
   const { roomId } = useParams<{ roomId: string }>();
+  const router = useRouter();
+  // Si no se pudo abrir la sala nueva (sin red, límite de salas), se muestra la fija: la demo no se cae.
+  const [fallback, setFallback] = useState(false);
+  const redirecting = roomId === NEW_DEMO_PATH && !fallback;
+
+  useEffect(() => {
+    if (!redirecting) return;
+    let cancelled = false;
+    // Una sola sala aunque el efecto corra dos veces (modo estricto de React en desarrollo).
+    opening ??= createRoom("cross_org", { scenario: "hospitales", demo: true }).then((created) => created.roomId);
+    opening
+      .then((id) => !cancelled && router.replace(`/stage/${encodeURIComponent(id)}`))
+      .catch(() => !cancelled && setFallback(true))
+      .finally(() => (opening = null));
+    return () => {
+      cancelled = true;
+    };
+  }, [redirecting, router]);
+
+  if (redirecting) return <main className="p-6 text-lg text-muted-foreground">Abriendo una sala nueva…</main>;
+  return <StageRoom roomId={roomId} />;
+}
+
+// Pantalla grande. Mira la sala como "stage": recibe solo lo que todos pueden
+// ver, y lo muestra en el centro de mando (src/components/stage/command-center.tsx).
+function StageRoom({ roomId }: { roomId: string }) {
   const router = useRouter();
   const { room, status, unreachable, problem } = useRoom(roomId, { spectator: true });
   const [host, setHost] = useState<HostCredentials | null | undefined>(undefined);

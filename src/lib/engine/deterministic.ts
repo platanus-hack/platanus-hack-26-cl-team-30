@@ -636,7 +636,11 @@ function projectCandidate(state: RoomState, candidate: OrgCandidate, viewer: Vie
 /** Nombres cortos de los asientos de la demo de hospitales. En otros escenarios se usa el nombre de la organización sin su primera palabra. */
 const DEMO_SEAT_LABELS: Record<string, string> = { clinica_andes: "Clínica", hospital_rural: "Hospital Rural" };
 
-export type DemoSeat = { seat: ActorRef; seatOrder: number; label: string; action: "submit" | "decide" };
+/** action: qué hace el asiento. "position" es el rol administrativo en la negociación: solo fija postura. */
+export type DemoSeat = { seat: ActorRef; seatOrder: number; label: string; action: "submit" | "decide" | "position" };
+
+/** «URGENCIAS» → «Urgencias». */
+const titleCase = (text: string) => (text ? text.charAt(0).toUpperCase() + text.slice(1).toLowerCase() : text);
 
 /**
  * Asientos humanos de una sala de demo, en el orden en que se reparten al llegar:
@@ -645,12 +649,26 @@ export type DemoSeat = { seat: ActorRef; seatOrder: number; label: string; actio
  */
 export function demoSeats(state: RoomState): DemoSeat[] {
   if (!state.demo || !state.scarcity) return [];
-  const cases = state.scarcity.candidates.map((candidate, i): DemoSeat => {
-    const orgName = findGenome(state, candidate.orgId)?.orgName ?? candidate.orgId;
-    const label = DEMO_SEAT_LABELS[candidate.orgId] ?? (orgName.split(" ").slice(1).join(" ") || orgName);
-    return { seat: { orgId: candidate.orgId, roleId: candidate.proposerRoleId }, seatOrder: i + 1, label, action: "submit" };
-  });
+  const orgLabel = (orgId: string) => {
+    const orgName = findGenome(state, orgId)?.orgName ?? orgId;
+    return DEMO_SEAT_LABELS[orgId] ?? (orgName.split(" ").slice(1).join(" ") || orgName);
+  };
   const arbiter = state.scarcity.arbiter;
+  // Negociación entre agentes: 5 asientos. Por cada organización, quien presenta el
+  // caso y su administración; al final, el Comité. Los vacíos los juega un bot.
+  if (state.negotiation) {
+    const seats: DemoSeat[] = [];
+    for (const candidate of state.scarcity.candidates) {
+      const genome = findGenome(state, candidate.orgId);
+      const proposerTag = genome?.roles.find((role) => role.id === candidate.proposerRoleId)?.shortTag ?? "Caso";
+      seats.push({ seat: { orgId: candidate.orgId, roleId: candidate.proposerRoleId }, seatOrder: seats.length + 1, label: `${orgLabel(candidate.orgId)} · ${titleCase(proposerTag)}`, action: "submit" });
+      if (genome) seats.push({ seat: { orgId: candidate.orgId, roleId: genome.authorityRule.approverRoleId }, seatOrder: seats.length + 1, label: `${orgLabel(candidate.orgId)} · Administración`, action: "position" });
+    }
+    return [...seats, { seat: { orgId: arbiter.orgId, roleId: arbiter.roleId }, seatOrder: seats.length + 1, label: "Comité", action: "decide" }];
+  }
+  const cases = state.scarcity.candidates.map((candidate, i): DemoSeat => {
+    return { seat: { orgId: candidate.orgId, roleId: candidate.proposerRoleId }, seatOrder: i + 1, label: orgLabel(candidate.orgId), action: "submit" };
+  });
   return [...cases, { seat: { orgId: arbiter.orgId, roleId: arbiter.roleId }, seatOrder: cases.length + 1, label: "Comité", action: "decide" }];
 }
 
@@ -666,7 +684,10 @@ function demoSeatOf(state: RoomState, actor: ActorRef): DemoSeat | undefined {
 export function demoTurn(state: RoomState): (DemoSeat & { key: string; caseId: string | null }) | null {
   if (!state.demo || !state.scarcity || state.decisionSealedAt !== null || clockStart(state) === null) return null;
   const seats = demoSeats(state);
-  for (const entry of seats.filter((seat) => seat.action === "submit")) {
+  // En la negociación no hay turnos de presentar: los casos entran con la propuesta.
+  // El único turno es el del Comité, cuando la negociación llega a la decisión.
+  if (state.negotiation && state.negotiation.phase !== "decision") return null;
+  for (const entry of state.negotiation ? [] : seats.filter((seat) => seat.action === "submit")) {
     const candidate = state.scarcity.candidates.find((item) => item.orgId === entry.seat.orgId && item.proposerRoleId === entry.seat.roleId);
     if (candidate && candidate.submitted !== true) return { ...entry, key: `submit:${candidate.caseId}`, caseId: candidate.caseId };
   }
@@ -684,7 +705,8 @@ function projectDemoTurn(state: RoomState, nowTs: number): ProjectedRoomState["t
   const totalMs = state.turnTimeoutMs ?? 0;
   const startedAt = state.turnStartedAt ?? nowTs;
   const remainingMs = totalMs > 0 ? Math.max(0, startedAt + totalMs - nowTs) : 0;
-  return { orgId: turn.seat.orgId, roleId: turn.seat.roleId, seatOrder: turn.seatOrder, label: turn.label, action: turn.action, remainingMs, totalMs };
+  // Un turno solo es de presentar o de decidir: los asientos de solo postura no tienen turno.
+  return { orgId: turn.seat.orgId, roleId: turn.seat.roleId, seatOrder: turn.seatOrder, label: turn.label, action: turn.action === "decide" ? "decide" : "submit", remainingMs, totalMs };
 }
 
 /** true si el asiento lo tiene un bot del piloto automático. */

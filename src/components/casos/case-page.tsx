@@ -78,7 +78,7 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
         <KineticHero title={study.title} lede={study.lede}>
           <DemoButton room={view.demoRoom} large />
         </KineticHero>
-        <StageScroll src={`/casos/${slug}-pantalla.jpg`} alt={`Pantalla grande de la demo de ${study.nav.toLowerCase()}: el Comité decide`} />
+        <StageScroll src={`/casos/${slug}-negociacion-pantalla.jpg`} alt={`Pantalla grande de la demo de ${study.nav.toLowerCase()}: el Comité decide`} />
 
         {/* 2. Cómo se decide: tres pasos, cada uno con su captura real de la pantalla grande. */}
         <section className="cs-section" aria-labelledby="pasos-titulo">
@@ -91,7 +91,7 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
                 steps={study.steps.map((step, index) => ({
                   title: step.title,
                   detail: step.detail,
-                  src: `/casos/${slug}-paso-${index + 1}.jpg`,
+                  src: `/casos/${slug}-negociacion-paso-${index + 1}.jpg`,
                   alt: `Pantalla grande de la demo de ${study.nav.toLowerCase()}, paso ${index + 1}: ${step.title.toLowerCase()}`,
                 }))}
               />
@@ -99,20 +99,22 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
           </div>
         </section>
 
-        {/* 3. A todo el ancho: cada persona, en su celular (capturas reales). */}
+        {/* 3. A todo el ancho: cada persona, en su celular (capturas reales de la demo con negociación:
+            el consejo de su agente, el debate en vivo y el Comité decidiendo). */}
         <section className="cs-section bg-muted/60" aria-labelledby="cel-titulo">
           <div className="wrap">
             <h2 id="cel-titulo" className="cs-h2 max-w-[16ch]">
               Cada persona, en su celular.
             </h2>
-            <p className="cs-lede mt-6 max-w-[34rem] text-muted-foreground">Un botón cuando le toca. Nada más.</p>
+            <p className="cs-lede mt-6 max-w-[34rem] text-muted-foreground">Su agente le aconseja. Usted decide con un toque.</p>
             <div className="mt-16">
               <PhoneTrio
                 phones={view.viewers.map((viewer, index) => ({
                   label: viewer.label,
-                  src: `/casos/${slug}-cel-${index + 1}.jpg`,
+                  src: `/casos/${slug}-negociacion-cel-${index + 1}.jpg`,
                   alt: `Celular de ${viewer.label} en la demo`,
-                  tone: ["#6faf9b", "#8fd3bd", "#b9aaf0"][index] ?? "#6faf9b",
+                  // El color de cada rol en su celular: eucalipto, arcilla y lavanda.
+                  tone: ["#6faf9b", "#e0a891", "#b9aaf0"][index] ?? "#6faf9b",
                 }))}
               />
             </div>
@@ -143,10 +145,11 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
                 Todo queda en el acta.
               </h2>
               <p className="mt-10">
-                <Ticker value={60} suffix=" s" className="cs-big text-brand" />
-                <span className="cs-body mt-3 block">como máximo por ronda, una vez que entran los tres.</span>
+                {/* Plazos del servidor: 60 s para las posturas, 4 mensajes cada 7 s, la propuesta y 20 s para el Comité (unos 125 s). */}
+                <Ticker value={2} suffix=" min" className="cs-big text-brand" />
+                <span className="cs-body mt-3 block">aproximadamente, como máximo por ronda, con las cinco personas adentro.</span>
               </p>
-              <p className="cs-body mt-6 max-w-[28rem] text-muted-foreground">Si alguien no aprieta, el sistema juega su turno a los 20 s y queda marcado como automático.</p>
+              <p className="cs-body mt-6 max-w-[28rem] text-muted-foreground">Si alguien no responde a tiempo, lo juega el sistema y queda marcado como automático.</p>
             </div>
             <ActaFeed entries={view.acta} />
           </div>
@@ -205,9 +208,9 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
         <section className="cs-section cs-cta text-center" aria-labelledby="probar-titulo">
           <div className="wrap flex flex-col items-center">
             <h2 id="probar-titulo" className="cs-h2 max-w-[14ch]">
-              Pruébalo con tres personas.
+              Pruébalo con cinco personas.
             </h2>
-            <p className="cs-lede mt-6">Un minuto, cada una con su celular.</p>
+            <p className="cs-lede mt-6">Cada una con su celular y su agente.</p>
             <div className="mt-10">
               <DemoButton room={view.demoRoom} large />
             </div>

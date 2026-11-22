@@ -96,6 +96,19 @@ Recorrido de `demo-cross` con 3 celulares (Playwright, 390 × 844) y la pantalla
 
 Los toques que deciden algo son 3 (dos presentaciones y la aprobación); los otros 4 son las tres entradas a la silla y el chip de razón del Comité. Los bots sellaron y firmaron en menos de 4 segundos desde la primera entrada. El reloj de la pantalla grande marcó 00:00 antes de que entrara alguien y «Decidido en 00:21» al cerrar (antes contaba desde que se creó la sala). `scripts/e2e.mjs` comprueba los mismos 3 toques en su recorrido «sala de demo».
 
+## Negociación entre agentes con 5 personas (ronda 20)
+
+Recorrido con 5 celulares (Playwright, 390 × 844, claro y oscuro) contra `next start` en un notebook el 21 de noviembre, con `NEXO_NEGOTIATION_STEP_MS=2500` y **sin modelo configurado**, así que todos los textos fueron el respaldo (`fallback: true`).
+
+| Cifra | Valor |
+| --- | --- |
+| Toques por persona | 1: la postura de cada uno de los 4 asientos de organización, y «Aceptar» del Comité con la razón precargada |
+| Desde la última postura hasta el turno del Comité | 15 s: 2,5 s de pausa, 4 argumentos y 2 pasos de propuesta, cada uno de 2,5 s. Con la pausa por defecto (7 s), unos 44 s |
+| Desbordes horizontales en los 5 celulares | 0, en las 4 fases y en claro y oscuro |
+| Datos reservados en mensajes publicados | 0 (`tests/negotiation.test.ts` y el recorrido de `scripts/e2e.mjs`) |
+
+No está medido cuánto tarda Claude en escribir cada frase ni cuántas veces cae al respaldo en el deploy.
+
 ## Lo que no está medido
 
 - Cuadros por segundo de la pantalla grande en un equipo distinto del notebook M4 (por ejemplo, el que se conecte al proyector).

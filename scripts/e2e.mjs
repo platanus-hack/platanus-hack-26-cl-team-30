@@ -1223,7 +1223,7 @@ async function demoJourney() {
   let stage = null;
   const people = [];
   try {
-    roomId = await createRoom("cross_org", { demo: true });
+    roomId = await createRoom("cross_org", { demo: true, negotiation: false });
     stage = new Participant(roomId, "pantalla general");
     const roleOf = (state, orgId, roleId) => orgOf(state, orgId)?.roles.find((role) => role.id === roleId);
 
@@ -1314,6 +1314,110 @@ async function demoJourney() {
   }
 }
 
+// --- Negociación entre agentes: 5 personas --------------------------------------------
+
+async function negotiationJourney() {
+  title("negociación entre agentes: 5 personas, cada agente asesora, los agentes negocian y el Comité decide");
+  let roomId = null;
+  let stage = null;
+  const people = [];
+  try {
+    // Pausa corta entre mensajes para que el recorrido no tarde; el plan B, apagado.
+    const created = await request(baseUrl, "POST", "/api/rooms", { mode: "cross_org", demo: true, stepMs: 400, turnMs: 0 });
+    check(created.ok && typeof created.data?.roomId === "string", `POST /api/rooms debía crear la sala: ${describeResponse(created)}`);
+    roomId = created.data.roomId;
+    hosts.set(roomId, { hostToken: created.data.hostToken, committeeKey: created.data.committeeKey });
+    stage = new Participant(roomId, "pantalla general");
+
+    await step("la sala trae un código de 5 caracteres legibles (sin 0/O ni 1/I) y la negociación en la fase de posturas", async () => {
+      check(/^[A-HJ-NP-Z2-9]{5}$/.test(roomId) && created.data.roomCode === roomId, `Código de sala inesperado: ${roomId} / ${created.data.roomCode}`);
+      const state = await stage.listen();
+      check(state.roomCode === roomId, `La vista debía traer roomCode ${roomId} y trajo ${state.roomCode}`);
+      check(state.negotiation?.phase === "positions" && state.negotiation.messages.length === 0, `Negociación inicial inesperada: ${JSON.stringify(state.negotiation)}`);
+      return roomId;
+    });
+
+    const seats = [];
+    await step("5 personas sin clave, por orden de llegada: Clínica · Urgencias, Clínica · Administración, Hospital Rural · Turno, Hospital Rural · Administración y Comité; la sexta, 409", async () => {
+      for (let i = 0; i < 5; i++) {
+        const res = await drawSeat(roomId);
+        expectOk(res);
+        seats.push({ ...res.data.seat, token: res.data.token });
+      }
+      const labels = [...stage.state.orgs.flatMap((org) => org.roles.filter((role) => role.seatLabel).map((role) => `${role.seatOrder}:${role.seatLabel}`)), `${stage.state.scarcity.arbiter.seatOrder}:${stage.state.scarcity.arbiter.seatLabel}`];
+      check(labels.join() === "1:Clínica · Urgencias,2:Clínica · Administración,3:Hospital Rural · Turno,4:Hospital Rural · Administración,5:Comité", `Asientos inesperados: ${labels.join(", ")}`);
+      expectError(await drawSeat(roomId), 409, "NO_FREE_SEAT");
+      return seats.map(seatId).join(", ");
+    });
+
+    for (const seat of seats) {
+      const person = new Participant(roomId, seatId(seat), seat.orgId, seat.roleId);
+      person.token = seat.token;
+      await person.listen();
+      people.push(person);
+    }
+    const committee = people[4];
+    const negotiators = people.slice(0, 4);
+
+    await step("cada celular recibe el consejo de su agente (solo el suyo) y sus opciones de postura; la pantalla grande no ve ningún consejo", async () => {
+      for (const person of people) {
+        await person.waitFor((state) => state.negotiation.messages.some((message) => message.kind === "advice"), `${person.label}: el consejo de su agente`, 15_000);
+        const advice = person.state.negotiation.messages.filter((message) => message.kind === "advice");
+        check(advice.every((message) => message.orgId === person.orgId && message.roleId === person.roleId), `${person.label} recibió un consejo ajeno: ${JSON.stringify(advice)}`);
+      }
+      for (const person of negotiators) check((person.state.negotiation.myOptions ?? []).length >= 2, `${person.label} debía tener 2 o 3 opciones de postura`);
+      check(stage.raw.every((raw) => !raw.includes('"kind":"advice"')), "Un consejo privado viajó a la pantalla grande");
+    });
+
+    await step("un toque por persona: las 4 posturas quedan a la vista y empieza el debate", async () => {
+      for (const person of negotiators) expectOk(await person.act("SET_POSITION", { optionId: person.state.negotiation.myOptions[0].id }));
+      expectError(await committee.act("SET_POSITION", { optionId: "now" }), 403, "RBAC_DENIED");
+      await stage.waitFor((state) => state.negotiation.positions.every((position) => position.position && !position.automatic), "las 4 posturas puestas por personas");
+      await stage.waitFor((state) => state.negotiation.phase === "debate", "el debate empieza", 10_000);
+    });
+
+    await step("el narrador pausa (403 sin token de anfitrión) y reanuda", async () => {
+      expectError(await request(baseUrl, "POST", `/api/rooms/${roomId}/negotiation`, { action: "pause" }), 403, "HOST_ONLY");
+      const paused = await request(baseUrl, "POST", `/api/rooms/${roomId}/negotiation`, { action: "pause" }, hostHeaders(roomId));
+      check(paused.status === 200 && paused.data.paused === true, `Pausar debía responder 200: ${describeResponse(paused)}`);
+      await stage.waitFor((state) => state.negotiation.paused === true && state.negotiation.nextAt === null, "la negociación en pausa");
+      const resumed = await request(baseUrl, "POST", `/api/rooms/${roomId}/negotiation`, { action: "resume" }, hostHeaders(roomId));
+      check(resumed.status === 200 && resumed.data.paused === false, `Reanudar debía responder 200: ${describeResponse(resumed)}`);
+    });
+
+    await step("los 4 agentes argumentan y el código arma la propuesta; ningún mensaje trae un dato reservado", async () => {
+      await stage.waitFor((state) => state.negotiation.phase === "decision", "la propuesta lista para el Comité", 60_000);
+      const messages = stage.state.negotiation.messages;
+      const args = messages.filter((message) => message.kind === "argument");
+      check(args.length === 4, `Debían ser 4 argumentos y fueron ${args.length}`);
+      check(args.every((message) => message.text.length <= 110), "Un argumento se pasó de 110 caracteres");
+      check(messages.some((message) => message.kind === "proposal"), "Faltó la propuesta");
+      check(stage.state.allocation?.status === "PROPOSED", `La asignación debía quedar propuesta: ${stage.state.allocation?.status}`);
+      const reserved = ["2400000", "2.400.000", "1600000", "1.600.000", "3100000", "1900000", "23/50", "28/50", "2,4 millones", "1,6 millones"];
+      for (const message of messages) for (const value of reserved) check(!message.text.includes(value), `Un mensaje publicado trae un dato reservado (${value}): ${message.text}`);
+      return `${args.filter((message) => message.fallback).length} de 4 con texto de respaldo`;
+    });
+
+    await step("el Comité acepta la propuesta y la negociación termina en el acta", async () => {
+      expectOk(await committee.act("ALLOCATION_SEAL", PAYLOADS.allocationSeal("Se acepta la propuesta de la regla.")));
+      await allSee([stage, ...people], (state) => state.allocation?.status === "SEALED" && state.negotiation?.phase === "done", "acta cerrada y negociación terminada");
+      const acta = await request(baseUrl, "GET", `/api/rooms/${roomId}/acta?format=md`);
+      check(acta.status === 200 && String(acta.text ?? acta.data).includes("Negociación entre agentes"), `El acta debía traer la negociación: ${describeResponse(acta)}`);
+    });
+
+    await step("«Nueva demo» crea otra sala con otro código", async () => {
+      const again = await request(baseUrl, "POST", "/api/rooms", { mode: "cross_org", demo: true });
+      check(again.ok && again.data.roomCode !== roomId, `La sala nueva debía tener otro código: ${describeResponse(again)}`);
+      hosts.set(again.data.roomId, { hostToken: again.data.hostToken, committeeKey: again.data.committeeKey });
+      await request(baseUrl, "DELETE", `/api/rooms/${again.data.roomId}`, undefined, hostHeaders(again.data.roomId));
+    });
+  } finally {
+    stage?.close();
+    for (const person of people) person.close();
+    await discardRoom(roomId, null, { sealedDemo: true });
+  }
+}
+
 // --- Demo: rechazar asigna el recurso al otro ------------------------------------------
 
 async function demoVetoJourney() {
@@ -1321,7 +1425,7 @@ async function demoVetoJourney() {
   let roomId = null;
   let stage = null;
   try {
-    roomId = await createRoom("cross_org", { demo: true, turnMs: 0 });
+    roomId = await createRoom("cross_org", { demo: true, negotiation: false, turnMs: 0 });
     stage = new Participant(roomId, "pantalla general");
     await stage.listen();
     const seats = [];
@@ -1360,7 +1464,7 @@ async function demoPlanBJourney() {
   let roomId = null;
   let stage = null;
   try {
-    roomId = await createRoom("cross_org", { demo: true, turnMs: 1500 });
+    roomId = await createRoom("cross_org", { demo: true, negotiation: false, turnMs: 1500 });
     stage = new Participant(roomId, "pantalla general");
     await stage.listen();
     await step("entra una sola persona y nadie aprieta nada: la demo igual llega al acta", async () => {
@@ -1418,6 +1522,7 @@ async function main() {
   if (!ONLY) await demoJourney();
   if (!ONLY) await demoPlanBJourney();
   if (!ONLY) await demoVetoJourney();
+  if (!ONLY) await negotiationJourney();
   if (!ONLY) await mutatedRoomJourney();
 
   console.log(`\nResultado: ${passed} pasos OK, ${failures.length} con FALLA.`);

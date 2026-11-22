@@ -367,3 +367,64 @@ Formato de cada entrada:
 - **Privacidad:** el número vive solo en la memoria del servidor durante la ronda; un reinicio de la sala lo olvida. Nunca entra al estado de la sala, así que no viaja a ninguna pantalla (`tests/committee-summary.test.ts` lo comprueba).
 - **Riesgo:** quien conozca el código de una sala puede asociar su número y recibir el acta de esa sala. El acta no trae datos reservados (sale de la vista del Comité), así que se acepta en las salas de demo.
 
+## Negociación entre agentes: contrato de datos (ronda 20)
+
+- **Decisión:** la demo pasa a 5 personas (Clínica·Urgencias, Clínica·Administración, Hospital Rural·Turno, Hospital Rural·Administración y Comité, por orden de llegada; los asientos vacíos los juega un bot marcado como automático). Cada persona tiene un agente que la asesora en su celular y le pide su postura con un toque. Después, los agentes negocian a la vista en la pantalla grande, solo en texto, y de ahí sale la propuesta que el Comité acepta o rechaza. La IA escribe, el código decide: los mensajes los redacta Claude (`src/agents/negotiation-agent.ts`, por `src/lib/llm.ts`) con la vista proyectada de su rol, y antes de publicarse se revisan buscando los valores reservados; si aparece uno, o si el modelo tarda más de 6 s, se publica el texto de respaldo determinista de ese rol y fase (`fallback: true`). La propuesta y los puntajes salen del motor (`resolveAllocation`), nunca del modelo.
+- **Contrato que lee la pantalla grande** (en `ProjectedRoomState`, campos nuevos):
+
+```ts
+roomCode: string; // código de la sala: 4 a 6 caracteres legibles (sin 0/O ni 1/I), p. ej. "K7QMP". Las salas fijas conservan su id.
+negotiation?: {
+  phase: "positions" | "debate" | "proposal" | "decision" | "done";
+  paused: boolean;
+  nextAt: number | null; // reloj del servidor (ms) del próximo paso; con serverNowTs se calcula el desfase. null si está en pausa o espera a una persona.
+  stepMs: number;        // pausa entre mensajes (6–8 s, configurable)
+  typing: { orgId: string; roleId: string; agentLabel: string } | null; // agente que «está escribiendo» el próximo mensaje
+  positions: Array<{ orgId: string; roleId: string; seatLabel: string; position: string | null; automatic: boolean }>;
+  messages: Array<{
+    id: string;
+    orgId: string;
+    roleId: string;
+    agentLabel: string; // «Agente de Urgencias · Clínica»
+    text: string;
+    kind: "advice" | "position" | "argument" | "proposal" | "system";
+    ts: number;
+    fallback?: boolean; // true si es el texto de respaldo (el modelo tardó o el texto traía un dato reservado)
+  }>;
+  myOptions?: Array<{ id: string; label: string }>; // solo para el celular de ese rol, en la fase positions
+  myPosition?: string | null;                        // solo para el celular de ese rol
+} | null;
+```
+
+- **Quién ve qué:** los mensajes `advice` viajan solo al celular de su rol (la proyección los filtra en el servidor); el resto es público. `myOptions` y `myPosition` solo van a su rol.
+- **Fases:** `positions` (consejo privado y postura de cada uno; termina cuando las 4 posturas de las organizaciones están puestas, o al vencer el plazo, y entonces un bot pone las que faltan, con `automatic: true`) → `debate` (un argumento por agente, uno cada `stepMs`) → `proposal`, en dos momentos: primero «la regla está calculando» (`typing` con la regla, sin mensaje `proposal`, `allocation.status` aún `PENDING`); después se presentan los casos, llega el mensaje `proposal` armado por el código con el resultado del motor y la fase SIGUE en `proposal` un paso más (`typing: null`, `nextAt = ahora + stepMs`) para que la pantalla muestre la propuesta. «La propuesta llegó» se lee de `allocation.status === "PROPOSED"` con `allocation.ranking` no vacío, no del texto → `decision` (el Comité acepta o rechaza; sigue el plan B de 20 s) → `done`.
+- **Asientos:** en la negociación son 5, con `seatOrder` 1 a 5 y `seatLabel` «Clínica · Urgencias», «Clínica · Administración», «Hospital Rural · Turno», «Hospital Rural · Administración», «Comité».
+- **Acciones:** `SET_POSITION { optionId }` (una persona, un toque, en la fase `positions`). Controles del narrador (anfitrión): `POST /api/rooms/:id/negotiation` con `x-host-token` y `{ action: "pause" | "resume" | "advance" }` (las tres de la consigna: NEGOTIATION_PAUSE, NEGOTIATION_RESUME y NEGOTIATION_ADVANCE).
+- **Ejemplo** (lo que recibe la pantalla grande en mitad del debate):
+
+```json
+{
+  "roomCode": "K7QMP",
+  "negotiation": {
+    "phase": "debate", "paused": false, "nextAt": 1795300012000, "stepMs": 7000,
+    "typing": { "orgId": "hospital_rural", "roleId": "role_a", "agentLabel": "Agente de Turno · Hospital Rural" },
+    "positions": [
+      { "orgId": "clinica_andes", "roleId": "role_a", "seatLabel": "Clínica · Urgencias", "position": "Pedir la cama ahora", "automatic": false },
+      { "orgId": "clinica_andes", "roleId": "role_b", "seatLabel": "Clínica · Administración", "position": "Respaldar el pedido", "automatic": true }
+    ],
+    "messages": [
+      { "id": "m3", "orgId": "clinica_andes", "roleId": "role_a", "agentLabel": "Agente de Urgencias · Clínica", "text": "Nuestro paciente es el más grave y no puede esperar el traslado.", "kind": "argument", "ts": 1795300005000 }
+    ]
+  }
+}
+```
+
+- **Por qué:** Sebastián jugó la demo y era demasiado rápida y mecánica: nadie veía cómo actuaban los agentes. Con la negociación a la vista se entiende que cada organización defiende lo suyo sin mostrar sus datos, y que la decisión la toman la regla y una persona.
+
+
+## Un valor reservado no puede coincidir con un número público (ronda 20)
+
+Al pasar la gravedad a la escala de 1 a 50, el campo reservado `triage_criticality` quedó en 45/50 y 40/50: justo el puntaje público de gravedad (`clinicalSeverityScore` 0,9 y 0,8) multiplicado por 50. El servidor nunca envió el valor a un visor ajeno, pero la pantalla grande calculaba «Gravedad N/50» desde el puntaje público y mostraba exactamente el dato reservado. Lo encontró la prueba de QA de p4 (`scripts/novato-demo.mjs`).
+
+- **Elegido:** valores reservados proporcionales a los originales (18/40 → **23/50**, 22/40 → **28/50**), que no salen de ningún número público, y una prueba (`tests/negotiation.test.ts`) que abre el SSE real de la pantalla, del Comité y de cada rol ajeno hasta la fase de propuesta. Falla si llega el valor, y también si `round(clinicalSeverityScore × 50)` o `round(score × 50)` lo igualan. La pantalla grande muestra el puntaje compuesto de la regla y la etiqueta pública del caso, nunca una «Gravedad N/50».
+- **Descartado:** dejar de enviar `clinicalSeverityScore` y el desglose `ranking[].terms`. Son la parte pública de la regla: sin ellos el Comité no puede ver por qué ganó un caso.

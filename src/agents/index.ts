@@ -3,3 +3,4 @@
 
 export { mutateGenomeFromPrompt, type MutateGenomeOptions, type MutateGenomeResult } from "./mutate-genome";
 export { runRoleAgentTurn, type RoleAgentContext, type RoleAgentTurn } from "./role-agent";
+export { writeNegotiationLine, type NegotiationLineInput } from "./negotiation-agent";

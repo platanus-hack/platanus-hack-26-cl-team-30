@@ -3,9 +3,10 @@
 // general ("stage"), igual que la pantalla: sin red, sin reloj y sin modelo.
 
 import { describe, expect, it } from "vitest";
-import { markRoleJoined, openRoom, projectStateForOrgAndRole, sealRule, submitCandidate, type ActorRef, type EngineResult } from "../src/lib/engine/deterministic";
-import type { RoomState, Telemetry } from "../src/lib/genome/schema";
+import { markRoleJoined, openRoom, projectStateForOrgAndRole, sealAllocation, sealRule, submitCandidate, type ActorRef, type EngineResult } from "../src/lib/engine/deterministic";
+import type { ProjectedRoomState, RoomState, Telemetry } from "../src/lib/genome/schema";
 import { getInitialCrossOrgRoom, getInitialSingleOrgRoom } from "../src/lib/genome/seeds";
+import { debateMessages, lockedFields, progressWindow, proposalMessage, readNegotiation, roomCode, seatParts, scorePoints, stageStep, type Negotiation } from "../src/components/stage/negotiation";
 import { isDemoRoom, shortLabel, stageSeats } from "../src/components/stage/seats";
 import { demoTurn, freeHumanSeat, roomStarted, storyCards, storyMissing, storyProgress } from "../src/components/stage/story";
 
@@ -150,5 +151,92 @@ describe("sala de demo: 3 personas", () => {
     expect(says(join(state, ARBITER))).toBe("Comité: ¿aceptas o rechazas?");
     // Sin plan B del servidor no hay cuenta regresiva inventada.
     expect(demoTurn(stage(join(state, ARBITER)))?.totalMs).toBe(0);
+  });
+});
+
+// La negociación entre agentes (ronda 20): la pantalla solo lee el contrato que
+// publica el servidor (docs/DECISIONES.md). Aquí se arma ese estado a mano sobre
+// una sala de demo proyectada, para probar la lectura sin motor ni modelo.
+describe("negociación entre agentes en la pantalla grande", () => {
+  const LABELS: Record<string, [number, string]> = {
+    "clinica_andes/role_a": [1, "Clínica · Urgencias"],
+    "clinica_andes/role_b": [2, "Clínica · Administración"],
+    "hospital_rural/role_a": [3, "Hospital Rural · Turno"],
+    "hospital_rural/role_b": [4, "Hospital Rural · Administración"],
+  };
+  const base = (state: RoomState): ProjectedRoomState => {
+    const room = stage({ ...state, demo: true });
+    return {
+      ...room,
+      roomCode: "k7qmp",
+      orgs: room.orgs.map((org) => ({ ...org, roles: org.roles.map((role) => ({ ...role, seatOrder: LABELS[`${org.orgId}/${role.id}`]?.[0], seatLabel: LABELS[`${org.orgId}/${role.id}`]?.[1] })) })),
+      scarcity: room.scarcity && { ...room.scarcity, arbiter: { ...room.scarcity.arbiter, seatOrder: 5, seatLabel: "Comité" } },
+    };
+  };
+  const negotiation = (over: Partial<Negotiation> = {}): Negotiation => ({ phase: "positions", paused: false, nextAt: null, stepMs: 7000, typing: null, positions: [], messages: [], ...over });
+  const withNegotiation = (room: ProjectedRoomState, over: Partial<Negotiation> = {}): ProjectedRoomState => ({ ...room, negotiation: negotiation(over) });
+  const empty = openRoom(getInitialCrossOrgRoom("neg", { now: T0, telemetry: TELEMETRY }), T0);
+
+  it("sin el campo, la sala se muestra como antes; con una fase desconocida, también", () => {
+    expect(readNegotiation(base(empty))).toBeNull();
+    expect(readNegotiation({ ...base(empty), negotiation: { phase: "otra" } } as unknown as ProjectedRoomState)).toBeNull();
+    expect(readNegotiation(withNegotiation(base(empty)))?.phase).toBe("positions");
+  });
+
+  it("son 5 sillas de persona, en orden de llegada, con el nombre que manda el servidor", () => {
+    const people = stageSeats(base(empty)).filter((seat) => seat.human).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    expect(people.map((seat) => seat.short)).toEqual(["Clínica · Urgencias", "Clínica · Administración", "Hospital Rural · Turno", "Hospital Rural · Administración", "Comité"]);
+    expect(seatParts("Clínica · Urgencias")).toEqual({ org: "Clínica", role: "Urgencias" });
+    expect(seatParts("Comité")).toEqual({ org: "", role: "Comité" });
+  });
+
+  it("el código se muestra en mayúsculas; una sala fija muestra su id", () => {
+    expect(roomCode(base(empty))).toBe("K7QMP");
+    expect(roomCode(stage(empty))).toBe("NEG");
+  });
+
+  it("«Unirse» dura hasta la primera postura o hasta que no queden sillas libres", () => {
+    const room = base(empty);
+    expect(stageStep(room, negotiation())).toBe("join");
+    const position = { orgId: "clinica_andes", roleId: "role_a", seatLabel: "Clínica · Urgencias", position: "Pedir la cama ahora", automatic: false };
+    expect(stageStep(room, negotiation({ positions: [position] }))).toBe("positions");
+    expect(stageStep(base(join(empty, ...CROSS_PLAYERS, ARBITER)), negotiation())).toBe("positions");
+    expect(stageStep(room, negotiation({ phase: "debate" }))).toBe("debate");
+  });
+
+  it("el debate muestra argumentos y avisos; nunca el consejo privado ni la postura", () => {
+    const message = (id: string, kind: Negotiation["messages"][number]["kind"]) => ({ id, orgId: "clinica_andes", roleId: "role_a", agentLabel: "Agente de Urgencias · Clínica", text: id, kind, ts: T0 });
+    const all = negotiation({ messages: [message("a", "advice"), message("b", "position"), message("c", "argument"), message("d", "system"), message("e", "proposal")] });
+    expect(debateMessages(all).map((entry) => entry.id)).toEqual(["c", "d"]);
+    expect(proposalMessage(all)?.id).toBe("e");
+  });
+
+  it("el puntaje compuesto va de 1 a 50 y la barra mide el plazo real", () => {
+    expect([0, 0.46, 0.5, 1].map(scorePoints)).toEqual([1, 23, 25, 50]);
+    // Un mensaje del debate dura stepMs aunque la pantalla lo vea tarde.
+    expect(progressWindow(10_000, 8_000, 7000)).toEqual({ start: 3_000, total: 7000 });
+    // Un plazo más largo (las posturas) se mide desde que se vio.
+    expect(progressWindow(40_000, 10_000, 7000)).toEqual({ start: 10_000, total: 30_000 });
+  });
+
+  it("la tarjeta de la propuesta no deja ver ningún dato reservado: solo su nombre, con candado", () => {
+    let state = join(empty, ...CROSS_PLAYERS, ARBITER);
+    for (const candidate of state.scarcity!.candidates) state = ok(submitCandidate(state, { orgId: candidate.orgId, roleId: candidate.proposerRoleId }, candidate.caseId, T0 + 700));
+    const room = base(state);
+    const shown = room.allocation!.ranking.flatMap((entry) => [String(scorePoints(entry.score)), ...lockedFields(room, entry.orgId)]).join(" ");
+    // Los valores secretos de las semillas (por ejemplo «45/50» o el costo) nunca están en lo que se dibuja.
+    for (const org of state.orgGenomes) for (const field of org.fields.filter((item) => item.classification === "secret")) expect(shown).not.toContain(String(field.value));
+    expect(lockedFields(room, "clinica_andes").length).toBeGreaterThan(0);
+    // 26 y 27: el puntaje compuesto sigue distinguiendo al primero del segundo.
+    const [first, second] = room.allocation!.ranking.map((entry) => scorePoints(entry.score));
+    expect(first).toBeGreaterThan(second);
+  });
+
+  it("al cerrar, la frase final nombra a la organización, no al cargo", () => {
+    let state = join(empty, ...CROSS_PLAYERS, ARBITER);
+    for (const org of state.orgGenomes) state = ok(sealRule(state, { orgId: org.orgId, roleId: org.authorityRule.approverRoleId }, { threshold: org.authorityRule.min, gateMode: "deterministic_hitl" }, T0 + 600));
+    for (const candidate of state.scarcity!.candidates) state = ok(submitCandidate(state, { orgId: candidate.orgId, roleId: candidate.proposerRoleId }, candidate.caseId, T0 + 700));
+    state = ok(sealAllocation(state, ARBITER, "Por equidad.", T0 + 900));
+    expect(storyMissing(base(state)).text).toBe("Hospital Rural recibe el recurso");
   });
 });

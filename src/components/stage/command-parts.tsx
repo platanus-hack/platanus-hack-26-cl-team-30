@@ -126,7 +126,7 @@ export function Dialog({ title, children, close, light = false }: { title: strin
 }
 
 /** «Nueva ronda»: el mismo reinicio del anfitrión. La sala conserva su id, sus claves y su modo. */
-export function NewRoundButton({ onNewRound }: { onNewRound: () => Promise<void> }) {
+export function NewRoundButton({ onNewRound, label = "Nueva ronda", busyLabel = "Reiniciando…" }: { onNewRound: () => Promise<void>; label?: string; busyLabel?: string }) {
   const [busy, setBusy] = useState(false);
   return (
     <button
@@ -139,7 +139,7 @@ export function NewRoundButton({ onNewRound }: { onNewRound: () => Promise<void>
         setBusy(false);
       }}
     >
-      <RotateCcw aria-hidden="true" /> {busy ? "Reiniciando…" : "Nueva ronda"}
+      <RotateCcw aria-hidden="true" /> {busy ? busyLabel : label}
     </button>
   );
 }

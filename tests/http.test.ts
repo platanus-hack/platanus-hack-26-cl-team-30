@@ -52,6 +52,8 @@ describe("API por HTTP", () => {
     expect(failed, output).toEqual([]);
     expect(code, output).toBe(0);
     expect(output).toMatch(/Resultado: \d+ pasos OK, 0 con FALLA/);
+    // La negociación entre agentes con 5 personas también se recorre.
+    expect(output).toContain("negociación entre agentes: 5 personas");
   }, 120_000);
 
   it("el Comité también puede sellar la primera propuesta sin vetar", async () => {

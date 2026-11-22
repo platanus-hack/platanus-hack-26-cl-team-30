@@ -20,6 +20,10 @@ const CreateSchema = z.discriminatedUnion("mode", [
     demo: z.boolean().optional(),
     /** Sala de demo: plan B en ms (si nadie actúa, juega el piloto). 0 lo apaga. Por defecto 20 s. */
     turnMs: z.number().int().min(0).max(120_000).optional(),
+    /** Sala de demo: negociación entre agentes con 5 asientos (por defecto true). false: demo pauteada de 3. */
+    negotiation: z.boolean().optional(),
+    /** Negociación: pausa entre mensajes en ms (por defecto 7 s). */
+    stepMs: z.number().int().min(0).max(20_000).optional(),
   }),
 ]);
 
@@ -63,9 +67,11 @@ export async function POST(request: Request) {
       return Response.json({ ...room, ...getHostCredentials(room.roomId), mode: "single_org" });
     }
     const room =
-      input.mode === "cross_org" ? createRoom({ mode: "cross_org", scenario: input.scenario, demo: input.demo, turnTimeoutMs: input.turnMs }) : createRoom({ mode: "single_org", seed: input.seed });
+      input.mode === "cross_org" ? createRoom({ mode: "cross_org", scenario: input.scenario, demo: input.demo, turnTimeoutMs: input.turnMs, negotiation: input.negotiation, negotiationStepMs: input.stepMs }) : createRoom({ mode: "single_org", seed: input.seed });
     return Response.json({
       roomId: room.roomId,
+      // Código para mostrar y dictar: es el mismo id (5 caracteres legibles, nunca reutilizado).
+      roomCode: room.roomId,
       ...getHostCredentials(room.roomId),
       mode: room.mode,
       ...(room.scenarioId ? { scenario: room.scenarioId } : {}),

@@ -81,7 +81,7 @@ const clinicaAndesInput: OrgGenomeInput = {
     {
       key: "triage_criticality",
       label: "Gravedad clínica",
-      value: "18/40",
+      value: "23/50",
       unit: "pts",
       ownerOrgId: "clinica_andes",
       ownerRoleId: "role_a",
@@ -211,7 +211,7 @@ const hospitalRuralInput: OrgGenomeInput = {
     {
       key: "triage_criticality",
       label: "Gravedad clínica",
-      value: "22/40",
+      value: "28/50",
       unit: "pts",
       ownerOrgId: "hospital_rural",
       ownerRoleId: "role_a",

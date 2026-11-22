@@ -202,6 +202,22 @@ export async function hostRequest(
   }
 }
 
+/** Controles del narrador sobre la negociación entre agentes (solo con el token de anfitrión). */
+export async function negotiationControl(roomId: string, credentials: HostCredentials, action: "pause" | "resume" | "advance"): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch(`/api/rooms/${encodeURIComponent(roomId)}/negotiation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-host-token": credentials.hostToken },
+      body: JSON.stringify({ action }),
+    });
+    if (res.ok) return { ok: true };
+    const data = await res.json().catch(() => ({}));
+    return { ok: false, error: typeof data.error === "string" ? data.error : `El servidor respondió ${res.status}` };
+  } catch {
+    return { ok: false, error: "No se pudo llegar al servidor." };
+  }
+}
+
 export type MutateResult = { ok: boolean; source?: string; latencyMs?: number; error?: string };
 
 /** POST /api/rooms/:id/mutate. Pide un genoma nuevo a partir de una frase. */

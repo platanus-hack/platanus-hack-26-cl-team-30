@@ -421,7 +421,7 @@ describe("runRoleAgentTurn", () => {
     expect(sent[0]).toMatchObject({ max_tokens: 140 });
     expect(text).toContain("Agente Triaje");
     expect(text).toContain("Prioriza por gravedad");
-    expect(text).toContain("18/40"); // dato propio de role_a
+    expect(text).toContain("23/50"); // dato propio de role_a
     expect(text).toContain("¿Qué hago?");
     // Valores que role_a no ve: no están en ninguna parte del prompt.
     expect(text).not.toContain("2400000");

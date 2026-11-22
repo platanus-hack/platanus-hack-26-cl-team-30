@@ -23,10 +23,11 @@
 
 import { EventEmitter } from "node:events";
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { mutateGenomeFromPrompt, runRoleAgentTurn } from "../../agents";
+import { mutateGenomeFromPrompt, runRoleAgentTurn, writeNegotiationLine } from "../../agents";
 import { AUTOPILOT_DEFAULT_STEP_MS, buildAutopilotScript, buildDemoBotScript, demoBotSeats, scriptSeats, stepOutcome, type AutopilotStep } from "../engine/autopilot";
 import * as engine from "../engine/deterministic";
-import { OrgGenomeSchema, type AutopilotView, type OrgGenome, type ProjectedRoomState, type RoomMode, type RoomState, type Viewer } from "../genome/schema";
+import * as negotiation from "../engine/negotiation";
+import { OrgGenomeSchema, type AutopilotView, type NegotiationMessage, type OrgGenome, type ProjectedRoomState, type RoomMode, type RoomState, type Viewer } from "../genome/schema";
 import { CROSS_ORG_SCENARIOS, DEFAULT_CROSS_ORG_SCENARIO, type CrossOrgScenarioId } from "../genome/scenarios";
 import { getInitialCrossOrgRoom, getInitialSingleOrgRoom, getSeedGenome, initialTelemetry, type SeedGenomeId } from "../genome/seeds";
 import { getTelemetry } from "../llm";
@@ -36,7 +37,20 @@ import { ActionSchema, RandomSeatRequestSchema, type ActionError, type ActionErr
 
 /** Con qué se abrió la sala: sirve para reiniciarla exactamente donde empezó. */
 /** Con qué se abrió la sala. demo: sala de demo de 3 personas (solo entre organizaciones). */
-type RoomOrigin = { mode: RoomMode; seed?: SeedGenomeId; genome?: OrgGenome; scenario?: CrossOrgScenarioId; demo?: boolean; turnTimeoutMs?: number };
+type RoomOrigin = { mode: RoomMode; seed?: SeedGenomeId; genome?: OrgGenome; scenario?: CrossOrgScenarioId; demo?: boolean; turnTimeoutMs?: number; negotiation?: boolean; negotiationStepMs?: number };
+
+/** Lo que el almacén lleva de una negociación en curso: temporizador, paso pendiente y texto en redacción. */
+type NegotiationRun = {
+  timer: ReturnType<typeof setTimeout> | null;
+  /** Qué pasa cuando venza el temporizador. */
+  tick: "positions" | "debate" | "proposal" | "decide" | null;
+  /** En pausa: cuánto faltaba para el paso. */
+  remainingMs: number | null;
+  /** Mensaje que un agente está redactando para el debate. line queda null hasta que el modelo responde. */
+  pending: { index: number; line: { text: string; fallback: boolean } | null } | null;
+  /** Asientos que ya recibieron (o tienen en camino) su consejo. */
+  advised: Set<string>;
+};
 
 type AutopilotRun = {
   running: boolean;
@@ -66,6 +80,8 @@ type RoomRecord = {
   resetTimer?: ReturnType<typeof setTimeout> | null;
   /** Ronda de la sala: sube con cada reinicio. Lo usan los canales para olvidar datos de la ronda anterior. */
   round?: number;
+  /** Negociación entre agentes en curso (salas de demo). */
+  negotiationRun?: NegotiationRun;
   /** Sala de demo: turno actual (demoTurn().key) y su plan B. */
   turnKey?: string | null;
   turnTimer?: ReturnType<typeof setTimeout> | null;
@@ -77,6 +93,8 @@ type Store = {
   /** Conexiones SSE abiertas por sala. Se llevan por id: sobreviven al reinicio de la sala. */
   connections: Map<string, number>;
   lastSweepAt: number;
+  /** Códigos de sala ya entregados: no se reutilizan nunca mientras viva el proceso. */
+  usedCodes?: Set<string>;
 };
 
 // Se guarda en globalThis para que la recarga en caliente de desarrollo no lo borre.
@@ -120,6 +138,22 @@ export const DEMO_RESET_IDLE_MS = 2 * 60 * 1000;
  */
 export const DEMO_TURN_TIMEOUT_MS = 20_000;
 export const MAX_DEMO_TURN_TIMEOUT_MS = 120_000;
+
+/** Negociación entre agentes: si el modelo tarda más que esto, se publica el texto de respaldo. */
+export const NEGOTIATION_MODEL_TIMEOUT_MS = 6000;
+/** Plazo para fijar posturas desde que entra la primera persona; después, un bot pone las que falten. */
+export const NEGOTIATION_POSITIONS_MS = 60_000;
+/** Con todas las posturas puestas, el debate empieza tras esta pausa corta. */
+export const NEGOTIATION_POSITIONS_GRACE_MS = 2500;
+function envMs(name: string, fallback: number, max: number): number {
+  const raw = process.env[name];
+  if (raw === undefined || raw.trim() === "") return fallback;
+  const value = Number.parseInt(raw, 10);
+  return Number.isFinite(value) && value >= 0 ? Math.min(value, max) : fallback;
+}
+/** Pausa entre mensajes del debate: NEXO_NEGOTIATION_STEP_MS (por defecto 7 s, máximo 20 s). */
+const negotiationStepMs = () => envMs("NEXO_NEGOTIATION_STEP_MS", negotiation.NEGOTIATION_DEFAULT_STEP_MS, 20_000);
+const negotiationPositionsMs = () => envMs("NEXO_NEGOTIATION_POSITIONS_MS", NEGOTIATION_POSITIONS_MS, 300_000);
 function demoTurnTimeoutMs(): number {
   const raw = process.env.NEXO_DEMO_TURN_MS;
   if (raw === undefined || raw.trim() === "") return DEMO_TURN_TIMEOUT_MS;
@@ -176,6 +210,7 @@ export function sweepRooms(now: number = Date.now()): number {
       stopTimer(record);
       clearResetTimer(record);
       clearTurnTimer(record);
+      clearNegotiation(record);
       store.rooms.delete(roomId);
       removed += 1;
     }
@@ -199,10 +234,22 @@ function makeRoomFor(roomId: string) {
   }
 }
 
+/** Letras y números que no se confunden al leerlos o dictarlos: sin 0/O ni 1/I. */
+export const ROOM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+export const ROOM_CODE_LENGTH = 5;
+
+/**
+ * Código de una sala nueva, que es también su id: 5 caracteres legibles. No se
+ * reutiliza nunca: cada «Nueva demo» recibe un código que nadie usó antes.
+ */
 function newRoomId(): string {
+  const used = (store.usedCodes ??= new Set());
   let id: string;
-  do id = randomBytes(4).toString("hex");
-  while (store.rooms.has(id) || isFixedRoom(id));
+  do {
+    const bytes = randomBytes(ROOM_CODE_LENGTH);
+    id = Array.from(bytes, (byte) => ROOM_CODE_ALPHABET[byte % ROOM_CODE_ALPHABET.length]).join("");
+  } while (used.has(id) || store.rooms.has(id) || isFixedRoom(id));
+  used.add(id);
   return id;
 }
 
@@ -229,6 +276,10 @@ export type CreateRoomInput = {
   demo?: boolean;
   /** Plan B de la demo (ms). Por defecto NEXO_DEMO_TURN_MS o 20 s; 0 lo apaga. */
   turnTimeoutMs?: number;
+  /** Sala de demo: negociación entre agentes con 5 asientos. Por defecto true; false deja la demo pauteada de 3. */
+  negotiation?: boolean;
+  /** Pausa entre mensajes de la negociación (ms). Por defecto NEXO_NEGOTIATION_STEP_MS o 7 s. */
+  negotiationStepMs?: number;
   /** Reloj del servidor. Por defecto, ahora. */
   now?: number;
 };
@@ -246,7 +297,10 @@ function initialState(id: string, origin: RoomOrigin, now: number): RoomState {
   const opened = engine.openRoom(initial, now);
   // El reloj de espera arranca con la primera persona que entra (markRoleJoined).
   const demo = origin.mode === "cross_org" && origin.demo === true;
-  return { ...opened, clockStartedAt: null, ...(demo ? { demo: true, turnStartedAt: null, turnTimeoutMs: origin.turnTimeoutMs ?? demoTurnTimeoutMs() } : {}) };
+  const state: RoomState = { ...opened, clockStartedAt: null, ...(demo ? { demo: true, turnStartedAt: null, turnTimeoutMs: origin.turnTimeoutMs ?? demoTurnTimeoutMs() } : {}) };
+  // Sala de demo: negociación entre agentes, salvo que se pida la demo pauteada simple.
+  if (!demo || origin.negotiation === false) return state;
+  return { ...state, negotiation: negotiation.initialNegotiation(state, origin.negotiationStepMs ?? negotiationStepMs()) };
 }
 
 /**
@@ -261,7 +315,15 @@ export function createRoom(input: CreateRoomInput = {}): RoomState {
   const mode = input.mode ?? "single_org";
   const origin: RoomOrigin =
     mode === "cross_org"
-      ? { mode, scenario: input.scenario ?? DEFAULT_CROSS_ORG_SCENARIO, ...(input.demo ? { demo: true, ...(input.turnTimeoutMs !== undefined ? { turnTimeoutMs: input.turnTimeoutMs } : {}) } : {}) }
+      ? { mode, scenario: input.scenario ?? DEFAULT_CROSS_ORG_SCENARIO, ...(input.demo
+          ? {
+              demo: true,
+              ...(input.turnTimeoutMs !== undefined ? { turnTimeoutMs: input.turnTimeoutMs } : {}),
+              ...(input.negotiation !== undefined ? { negotiation: input.negotiation } : {}),
+              ...(input.negotiationStepMs !== undefined ? { negotiationStepMs: input.negotiationStepMs } : {}),
+            }
+          : {}),
+      }
       : { mode, ...(input.genome ? { genome: structuredClone(input.genome) } : { seed: input.seed }) };
   const state = initialState(id, origin, input.now ?? Date.now());
   store.rooms.set(id, {
@@ -315,6 +377,7 @@ export function resetRoom(roomId: string, now: number = Date.now()): boolean {
   stopTimer(record);
   clearResetTimer(record);
   clearTurnTimer(record);
+  clearNegotiation(record);
   record.autopilot = null;
   record.tokens.clear();
   record.busy.clear();
@@ -343,6 +406,7 @@ export function discardRoom(roomId: string): boolean {
   stopTimer(record);
   clearResetTimer(record);
   clearTurnTimer(record);
+  clearNegotiation(record);
   store.rooms.delete(roomId);
   emit(roomId);
   return true;
@@ -489,7 +553,8 @@ export function projectRoom(roomId: string, viewer: Viewer, now: number = Date.n
   const record = lookup(roomId);
   if (!record) return undefined;
   const projected = engine.projectStateForOrgAndRole({ ...record.state, telemetry: liveTelemetry() }, viewer, now);
-  return { ...projected, autopilot: autopilotView(record) };
+  // La negociación se proyecta para quien mira: los consejos solo llegan a su rol.
+  return { ...projected, roomCode: roomId, negotiation: negotiation.projectNegotiation(record.state, projected.viewer), autopilot: autopilotView(record) };
 }
 
 /** true mientras el contador de lo que está en juego sigue corriendo. */
@@ -499,11 +564,17 @@ export function isStakesRunning(roomId: string): boolean {
 }
 
 /** Acta de la sala con la bitácora completa, en JSON y en Markdown. No contiene valores reservados. */
-export function getActa(roomId: string, now: number = Date.now()): { acta: engine.AuditActa; markdown: string } | undefined {
+export function getActa(roomId: string, now: number = Date.now()): { acta: engine.AuditActa & { negotiation?: NegotiationMessage[] }; markdown: string } | undefined {
   const record = lookup(roomId);
   if (!record) return undefined;
   const acta = engine.buildAuditActa({ ...record.state, telemetry: liveTelemetry() }, now);
-  return { acta, markdown: engine.renderActaMarkdown(acta) };
+  const markdown = engine.renderActaMarkdown(acta);
+  if (!record.state.negotiation) return { acta, markdown };
+  // La negociación entre agentes va completa al acta (sin los consejos privados).
+  const transcript = negotiation.publicTranscript(record.state);
+  const lines = transcript.map((message) => `- ${new Date(message.ts).toISOString()} · ${message.agentLabel}${message.fallback ? " (texto de respaldo)" : ""}: ${message.text.replace(/\s+/g, " ")}`);
+  const section = ["", "## Negociación entre agentes", "", "Los textos los redacta el modelo (o el respaldo); la propuesta y los puntajes los calcula el código.", "", ...(lines.length ? lines : ["Sin mensajes todavía."]), ""].join("\n");
+  return { acta: { ...acta, negotiation: transcript }, markdown: markdown + section };
 }
 
 // --- Acciones ---------------------------------------------------------------
@@ -523,6 +594,7 @@ function settle(roomId: string, record: RoomRecord, result: engine.EngineResult,
   const nextState = result.state;
   if (nextState && nextState !== record.state) {
     record.state = nextState;
+    syncNegotiationEnd(record);
     syncDemoTurn(roomId, record);
     emit(roomId);
   }
@@ -558,7 +630,10 @@ function join(roomId: string, record: RoomRecord, actor: engine.ActorRef, token:
   const fresh = newToken();
   record.tokens.set(key, fresh);
   const response = settle(roomId, record, engine.markRoleJoined(record.state, actor, now), { token: fresh, reconnected: false });
-  if (response.status === 200) startDemoBots(roomId, record, now);
+  if (response.status === 200) {
+    startDemoBots(roomId, record, now);
+    onNegotiationJoin(roomId, record, actor, now);
+  }
   return response;
 }
 
@@ -577,12 +652,8 @@ function drawableSeats(state: RoomState, withCommittee: boolean): engine.ActorRe
   // el deploy la pantalla grande de una sala fija no tiene la clave del QR del
   // Comité (exige NEXO_ADMIN_KEY), y sin esto la demo quedaba trabada esperando
   // al Comité. Lo demás lo juegan bots. Riesgo y alternativa en docs/DECISIONES.md.
-  if (state.demo && state.scarcity && arbiter) {
-    return [
-      ...state.scarcity.candidates.map((candidate) => ({ orgId: candidate.orgId, roleId: candidate.proposerRoleId })),
-      { orgId: arbiter.orgId, roleId: arbiter.roleId },
-    ];
-  }
+  // Son 3 asientos en la demo pauteada y 5 en la negociación entre agentes (engine.demoSeats).
+  if (state.demo && state.scarcity && arbiter) return engine.demoSeats(state).map((entry) => entry.seat);
   const seats: engine.ActorRef[] = [];
   for (const genome of state.orgGenomes) {
     for (const role of genome.roles) {
@@ -643,6 +714,7 @@ export function joinRandomSeat(roomId: string, rawBody: unknown, now: number = D
   syncDemoTurn(roomId, record);
   emit(roomId);
   startDemoBots(roomId, record, now);
+  onNegotiationJoin(roomId, record, seat, now);
   scheduleDemoReset(roomId, record);
   return { status: 200, body: { ok: true, token: fresh, reconnected: false, seat } };
 }
@@ -677,6 +749,11 @@ export async function applyAction(roomId: string, rawBody: unknown, now: number 
   }
 
   switch (action.type) {
+    case "SET_POSITION": {
+      const response = settle(roomId, record, negotiation.setPosition(record.state, actor, action.optionId, now));
+      if (response.status === 200) onPositionSet(roomId, record, now);
+      return response;
+    }
     case "LEAVE_ROLE":
       record.tokens.delete(tokenKey(actor));
       return settle(roomId, record, engine.markRoleLeft(record.state, actor, now));
@@ -938,6 +1015,8 @@ export function stopAutopilot(roomId: string, now: number = Date.now()): HostRes
  */
 function startDemoBots(roomId: string, record: RoomRecord, now: number) {
   if (!record.state.demo || record.autopilot || record.state.decisionSealedAt !== null) return;
+  // En la negociación entre agentes las administraciones son asientos de personas (o de un bot de postura).
+  if (record.state.negotiation) return;
   const botSeats = demoBotSeats(record.state).filter((seat) => !record.tokens.has(tokenKey(seat)));
   if (botSeats.length === 0) return;
   const script = buildDemoBotScript(record.state).filter((step) => botSeats.some((seat) => seat.orgId === step.seat.orgId && seat.roleId === step.seat.roleId));
@@ -966,6 +1045,8 @@ function clearTurnTimer(record: RoomRecord) {
  */
 function syncDemoTurn(roomId: string, record: RoomRecord, now: number = Date.now()) {
   if (!record.state.demo) return;
+  // Con la negociación en pausa, el plan B también espera.
+  if (record.state.negotiation?.paused) return;
   const turn = engine.demoTurn(record.state);
   const key = turn?.key ?? null;
   if (key === (record.turnKey ?? null)) return;
@@ -997,9 +1078,263 @@ function playTurnAutomatically(roomId: string, record: RoomRecord, key: string) 
   record.state = state;
   touch(record);
   record.turnKey = key;
+  syncNegotiationEnd(record, now);
   syncDemoTurn(roomId, record, now);
   emit(roomId);
   scheduleDemoReset(roomId, record);
+}
+
+// --- Negociación entre agentes ---------------------------------------------------------
+//
+// El almacén pone los tiempos y pide los textos; las reglas están en
+// src/lib/engine/negotiation.ts y el texto lo redacta src/agents/negotiation-agent.ts.
+// Fases: posturas (cada persona fija la suya con un toque; al vencer el plazo un
+// bot pone las que falten) → debate (un mensaje por agente, cada stepMs) →
+// propuesta (la calcula el motor) → decisión del Comité → acta.
+
+function clearNegotiation(record: RoomRecord) {
+  if (record.negotiationRun?.timer) clearTimeout(record.negotiationRun.timer);
+  record.negotiationRun = undefined;
+}
+
+function negotiationRunOf(record: RoomRecord): NegotiationRun {
+  return (record.negotiationRun ??= { timer: null, tick: null, remainingMs: null, pending: null, advised: new Set() });
+}
+
+/**
+ * Pide una frase al agente de un asiento y la deja lista para publicar. Nunca
+ * lanza ni tarda más de NEGOTIATION_MODEL_TIMEOUT_MS: si el modelo falla, tarda o
+ * escribe un dato reservado, devuelve el texto de respaldo de ese rol y fase.
+ * El filtro corre aquí, sobre lo que haya devuelto el agente: los mensajes
+ * públicos no pueden traer ningún valor reservado de la sala; el consejo privado,
+ * ninguno que su rol no vea.
+ */
+async function writeNegotiationText(roomId: string, record: RoomRecord, seat: engine.ActorRef, kind: "advice" | "argument"): Promise<{ text: string; fallback: boolean }> {
+  const fallback = { text: negotiation.fallbackLine(record.state, seat, kind), fallback: true };
+  const brief = negotiation.seatBrief(record.state, seat);
+  const view = projectRoom(roomId, seat);
+  if (!brief || !view) return fallback;
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const timeout = new Promise<null>((resolve) => {
+      timer = setTimeout(() => resolve(null), NEGOTIATION_MODEL_TIMEOUT_MS);
+      timer.unref?.();
+    });
+    const transcript = negotiation.publicTranscript(record.state).map((message) => ({ agentLabel: message.agentLabel, text: message.text }));
+    const written = await Promise.race([
+      Promise.resolve().then(() => writeNegotiationLine({ view, kind, seatLabel: brief.seatLabel, resource: brief.resource, role: brief.role, position: brief.position, options: brief.options, transcript, signal: controller.signal })),
+      timeout,
+    ]);
+    if (!written || typeof written.text !== "string") {
+      controller.abort();
+      return fallback;
+    }
+    const text = negotiation.fitText(written.text, kind === "argument" ? negotiation.NEGOTIATION_ARGUMENT_MAX_CHARS : negotiation.NEGOTIATION_MAX_CHARS);
+    const reserved = negotiation.reservedValues(record.state, kind === "advice" ? seat : undefined);
+    if (!text || negotiation.containsReserved(text, reserved)) return fallback;
+    return { text, fallback: false };
+  } catch {
+    return fallback;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+function scheduleNegotiation(roomId: string, record: RoomRecord, tick: NonNullable<NegotiationRun["tick"]>, delayMs: number, now: number) {
+  const run = negotiationRunOf(record);
+  if (run.timer) clearTimeout(run.timer);
+  run.tick = tick;
+  run.remainingMs = null;
+  record.state = negotiation.patchNegotiation(record.state, { nextAt: now + delayMs });
+  run.timer = setTimeout(() => runNegotiationTick(roomId, record), delayMs);
+  run.timer.unref?.();
+}
+
+function runNegotiationTick(roomId: string, record: RoomRecord, now: number = Date.now()) {
+  const run = record.negotiationRun;
+  if (!run || store.rooms.get(roomId) !== record || !record.state.negotiation) return;
+  if (run.timer) clearTimeout(run.timer);
+  run.timer = null;
+  const tick = run.tick;
+  run.tick = null;
+  if (tick === "positions") endPositions(roomId, record, now);
+  else if (tick === "debate") debateTick(roomId, record, now);
+  else if (tick === "proposal") proposalTick(roomId, record, now);
+  else if (tick === "decide") decideTick(roomId, record, now);
+  touch(record);
+  emit(roomId);
+}
+
+/** Alguien tomó un asiento: su agente le escribe el consejo, y con la primera persona empieza el plazo de posturas. */
+function onNegotiationJoin(roomId: string, record: RoomRecord, seat: engine.ActorRef, now: number) {
+  const current = record.state.negotiation;
+  if (!current || current.phase !== "positions") return;
+  const run = negotiationRunOf(record);
+  const key = tokenKey(seat);
+  const entry = engine.demoSeats(record.state).find((item) => tokenKey(item.seat) === key);
+  if (entry && !run.advised.has(key)) {
+    run.advised.add(key);
+    const publish = (line: { text: string; fallback: boolean }) => {
+      // La sala pudo reiniciarse mientras el agente escribía.
+      if (store.rooms.get(roomId) !== record || record.negotiationRun !== run || !record.state.negotiation) return;
+      record.state = negotiation.addNegotiationMessage(record.state, { ...seat, agentLabel: negotiation.agentLabelOf(entry), text: line.text, kind: "advice", ...(line.fallback ? { fallback: true } : {}) }, Date.now());
+      emit(roomId);
+    };
+    // El Comité no negocia: su consejo es fijo. Los demás lo redacta su agente.
+    if (entry.action === "decide") publish({ text: negotiation.fallbackLine(record.state, seat, "advice"), fallback: false });
+    else void writeNegotiationText(roomId, record, seat, "advice").then(publish);
+  }
+  if (!run.tick && !current.paused) {
+    scheduleNegotiation(roomId, record, "positions", negotiationPositionsMs(), now);
+    emit(roomId);
+  }
+}
+
+/** Con todas las posturas puestas no hace falta esperar el plazo: el debate empieza tras una pausa corta. */
+function onPositionSet(roomId: string, record: RoomRecord, now: number) {
+  const current = record.state.negotiation;
+  if (!current || current.phase !== "positions" || current.paused || !negotiation.allPositionsSet(record.state)) return;
+  scheduleNegotiation(roomId, record, "positions", Math.min(NEGOTIATION_POSITIONS_GRACE_MS, current.stepMs), now);
+  emit(roomId);
+}
+
+/** Cierra las posturas: un bot pone las que falten (marcadas como automáticas) y empieza el debate. */
+function endPositions(roomId: string, record: RoomRecord, now: number) {
+  let state = record.state;
+  for (const position of state.negotiation?.positions ?? []) {
+    if (position.optionId !== null) continue;
+    const seat = { orgId: position.orgId, roleId: position.roleId };
+    // Asiento sin persona: lo ocupa un bot, a la vista.
+    if (!record.tokens.has(tokenKey(seat))) {
+      const joined = engine.markRoleJoined(state, seat, now, { bot: true });
+      if (joined.ok) state = joined.state;
+    }
+    const option = negotiation.positionOptions(state, seat)[0];
+    const result = option ? negotiation.setPosition(state, seat, option.id, now, true) : null;
+    if (result?.ok) state = result.state;
+  }
+  record.state = negotiation.patchNegotiation(state, { phase: "debate", debateIndex: 0 });
+  startSpeaker(roomId, record, 0, now);
+}
+
+/** El agente del asiento `index` empieza a escribir; su mensaje se publica en el próximo paso. */
+function startSpeaker(roomId: string, record: RoomRecord, index: number, now: number) {
+  const entry = negotiation.negotiatingSeats(record.state)[index];
+  const run = negotiationRunOf(record);
+  if (!entry) return;
+  const pending: NonNullable<NegotiationRun["pending"]> = { index, line: null };
+  run.pending = pending;
+  record.state = negotiation.patchNegotiation(record.state, { typing: { ...entry.seat, agentLabel: negotiation.agentLabelOf(entry) } });
+  void writeNegotiationText(roomId, record, entry.seat, "argument").then((line) => {
+    pending.line = line;
+  });
+  scheduleNegotiation(roomId, record, "debate", record.state.negotiation?.stepMs ?? 0, now);
+}
+
+/** Publica el mensaje del agente que estaba escribiendo (o su respaldo, si no llegó a tiempo) y pasa al siguiente. */
+function debateTick(roomId: string, record: RoomRecord, now: number) {
+  const current = record.state.negotiation;
+  const run = negotiationRunOf(record);
+  if (!current) return;
+  const seats = negotiation.negotiatingSeats(record.state);
+  const index = current.debateIndex;
+  const entry = seats[index];
+  if (entry) {
+    const line = run.pending?.index === index && run.pending.line ? run.pending.line : { text: negotiation.fallbackLine(record.state, entry.seat, "argument"), fallback: true };
+    record.state = negotiation.addNegotiationMessage(record.state, { ...entry.seat, agentLabel: negotiation.agentLabelOf(entry), text: line.text, kind: "argument", ...(line.fallback ? { fallback: true } : {}) }, now);
+  }
+  run.pending = null;
+  record.state = negotiation.patchNegotiation(record.state, { debateIndex: index + 1 });
+  if (index + 1 < seats.length) {
+    startSpeaker(roomId, record, index + 1, now);
+    return;
+  }
+  record.state = negotiation.patchNegotiation(record.state, { phase: "proposal", typing: { orgId: RULE_SPEAKER, roleId: RULE_SPEAKER, agentLabel: RULE_LABEL } });
+  scheduleNegotiation(roomId, record, "proposal", current.stepMs, now);
+}
+
+/** Quien «habla» cuando el mensaje lo arma el código y no un agente. */
+const RULE_SPEAKER = "regla";
+const RULE_LABEL = "Regla de asignación (código)";
+
+/**
+ * La propuesta, en dos momentos. Primero «la regla está calculando» (typing con
+ * la regla, sin mensaje). Aquí, el segundo: los casos entran a la regla, el
+ * motor los ordena y el código arma el texto con ese resultado (ningún modelo
+ * participa). La fase sigue en «proposal» un paso más, para que la pantalla
+ * muestre la propuesta; después decide el Comité.
+ */
+function proposalTick(roomId: string, record: RoomRecord, now: number) {
+  let state = record.state;
+  for (const candidate of state.scarcity?.candidates ?? []) {
+    if (candidate.submitted === true) continue;
+    const seat = { orgId: candidate.orgId, roleId: candidate.proposerRoleId };
+    const automatic = state.negotiation?.positions.find((item) => item.orgId === seat.orgId && item.roleId === seat.roleId)?.automatic === true;
+    const result = engine.submitCandidate(state, seat, candidate.caseId, now, automatic ? { modo: "automático", motivo: "asiento sin persona" } : { via: "negociación" });
+    if (result.state) state = result.state;
+  }
+  state = negotiation.addNegotiationMessage(state, { orgId: RULE_SPEAKER, roleId: RULE_SPEAKER, agentLabel: RULE_LABEL, text: negotiation.proposalLine(state), kind: "proposal" }, now);
+  record.state = negotiation.patchNegotiation(state, { typing: null });
+  scheduleNegotiation(roomId, record, "decide", state.negotiation?.stepMs ?? 0, now);
+}
+
+/** Le toca al Comité: aceptar o rechazar la propuesta (con el plan B, si está encendido). */
+function decideTick(roomId: string, record: RoomRecord, now: number) {
+  record.state = negotiation.patchNegotiation(record.state, { phase: "decision", typing: null, nextAt: null });
+  syncDemoTurn(roomId, record, now);
+}
+
+/** La decisión quedó sellada: la negociación termina y lo dice en un mensaje. */
+function syncNegotiationEnd(record: RoomRecord, now: number = Date.now()) {
+  const current = record.state.negotiation;
+  if (!current || current.phase === "done" || record.state.decisionSealedAt === null) return;
+  if (record.negotiationRun?.timer) clearTimeout(record.negotiationRun.timer);
+  if (record.negotiationRun) {
+    record.negotiationRun.timer = null;
+    record.negotiationRun.tick = null;
+  }
+  const resolution = engine.resolveRoomAllocation(record.state);
+  const winner = resolution?.ranking.find((entry) => entry.caseId === resolution.winnerCaseId);
+  const decision = record.state.decisions.findLast((entry) => entry.scope === "allocation");
+  const who = decision?.automatic ? "Decisión automática (plan B)" : decision?.decision === "VETO" ? "El Comité rechazó la propuesta" : "El Comité aceptó la propuesta";
+  const text = winner ? `${who}: ${negotiation.resourceWord(record.state)} es para ${winner.patientLabel} (${engine.findGenome(record.state, winner.orgId)?.orgName ?? winner.orgId}).` : `${who}.`;
+  const state = negotiation.addNegotiationMessage(record.state, { orgId: RULE_SPEAKER, roleId: RULE_SPEAKER, agentLabel: "Acta", text, kind: "system" }, now);
+  record.state = negotiation.patchNegotiation(state, { phase: "done", typing: null, nextAt: null, paused: false });
+}
+
+/**
+ * Controles del narrador (anfitrión): pausar, reanudar o adelantar la negociación.
+ * Adelantar ejecuta ya el paso que estaba esperando; si el agente todavía no
+ * terminó de escribir, se publica su texto de respaldo.
+ */
+export function controlNegotiation(roomId: string, action: "pause" | "resume" | "advance", now: number = Date.now()): HostResponse<{ phase: string; paused: boolean }> {
+  const record = lookup(roomId);
+  if (!record) return { status: 404, body: { error: "La sala no existe", code: "ROOM_NOT_FOUND" } };
+  const current = record.state.negotiation;
+  if (!current) return { status: 409, body: { error: "Esta sala no tiene negociación entre agentes", code: "WRONG_MODE" } };
+  const run = negotiationRunOf(record);
+  touch(record);
+
+  if (action === "pause" && !current.paused && current.phase !== "done") {
+    run.remainingMs = current.nextAt !== null ? Math.max(0, current.nextAt - now) : null;
+    if (run.timer) clearTimeout(run.timer);
+    run.timer = null;
+    record.state = negotiation.patchNegotiation(record.state, { paused: true, nextAt: null });
+    clearTurnTimer(record);
+  } else if (action === "resume" && current.paused) {
+    record.state = negotiation.patchNegotiation(record.state, { paused: false });
+    if (run.tick) scheduleNegotiation(roomId, record, run.tick, run.remainingMs ?? current.stepMs, now);
+    syncDemoTurn(roomId, record, now);
+  } else if (action === "advance" && (current.phase === "positions" || current.phase === "debate" || current.phase === "proposal")) {
+    if (current.paused) record.state = negotiation.patchNegotiation(record.state, { paused: false });
+    // Sin nadie adentro todavía no hay paso programado: adelantar cierra las posturas.
+    if (!run.tick) run.tick = "positions";
+    runNegotiationTick(roomId, record, now);
+  }
+  emit(roomId);
+  const after = record.state.negotiation!;
+  return { status: 200, body: { ok: true, phase: after.phase, paused: after.paused } };
 }
 
 function clearResetTimer(record: RoomRecord) {

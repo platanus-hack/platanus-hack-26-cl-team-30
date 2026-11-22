@@ -135,7 +135,7 @@ describe("projectStateForOrgAndRole: lo reservado no sale del servidor", () => {
   it("ningún rol de hospital_rural recibe el costo de cobertura ni los campos reservados de clinica_andes", () => {
     const state = crossRoom();
     const secrets = reservedValues(state, CLINIC);
-    expect(secrets).toEqual(expect.arrayContaining(["2400000", "18/40", "3100000"]));
+    expect(secrets).toEqual(expect.arrayContaining(["2400000", "23/50", "3100000"]));
     for (const viewer of [A_RURAL, B_RURAL, C_RURAL]) {
       const json = wire(state, viewer);
       for (const secret of secrets) expect(json, `${viewer.roleId} de hospital_rural recibió ${secret}`).not.toContain(secret);
@@ -145,7 +145,7 @@ describe("projectStateForOrgAndRole: lo reservado no sale del servidor", () => {
   it("ningún rol de clinica_andes recibe el costo de cobertura ni los campos reservados de hospital_rural", () => {
     const state = crossRoom();
     const secrets = reservedValues(state, RURAL);
-    expect(secrets).toEqual(expect.arrayContaining(["1600000", "22/40", "1900000"]));
+    expect(secrets).toEqual(expect.arrayContaining(["1600000", "28/50", "1900000"]));
     for (const viewer of [A_CLINIC, B_CLINIC, C_CLINIC]) {
       const json = wire(state, viewer);
       for (const secret of secrets) expect(json, `${viewer.roleId} de clinica_andes recibió ${secret}`).not.toContain(secret);
@@ -172,7 +172,7 @@ describe("projectStateForOrgAndRole: lo reservado no sale del servidor", () => {
     const json = wire(state, A_CLINIC);
     expect(json).not.toContain("2400000");
     expect(json).not.toContain("3100000");
-    expect(json).toContain("18/40");
+    expect(json).toContain("23/50");
     const own = view(state, A_CLINIC).scarcity!.candidates.find((entry) => entry.orgId === CLINIC)!;
     expect(own.coverageCost).toEqual({ redacted: true, reason: "RBAC_SERVER_FILTERED" });
   });
@@ -182,7 +182,7 @@ describe("projectStateForOrgAndRole: lo reservado no sale del servidor", () => {
     const projected = view(state, B_CLINIC);
     expect(projected.scarcity!.candidates.find((entry) => entry.orgId === CLINIC)!.coverageCost).toBe(2400000);
     expect(projected.orgs.find((org) => org.orgId === CLINIC)!.fields.find((field) => field.key === "coverage_cost")).toMatchObject({ redacted: false, value: 2400000 });
-    expect(wire(state, B_CLINIC)).not.toContain("18/40");
+    expect(wire(state, B_CLINIC)).not.toContain("23/50");
   });
 
   it("el Comité árbitro y la pantalla general no reciben ningún valor reservado de ninguna organización", () => {
@@ -201,7 +201,7 @@ describe("projectStateForOrgAndRole: lo reservado no sale del servidor", () => {
     const visible = projected.orgs[0].fields.filter((field) => !field.redacted).map((field) => field.key);
     expect(visible).toEqual(["deadline_window"]);
     const json = JSON.stringify(projected);
-    for (const secret of ["2400000", "3100000", "18/40"]) expect(json).not.toContain(secret);
+    for (const secret of ["2400000", "3100000", "23/50"]) expect(json).not.toContain(secret);
   });
 
   it("un campo restringido que ven todos los roles sigue siendo interno: no sale a la pantalla general ni al acta", () => {

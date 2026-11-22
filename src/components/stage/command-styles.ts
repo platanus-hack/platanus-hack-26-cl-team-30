@@ -609,6 +609,7 @@ export const commandStyles = `
 .gd-app .gd-chart-readout { font-size: 13px; }
 .gd-app .gd-legend span { font-size: 12px; }
 .gd-app .gd-brand strong { font-size: 15px; letter-spacing: .12em; }
+.gd-app .gd-brand .gd-wordmark { font-size: 21px; letter-spacing: -.03em; font-weight: 800; }
 .gd-app .gd-brand small { font-size: 12px; }
 .gd-app .gd-prompt { font-size: 14px; }
 

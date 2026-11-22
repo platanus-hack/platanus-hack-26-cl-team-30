@@ -21,7 +21,8 @@ export function DemoSeatView({ room, me, act, acta, session }: { room: Projected
 
   const seats = demoSeatList(room);
   const mine = seats.find((seat) => seat.orgId === me.orgId && seat.roleId === me.roleId);
-  const other = seats.find((seat) => seat.seatOrder !== mine?.seatOrder && seat.isCase);
+  // La otra organización (en la negociación hay dos asientos por organización).
+  const other = seats.find((seat) => seat.isCase && seat.orgId !== mine?.orgId);
   const words = demoWords(room.scenarioId);
   const turn = room.turn ?? null;
   const myTurn = !!turn && turn.orgId === me.orgId && turn.roleId === me.roleId;
@@ -40,13 +41,13 @@ export function DemoSeatView({ room, me, act, acta, session }: { room: Projected
 
   if (!mine) return null;
 
-  const line = mine.isCase ? `Compites por ${words.resource}${other ? ` con ${withArticle(other.label)}` : ""}.` : `Tú decides quién recibe ${words.resource}.`;
+  const line = mine.isCase ? `Compites por ${words.resource}${other ? ` con ${withArticle(orgOfLabel(other.label))}` : ""}.` : `Tú decides quién recibe ${words.resource}.`;
 
   return (
     <>
       <SeatMain>
         <section className="st-card st-demo" data-accent={mine.accent} aria-live="polite">
-          <p className="st-demo-who">Eres {withArticle(mine.label)}</p>
+          <p className="st-demo-who">Eres {withArticle(orgOfLabel(mine.label))}</p>
           <p className="st-demo-line">{line}</p>
         </section>
 
@@ -54,14 +55,14 @@ export function DemoSeatView({ room, me, act, acta, session }: { room: Projected
           <section className="st-card st-demo-state st-reveal" data-tone="done">
             <CircleCheck aria-hidden />
             <p>
-              Listo: {words.resource} es para {winnerSeat ? withArticle(winnerSeat.label) : (winner?.patientLabel ?? "el caso elegido")}.
+              Listo: {words.resource} es para {winnerSeat ? withArticle(orgOfLabel(winnerSeat.label)) : (winner?.patientLabel ?? "el caso elegido")}.
             </p>
             {room.allocation?.committeeDecision?.decision === "VETO" && <p className="st-demo-line">El Comité rechazó la propuesta de la regla.</p>}
           </section>
         ) : myTurn && turn.action === "decide" ? (
           <section className="st-card st-demo-state">
             <p className="st-demo-ask">¿Aceptas o rechazas?</p>
-            <p className="st-demo-line">La regla propone {winnerSeat ? withArticle(winnerSeat.label) : (winner?.patientLabel ?? "un caso")}.</p>
+            <p className="st-demo-line">La regla propone {winnerSeat ? withArticle(orgOfLabel(winnerSeat.label)) : (winner?.patientLabel ?? "un caso")}.</p>
             <button type="button" className="st-demo-reason" onClick={() => setReasonIndex((index) => index + 1)} aria-label={`Razón: ${reason}. Toca para cambiarla`}>
               <span>Razón: {reason}</span>
               <RefreshCw aria-hidden />
@@ -146,9 +147,16 @@ export function demoSeatList(room: ProjectedRoomState): DemoSeatInfo[] {
   }
   const arbiter = room.scarcity?.arbiter;
   if (arbiter?.seatOrder && arbiter.seatLabel) seats.push({ orgId: arbiter.orgId, roleId: arbiter.roleId, seatOrder: arbiter.seatOrder, label: arbiter.seatLabel, isCase: false, accent: "violet" });
+  // Color por organización (la primera eucalipto, la segunda arcilla) y el Comité violeta.
+  const orgOrder = [...new Set(seats.filter((seat) => seat.isCase).sort((a, b) => a.seatOrder - b.seatOrder).map((seat) => seat.orgId))];
   return seats
     .sort((a, b) => a.seatOrder - b.seatOrder)
-    .map((seat) => ({ ...seat, accent: ACCENT_BY_ORDER[(seat.seatOrder - 1) % ACCENT_BY_ORDER.length] }));
+    .map((seat) => ({ ...seat, accent: seat.isCase ? ACCENT_BY_ORDER[orgOrder.indexOf(seat.orgId) % 2] : "violet" }));
+}
+
+/** «Clínica · Urgencias» → «Clínica». En la demo de 3, el nombre ya es el de la organización. */
+export function orgOfLabel(label: string): string {
+  return label.split(" · ")[0] ?? label;
 }
 
 /** Artículo de cada nombre corto: «la Clínica», «el Hospital Rural», «el Comité». Los demás, sin artículo. */

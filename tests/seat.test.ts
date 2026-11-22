@@ -90,7 +90,7 @@ describe("sorteo de silla: una silla libre al azar", () => {
 
   it("no agrega una acción nueva al contrato de /action", () => {
     expect(ACTION_TYPES).not.toContain("JOIN_RANDOM");
-    expect(ACTION_TYPES).toHaveLength(11);
+    expect(ACTION_TYPES).toHaveLength(12);
   });
 });
 

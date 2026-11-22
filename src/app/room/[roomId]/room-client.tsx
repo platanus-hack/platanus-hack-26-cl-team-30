@@ -8,6 +8,7 @@ import { seatTurn } from "@/components/nexo/guide";
 import { committeeKeyStorageKey } from "@/components/nexo/voice-assistant";
 import { findOrg, isArbiter, isRoleViewer, roleLabel } from "@/components/organs/format";
 import { DemoSeatView, demoSeatList } from "@/components/seat/demo-view";
+import { NegotiationSeatView } from "@/components/seat/negotiation-view";
 import { RevealCard } from "@/components/seat/reveal-card";
 import { RoomView } from "@/components/seat/room-view";
 import { SeatPicker } from "@/components/seat/seat-picker";
@@ -168,7 +169,12 @@ export default function RoomClient() {
   if (demoSeat) {
     return (
       <SeatShell who={{ title: demoSeat.label, org: arbiter ? undefined : myOrg?.orgName, accent: demoSeat.accent }} stakes={room.stakes} status={status} alert={alert}>
-        <DemoSeatView room={room} me={me} act={act} acta={{ md: actaUrl(roomId, "md") }} session={session} />
+        {/* Negociación entre agentes: posturas, debate y propuesta en su vista; la decisión y el acta, en la de demo. */}
+        {room.negotiation && ["positions", "debate", "proposal"].includes(room.negotiation.phase) ? (
+          <NegotiationSeatView room={room} me={me} act={act} />
+        ) : (
+          <DemoSeatView room={room} me={me} act={act} acta={{ md: actaUrl(roomId, "md") }} session={session} />
+        )}
       </SeatShell>
     );
   }

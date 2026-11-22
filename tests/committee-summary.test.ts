@@ -93,6 +93,13 @@ describe("el código de sala en el mensaje de wa.me", () => {
     // Una razón que menciona «sala» no es un código.
     expect(roomCodeFromText("Se asigna por equidad en esta sala de urgencias")).toBeNull();
   });
+
+  it("el código de una sala nueva se reconoce aunque se escriba en minúsculas", () => {
+    const code = createRoom({ mode: "cross_org", demo: true }).roomId;
+    expect(code).toMatch(/^[A-Z2-9]{5}$/);
+    expect(joinText(code)).toBe(`Hola, soy el Comité de la sala ${code}`);
+    expect(roomCodeFromText(`hola, soy el comité de la sala ${code.toLowerCase()}`)).toBe(code);
+  });
 });
 
 describe("el webhook asocia el número a la sala", () => {

@@ -43,7 +43,8 @@ describe("herramienta estado_sala de la guía", () => {
 
   it("dice el paso y a quién le toca, sin ningún dato reservado", async () => {
     vi.stubEnv("NEXO_CHANNEL_SECRET", SECRET);
-    const room = createRoom({ mode: "cross_org", demo: true });
+    // La demo de 3 (sin negociación): presentar y decidir.
+    const room = createRoom({ mode: "cross_org", demo: true, negotiation: false });
     const empty = await (await ask({ action: "estado_sala", room_id: room.roomId })).json();
     expect(empty.result).toContain("Unirse");
     expect(empty.result).toContain("Clínica");
@@ -63,6 +64,20 @@ describe("herramienta estado_sala de la guía", () => {
     const credentials = getHostCredentials(room.roomId)!;
     expect(waiting).not.toContain(credentials.committeeKey);
     expect(waiting).not.toContain(credentials.hostToken);
+  });
+
+  it("en la demo con negociación dice el código, cuántos faltan y la fase, sin datos reservados", async () => {
+    vi.stubEnv("NEXO_CHANNEL_SECRET", SECRET);
+    const room = createRoom({ mode: "cross_org", demo: true });
+    const said = async () => (await (await ask({ action: "estado_sala", room_id: room.roomId })).json()).result as string;
+    const empty = await said();
+    expect(empty).toContain(room.roomId.toUpperCase());
+    expect(empty).toContain("0 de 5");
+    // Entra la primera persona: ya puede dar su postura, pero aún faltan sillas.
+    expect((await applyAction(room.roomId, { type: "JOIN_ROLE", orgId: "clinica_andes", roleId: "role_a" })).status).toBe(200);
+    const one = await said();
+    expect(one).toContain("1 de 5");
+    for (const value of secretValues()) expect(one).not.toContain(value);
   });
 
   it("sin sala, o con una que no existe, invita a abrir la demo", async () => {

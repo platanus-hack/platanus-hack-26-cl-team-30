@@ -84,12 +84,12 @@ describe("detector de fugas usado en estas pruebas", () => {
     expect(mentions("1 recurso · 2 organizaciones · 2 vidas en riesgo · $4.0M CLP en juego", 4000000)).toBe(true);
     expect(mentions("Costo: 2.400.000 CLP", 2400000)).toBe(true);
     expect(mentions("Costo: 2400000", 2400000)).toBe(true);
-    expect(mentions("Gravedad 18/40", "18/40")).toBe(true);
+    expect(mentions("Gravedad 23/50", "23/50")).toBe(true);
   });
 
   it("no confunde un número con parte de otro", () => {
     expect(mentions("12% de descuento", 2)).toBe(false);
-    expect(mentions("cierre 18:00", "18/40")).toBe(false);
+    expect(mentions("cierre 18:00", "23/50")).toBe(false);
     expect(mentions("140 km de traslado", 14)).toBe(false);
   });
 });

@@ -260,7 +260,8 @@ export function storyMissing(room: ProjectedRoomState): StoryMissing {
       const name = orgOf(winner?.orgId)?.orgName;
       // En la demo, el mismo nombre del asiento («Litoral Sur»), no un recorte del nombre de la empresa.
       const seatName = winner ? stageSeats(room).find((seat) => seat.id === `${winner.orgId}/${scarcity.candidates.find((c) => c.caseId === winner.caseId)?.proposerRoleId}`)?.short : undefined;
-      const shown = isDemoRoom(room) ? (seatName ?? (name ? shortLabel(name) : name)) : name;
+      // Con 5 asientos el nombre viene como «Hospital Rural · Turno»: quien recibe es la organización.
+      const shown = isDemoRoom(room) ? (seatName?.split(" · ")[0] ?? (name ? shortLabel(name) : name)) : name;
       return { lead: "Listo", text: `${shown ?? winner?.patientLabel ?? "El caso"} recibe el recurso`, who: "Acta lista", whoConnected: null };
     }
     if (allocation.status === "PROPOSED") {

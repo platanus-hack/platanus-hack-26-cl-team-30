@@ -136,9 +136,9 @@ describe("salas", () => {
 // --- Forma de las acciones ----------------------------------------------------------
 
 describe("applyAction: forma del mensaje", () => {
-  it("el contrato define exactamente los once tipos de acción", () => {
+  it("el contrato define exactamente los doce tipos de acción", () => {
     expect([...ACTION_TYPES].sort()).toEqual(
-      ["ALLOCATION_SEAL", "COMMITTEE_VETO", "HITL_DECISION", "JOIN_ROLE", "LEAVE_ROLE", "RUN_ROLE_AGENT", "SEAL_RULE", "SUBMIT_CANDIDATE", "TEST_RBAC_BREACH", "TOGGLE_FIELD_SECRET", "UPDATE_AUTHORITY_SLIDER"].sort(),
+      ["ALLOCATION_SEAL", "COMMITTEE_VETO", "HITL_DECISION", "JOIN_ROLE", "LEAVE_ROLE", "RUN_ROLE_AGENT", "SEAL_RULE", "SET_POSITION", "SUBMIT_CANDIDATE", "TEST_RBAC_BREACH", "TOGGLE_FIELD_SECRET", "UPDATE_AUTHORITY_SLIDER"].sort(),
     );
   });
 
@@ -255,6 +255,7 @@ describe("identidad: un token por rol", () => {
       SUBMIT_CANDIDATE: {},
       ALLOCATION_SEAL: { reason: "x" },
       COMMITTEE_VETO: { reason: "x" },
+      SET_POSITION: { optionId: "now" },
     };
     expect(Object.keys(payloads).sort()).toEqual(ACTION_TYPES.filter((type) => type !== "JOIN_ROLE").sort());
 
@@ -453,15 +454,15 @@ describe("RUN_ROLE_AGENT: el agente hereda los permisos del rol", () => {
     expect(givenView.viewer).toEqual({ orgId: CLINIC, roleId: "role_a" });
     expect(context).toMatchObject({ instruction: "Prioriza al paciente" });
     const given = JSON.stringify(givenView);
-    for (const secret of ["2400000", "3100000", "1600000", "1900000", "22/40"]) expect(given, `el agente recibió ${secret}`).not.toContain(secret);
-    expect(given).toContain("18/40");
+    for (const secret of ["2400000", "3100000", "1600000", "1900000", "28/50"]) expect(given, `el agente recibió ${secret}`).not.toContain(secret);
+    expect(given).toContain("23/50");
     expect(given).not.toContain(a.token);
   });
 
   it("el texto de la propuesta vuelve solo a quien lo pidió: no entra a la bitácora ni a ninguna vista", async () => {
     const roomId = cross();
     const a = await join(roomId, CLINIC, "role_a");
-    agents.runRoleAgentTurn.mockResolvedValue(agentTurn({ proposalText: "TEXTO-PRIVADO-DEL-AGENTE con gravedad 18/40" }));
+    agents.runRoleAgentTurn.mockResolvedValue(agentTurn({ proposalText: "TEXTO-PRIVADO-DEL-AGENTE con gravedad 23/50" }));
     await act(roomId, a, "RUN_ROLE_AGENT");
 
     expect(events(roomId, "AGENT_PROPOSED")).toHaveLength(1);
@@ -469,7 +470,7 @@ describe("RUN_ROLE_AGENT: el agente hereda los permisos del rol", () => {
     for (const viewer of ["stage", { orgId: RURAL, roleId: "role_a" }, { orgId: CLINIC, roleId: "role_b" }, ARBITER] as const) {
       const sent = JSON.stringify(projectRoom(roomId, viewer));
       expect(sent).not.toContain("TEXTO-PRIVADO-DEL-AGENTE");
-      expect(sent).not.toContain("18/40");
+      expect(sent).not.toContain("23/50");
     }
     expect(JSON.stringify(getActa(roomId)!.acta)).not.toContain("TEXTO-PRIVADO-DEL-AGENTE");
   });
