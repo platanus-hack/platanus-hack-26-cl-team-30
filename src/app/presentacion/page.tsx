@@ -4,7 +4,7 @@ import { Deck } from "@/components/presentacion/deck";
 import { Atmosphere } from "@/components/sculptor/atmosphere";
 import { sculptorData } from "@/components/sculptor/data";
 import { SCULPTOR_PALETTE } from "@/components/sculptor/theme";
-import "../sculptor/sculptor.css";
+import "../sculptor.css";
 
 // Presentación de 3:00 para el domingo 22. Guion y tiempos en
 // src/components/presentacion/slides.ts, tomados de docs/DEMO_DIA.md. La cifra pⁿ

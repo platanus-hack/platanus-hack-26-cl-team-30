@@ -20,8 +20,8 @@ export function Mark({ size = 32, className, title }: { size?: number; className
   );
 }
 
-/** Landing principal de Sculptor: la página oficial de Ramón (/sculptor, en este mismo sitio). */
-export const SCULPTOR_HOME = "/sculptor";
+/** Landing principal de Sculptor: la página oficial de Ramón, en la dirección principal «/». */
+export const SCULPTOR_HOME = "/";
 
 /** Logotipo: marca y nombre. */
 export function Logo({ size = 28 }: { size?: number }) {

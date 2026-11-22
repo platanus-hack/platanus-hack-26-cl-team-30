@@ -90,7 +90,7 @@ export function Footer() {
           <p className="font-serif text-xl tracking-normal text-(--marmol) normal-case italic">{CLOSING}</p>
         </div>
         <Link
-          href="/"
+          href="/demo"
           className="inline-flex items-center gap-2 rounded-full bg-(--cincel) px-6 py-3 text-sm font-bold text-(--obsidiana) transition-transform duration-300 ease-out hover:-translate-y-0.5"
         >
           Abrir la demo <span aria-hidden>→</span>

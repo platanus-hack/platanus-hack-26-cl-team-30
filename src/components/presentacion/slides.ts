@@ -61,8 +61,8 @@ export const SLIDES: Slide[] = [
 
 /** Páginas que se pueden mostrar lado a lado en «Desarrollo». Todas son del mismo deploy. */
 export const PAGES = [
-  { href: "/", label: "Sculptor · portada" },
-  { href: "/sculptor", label: "Sculptor · protocolo" },
+  { href: "/", label: "Sculptor · protocolo" },
+  { href: "/hospitales", label: "Ejemplo · hospitales" },
   { href: "/casos/hospitales", label: "Caso · hospitales" },
   { href: "/casos/construccion", label: "Caso · construcción" },
   { href: "/casos/logistica", label: "Caso · logística" },
