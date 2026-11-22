@@ -13,7 +13,7 @@ La presentación del domingo es una página de la app: **`/presentacion`**. Sigu
 | 5 | Desarrollo | 2:40–2:50 | La landing `/` y el caso de logística `/casos/logistica` lado a lado, bajando solas de corrido |
 | 6 | Cierre | 2:50–3:00 | «SCULPTOR \| Donde el caos aprende a evolucionar» |
 | 7 | Equipo | Preguntas | Foto, nombres y roles (AI Product Strategist, Software Engineer, AI Engineer) sobre un collage de fotos del equipo en movimiento |
-| 8 | Gracias | Al terminar | «gracias» armado con píxeles que salen de una galaxia; el mouse los empuja y vuelven a su lugar |
+| 8 | Gracias | Al terminar | «gracias» armado con píxeles que salen de una galaxia; 4 s después de armado, los mismos píxeles vuelan a formar el isotipo de Sculptor. El mouse los empuja y vuelven a su lugar |
 
 Teclas: `→` o clic avanza, `←` retrocede, `1`–`8` salta, `T` inicia o pausa el reloj de 3:00 (se pone lima a los 2:40 y rojo a los 3:00), `R` lo reinicia, `N` muestra las notas del orador con lo que dice Nahum y lo que hacen Ramón y Sebastián, `F` pantalla completa.
 

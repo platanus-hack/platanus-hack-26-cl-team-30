@@ -61,7 +61,7 @@ export const SLIDES: Slide[] = [
     id: "gracias",
     time: "Después de las preguntas",
     say: "Gracias.",
-    do: "Se deja en pantalla al terminar. La palabra se arma con píxeles que salen de una galaxia; el mouse los empuja y vuelven a su lugar.",
+    do: "Se deja en pantalla al terminar. La palabra se arma con píxeles que salen de una galaxia y, 4 s después, los mismos píxeles forman el logo de Sculptor. El mouse los empuja y vuelven a su lugar.",
   },
 ];
 

@@ -4,16 +4,50 @@
 // en una galaxia (dos brazos, núcleo lima) y vuelan a su lugar en la palabra, de
 // izquierda a derecha. Después una onda de luz la recorre sin parar y el puntero
 // empuja los píxeles, que vuelven a su lugar como resortes.
+// Cuatro segundos después de armada, los mismos píxeles vuelan en cascada a formar
+// el isotipo (la galaxia del logo, src/components/sculptor/galaxy-data.ts) y toman
+// sus colores; los que sobran se apagan.
 // Con movimiento reducido la palabra aparece armada y quieta.
 
 import { useEffect, useRef } from "react";
+import { CELLS } from "@/components/sculptor/galaxy-data";
 
 const MARBLE = [243, 240, 232];
 const EUCA = [111, 175, 155];
 const PATINA = [46, 94, 81];
 const LIME = [215, 255, 61];
+// Colores de los tonos del isotipo, en el mismo orden que TONES: pátina, eucalipto, mármol y cincel.
+const LOGO_TONES = [PATINA, EUCA, MARBLE, LIME];
+// Segundo en que empieza el paso al logo: la palabra queda armada hacia los 2,5 s y se ve 4 s.
+const MORPH_AT = 6.5;
+// Segundos que tarda cada píxel en tomar el color y el tamaño del logo.
+const MORPH_FADE = 1.2;
+// Límites del isotipo en celdas (GALAXY_VIEWBOX es "-13.5 -9.5 27 21").
+const LOGO_W = 27;
+const LOGO_H = 21;
 
-type Px = { x: number; y: number; vx: number; vy: number; tx: number; ty: number; sx: number; sy: number; delay: number; color: number[]; seed: number };
+type Px = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  tx: number;
+  ty: number;
+  sx: number;
+  sy: number;
+  delay: number;
+  color: number[];
+  seed: number;
+  /** Lugar, color y retraso en el isotipo. */
+  lx: number;
+  ly: number;
+  lcolor: number[];
+  ldelay: number;
+  /** Fase del titileo en el logo: la misma para toda la celda, que titila entera. */
+  lseed: number;
+  /** false: otro píxel ya ocupa ese lugar del logo, así que este se apaga. */
+  keep: boolean;
+};
 
 export function Gracias() {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -74,12 +108,68 @@ export function Gracias() {
           const sy = cy + Math.sin(a) * r * 0.45;
           const roll = Math.random();
           const color = roll < 0.06 ? LIME : roll < 0.22 ? EUCA : roll < 0.28 ? PATINA : MARBLE;
-          pixels.push({ x: still ? tx : sx, y: still ? ty : sy, vx: 0, vy: 0, tx, ty, sx, sy, delay: (x / cols) * 1.1 + Math.random() * 0.25, color, seed: Math.random() });
+          pixels.push({
+            x: still ? tx : sx,
+            y: still ? ty : sy,
+            vx: 0,
+            vy: 0,
+            tx,
+            ty,
+            sx,
+            sy,
+            delay: (x / cols) * 1.1 + Math.random() * 0.25,
+            color,
+            seed: Math.random(),
+            lx: tx,
+            ly: ty,
+            lcolor: color,
+            ldelay: 0,
+            lseed: 0,
+            keep: true,
+          });
         }
       }
 
+      // 2. Lugares del isotipo: cada celda del logo se parte en sub × sub píxeles,
+      //    tantos como alcancen con los píxeles de la palabra.
+      const sub = Math.max(1, Math.floor(Math.sqrt(pixels.length / CELLS.length)));
+      const logoCell = Math.min((w * 0.5) / LOGO_W, (h * 0.66) / LOGO_H);
+      const subSize = (logoCell * 0.78) / sub;
+      const lcx = w / 2;
+      const lcy = h / 2 - h * 0.04 - logoCell;
+      const spots: { x: number; y: number; color: number[]; seed: number }[] = [];
+      for (const [cxs, cys, tone] of CELLS) {
+        const seed = Math.random();
+        for (let i = 0; i < sub; i++) {
+          for (let j = 0; j < sub; j++) {
+            spots.push({
+              x: lcx + cxs * logoCell + ((i + 0.5) / sub - 0.5) * logoCell * 0.78,
+              y: lcy + cys * logoCell + ((j + 0.5) / sub - 0.5) * logoCell * 0.78,
+              color: LOGO_TONES[tone],
+              seed,
+            });
+          }
+        }
+      }
+      // De izquierda a derecha en los dos lados: el vuelo se ve ordenado. Cada lugar
+      // queda con al menos un píxel, porque hay más píxeles que lugares.
+      spots.sort((a, b) => a.x - b.x || a.y - b.y);
+      const byX = [...pixels].sort((a, b) => a.tx - b.tx || a.ty - b.ty);
+      let last = -1;
+      byX.forEach((p, i) => {
+        const k = Math.floor((i * spots.length) / byX.length);
+        p.lx = spots[k].x;
+        p.ly = spots[k].y;
+        p.lcolor = spots[k].color;
+        p.lseed = spots[k].seed;
+        p.keep = k !== last;
+        p.ldelay = (i / byX.length) * 0.9 + Math.random() * 0.2;
+        last = k;
+      });
+
       const t0 = performance.now();
       const size = cell * 0.82;
+      const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
       const frame = (now: number) => {
         const t = still ? 10 : (now - t0) / 1000;
         ctx.clearRect(0, 0, w, h);
@@ -94,10 +184,12 @@ export function Gracias() {
             p.x = cx + dx * Math.cos(ang) - dy * Math.sin(ang);
             p.y = cy + (dx * Math.sin(ang) + dy * Math.cos(ang)) * 0.45;
           } else if (!still) {
-            // Resorte hacia su lugar en la palabra, más el empujón del puntero.
+            // Resorte hacia su lugar en la palabra (o en el logo, después de MORPH_AT),
+            // más el empujón del puntero.
+            const toLogo = t - MORPH_AT - p.ldelay > 0;
             const k = Math.min(1, local * 0.9) * 0.08;
-            p.vx += (p.tx - p.x) * k;
-            p.vy += (p.ty - p.y) * k;
+            p.vx += ((toLogo ? p.lx : p.tx) - p.x) * k;
+            p.vy += ((toLogo ? p.ly : p.ty) - p.y) * k;
             const dx = p.x - pointer.x;
             const dy = p.y - pointer.y;
             const d2 = dx * dx + dy * dy;
@@ -113,13 +205,19 @@ export function Gracias() {
             p.x += p.vx;
             p.y += p.vy;
           }
-          // Onda de luz que recorre la palabra de izquierda a derecha.
-          const wave = still ? 0 : Math.max(0, 1 - Math.abs(((p.tx - ox) / (cols * cell)) * 3 - ((t * 0.55) % 4.5) + 0.75) * 1.4);
-          const twinkle = still ? 1 : 0.8 + 0.2 * Math.sin(t * 2 + p.seed * 30);
-          const c = wave > 0 ? p.color.map((v, i) => Math.round(v + (LIME[i] - v) * wave * 0.7)) : p.color;
-          ctx.globalAlpha = Math.min(1, (0.85 + wave * 0.4) * twinkle);
+          // Avance hacia el logo, de 0 (palabra) a 1 (logo).
+          const m = still ? 0 : clamp01((t - MORPH_AT - p.ldelay) / MORPH_FADE);
+          // Onda de luz que recorre la palabra de izquierda a derecha; se apaga en el logo.
+          const wave = still ? 0 : Math.max(0, 1 - Math.abs(((p.tx - ox) / (cols * cell)) * 3 - ((t * 0.55) % 4.5) + 0.75) * 1.4) * (1 - m);
+          const twinkle = still ? 1 : 0.8 + 0.2 * Math.sin(t * 2 + (m > 0 ? p.lseed : p.seed) * 30);
+          const base = m > 0 ? p.color.map((v, i) => v + (p.lcolor[i] - v) * m) : p.color;
+          const c = wave > 0 ? base.map((v, i) => Math.round(v + (LIME[i] - v) * wave * 0.7)) : base.map(Math.round);
+          const fade = p.keep ? 1 : 1 - m;
+          if (fade <= 0) continue;
+          ctx.globalAlpha = Math.min(1, (0.85 + wave * 0.4) * twinkle) * fade;
           ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
-          ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
+          const s = size + (subSize - size) * m;
+          ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s);
         }
         ctx.globalAlpha = 1;
         ctx.globalCompositeOperation = "source-over";
