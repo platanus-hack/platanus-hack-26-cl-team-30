@@ -3,7 +3,8 @@
 //
 // Una idea por sección, con ritmo: el héroe a todo el ancho con la pantalla grande
 // real como protagonista; después, los tres pasos con sus capturas, los celulares,
-// la regla, lo que ve cada uno, el acta, por qué firma una persona, otros rubros y
+// la regla, lo que ve cada uno, el acta, por qué firma una persona, otros rubros (una fila de
+// tarjetas como la de la landing) y
 // el llamado final. Todas las capturas son reales (public/casos/). Solo Manrope, titulares grandes y nada de
 // texto menor a 16 px. Las piezas animadas vienen de 21st.dev (docs/diseno/21st/),
 // adaptadas con CSS y GSAP.
@@ -23,6 +24,7 @@ import { SeenBento } from "./seen-bento";
 import { StageScroll } from "./stage-scroll";
 import { StepsScroll } from "./steps-scroll";
 import { Ticker } from "./ticker";
+import { UsesTrack } from "./uses-track";
 
 function DemoButton({ room, large = false }: { room: string; large?: boolean }) {
   return (
@@ -161,38 +163,9 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
           </div>
         </section>
 
-        {/* 8. Angosta: el mismo esqueleto en otros rubros, como enlaces simples. */}
-        <section className="cs-section border-t border-border" aria-labelledby="mas-titulo">
-          <div className="wrap max-w-5xl">
-            <h2 id="mas-titulo" className="cs-h2 max-w-[16ch]">
-              ¿Dónde más pasa esto?
-            </h2>
-            {/* El patrón, para que cada persona reconozca su propio caso: «para cualquier recurso» no orienta. */}
-            <p className="cs-lede mt-6 max-w-[34rem] text-muted-foreground">
-              Cada vez que dos equipos piden lo mismo y ninguno puede mostrar sus números.
-            </p>
-            <ul className="mt-12 divide-y divide-border border-y border-border">
-              {otherUses(slug).map((item) => (
-                <li key={item.title}>
-                  {item.href ? (
-                    <Link href={item.href} className="group flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-6">
-                      <span className="text-2xl font-bold tracking-tight underline decoration-transparent underline-offset-8 transition-colors group-hover:decoration-brand">{item.title}</span>
-                      <span className="cs-body text-muted-foreground">{item.detail}</span>
-                    </Link>
-                  ) : (
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-6">
-                      <span className="text-2xl font-bold tracking-tight">{item.title}</span>
-                      <span className="cs-body text-muted-foreground">{item.detail}</span>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <Link href="/" className="cs-body mt-8 inline-flex min-h-11 items-center font-semibold underline decoration-border underline-offset-4 hover:decoration-brand">
-              Qué es Sculptor
-            </Link>
-          </div>
-        </section>
+        {/* 8. A todo el ancho: el mismo esqueleto en otros rubros, cada uno con la pregunta que se hace la gente
+            (la misma lista y presentación que «Mismo esqueleto, otro genoma» en la landing de Sculptor). */}
+        <UsesTrack uses={otherUses(slug)} />
 
         {/* 9. A todo el ancho: el llamado final. */}
         <section className="cs-section cs-cta text-center" aria-labelledby="probar-titulo">

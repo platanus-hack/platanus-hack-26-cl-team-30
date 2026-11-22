@@ -29,5 +29,8 @@ export type CaseStudy = {
 
 export type CaseStep = { title: string; detail: string };
 
-/** Otro uso del mismo esqueleto, para «Sculptor sirve para más». Con href si tiene su página. */
-export type CaseUse = { icon: LucideIcon; title: string; detail: string; href?: string };
+/**
+ * Otro uso del mismo esqueleto, para «¿Dónde más pasa esto?». `detail` es la pregunta que se hace
+ * la gente; `status` dice cuán listo está (como en la landing); con href si tiene su página.
+ */
+export type CaseUse = { title: string; detail: string; status: "Ver el caso" | "Genoma listo" | "Desde una frase"; href?: string };
