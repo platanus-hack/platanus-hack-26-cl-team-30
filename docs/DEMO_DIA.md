@@ -222,7 +222,7 @@ Tres cosas: guardar las salas en una base de datos con un bus compartido, para q
 
 | Falla | Qué hacemos | Quién |
 |---|---|---|
-| Render no carga o la sala no aparece | Ramón cambia a la pestaña del **video de respaldo**, que se graba en el ensayo 2 (todavía no existe). Nahum narra encima con el mismo guion: «Esto lo grabamos a las siete con cinco personas; así se ve». | Ramón y Nahum |
+| Render no carga o la sala no aparece | Ramón cambia a la pestaña del **video de respaldo** (ver «Video de respaldo», más abajo). Nahum narra encima con el mismo guion: «Esto lo grabamos hoy contra el mismo deploy, con cinco celulares manejados por un script; así se ve». Si en el ensayo 2 se graba uno con personas de verdad, se usa ese y la frase vuelve a ser «con cinco personas». | Ramón y Nahum |
 | No escanean, o falta alguien a los 15 s | Sebastián entra con datos móviles. Las sillas que sigan vacías las juega un bot marcado «automático». | Sebastián |
 | Nadie del público quiere subir | 2 personas aliadas de otro equipo ya avisadas, más los celulares del equipo. Por verificar: conseguirlas antes de las 9:00. | Sebastián |
 | Opción B: un juez no quiere o no tiene señal | Se pasa a la opción A con el público, sin comentarlo. | Sebastián |
@@ -235,6 +235,22 @@ Tres cosas: guardar las salas en una base de datos con un bus compartido, para q
 | Falla el wifi de la sede | El computador usa internet compartido de un celular. El público usa sus datos. | Sebastián |
 | Hay que mostrar un celular en la pantalla | Duplicar el iPhone en el Mac: con Duplicación del iPhone (macOS 15 o posterior) o con QuickTime → «Nueva grabación de película» → elegir el iPhone por cable. Por verificar en el Mac del proyector en el ensayo 5. | Ramón |
 
+### Video de respaldo
+
+`~/Desktop/Sculptor_demo_respaldo.mp4` (MP4 de 1920x1080, 86 s, 17 MB, grabado el 22 de noviembre a las 02:59). No está en el repo porque pesa. Es la demo completa grabada contra el deploy público: a la izquierda la pantalla grande en modo oscuro y a la derecha 3 celulares en miniatura con su rótulo (Clínica · Urgencias, Clínica · Administración y Comité Ético). Las 5 personas son navegadores manejados por un script. Entran por el QR, cada una toca la postura que le recomienda su agente (un círculo blanco marca cada toque), el Comité acepta y termina en el acta. Va a ritmo real. Solo se acelera la fase Unirse, y solo si dura más de 20 s: lo justo para que dure 20 s, con tope ×3, y mientras va acelerada se ve la velocidad («▶▶ ×1,4»). En el video actual no hizo falta acelerar. Los rótulos dicen que es una grabación con datos simulados. Las 4 pantallas están sincronizadas: cada página grabada lleva un cuadrado de 8 px que marca el segundo del reloj y que no aparece en el video final. Al unir, el script lo lee y corrige el desfase de cada video, porque Playwright empieza a grabar en el primer pintado y no al crear el contexto. Verificado: el círculo del «Aceptar» del Comité cae en el segundo calculado y la pantalla grande pasa al acta 0,2 s antes que el celular.
+
+Para regenerarlo (unos 3 minutos; necesita ffmpeg y el Playwright de `scripts/novato-demo.mjs`):
+
+```
+node scripts/video-respaldo.mjs https://team-30-platanus-hack.onrender.com ~/Desktop/Sculptor_demo_respaldo.mp4 --carpeta /tmp/sculptor-video-crudo
+```
+
+- Graba con `scripts/novato-demo.mjs --grabar` (un `.webm` por pantalla más `grabacion.json`) y después une los videos con ffmpeg. Si la demo no llega limpia al acta, no genera el MP4 y muestra la ruta del informe.
+- Para volver a unir una grabación ya hecha sin grabar otra: `node scripts/video-respaldo.mjs --solo-unir /tmp/sculptor-video-crudo/video <salida.mp4>`. Opciones: `--union 20` fija cuántos segundos dura como máximo Unirse en el video (`--union 0` deja todo a ritmo real) y `--final 10` fija cuánto se queda en el acta.
+- Graba con la máquina tranquila. Con la CPU saturada, las 6 pantallas grabando van lentas y la demo dura más de lo real.
+- No grabes mientras alguien hace push a main. Render se reinicia con cada deploy, las salas viven en memoria y la sala se pierde a mitad de la grabación («No encontramos esta sala»).
+- Al terminar, el script imprime en qué segundo del video empieza cada fase. Revisa 5 fotogramas antes de dar el video por bueno: `ffmpeg -ss <segundo> -i <salida.mp4> -frames:v 1 cuadro.png`.
+
 **Sala de respaldo:** si la sala queda trabada, `B` en la lámina 4 abre una sala nueva con otro código y otro QR. Con el acta cerrada, «Nueva demo» hace lo mismo. Las salas fijas (`demo-cross`, `demo-construccion`) no entregan sus controles en el deploy mientras `NEXO_ADMIN_KEY` no esté definida (`docs/PENDIENTES.md`, i3).
 
 **Riesgo por verificar:** 5 celulares en el mismo wifi pueden compartir una IP. El límite de peticiones por IP no está verificado detrás de Render (`docs/ARQUITECTURA.md`, «Límite de peticiones»). Hay que probarlo en el ensayo 2 con 5 celulares en el wifi de la sede.
@@ -245,7 +261,7 @@ Tres cosas: guardar las salas en una base de datos con un bus compartido, para q
 2. [ ] En el computador del proyector, pasar por la lámina 4 de `/presentacion`: debe mostrar el código gigante, el QR y 5 asientos. Volver a la lámina 1 sin recargar.
 3. [ ] Escanear el QR con un celular **con datos móviles**, entrar y salir. Después abrir una sala nueva y limpia.
 4. [ ] El deck está en la lámina 1, en pantalla completa y en modo oscuro. La lámina 2 tiene el dato con su fuente, o no tiene cifra.
-5. [ ] El video de respaldo está abierto en una pestaña, en pausa y en el segundo 0.
+5. [ ] El video de respaldo (`Sculptor_demo_respaldo.mp4`) está abierto en una pestaña, en pausa y en el segundo 0.
 6. [ ] El hotspot del celular de Sebastián está encendido, con nombre y clave a mano.
 7. [ ] Si el WhatsApp sigue en el guion: el Comité de prueba tiene sesión iniciada y ya mandó «Hola» al número de Kapso para abrir la ventana de 24 h. Si no responde, se saca del guion.
 8. [ ] Brillo de los celulares de apoyo al máximo, sin modo ahorro y con el sonido activado para la nota de voz.

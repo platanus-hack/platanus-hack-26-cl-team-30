@@ -3,6 +3,7 @@ import { Archivo } from "next/font/google";
 import { Deck } from "@/components/presentacion/deck";
 import { Atmosphere } from "@/components/sculptor/atmosphere";
 import { sculptorData } from "@/components/sculptor/data";
+import { instrumentPreload, jetbrainsPreload } from "@/components/sculptor/fonts";
 import { SCULPTOR_PALETTE } from "@/components/sculptor/theme";
 import "../sculptor.css";
 
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
 export default function PresentacionPage() {
   const { single } = sculptorData();
   return (
-    <div style={SCULPTOR_PALETTE} className={`${archivo.variable} h-svh overflow-hidden bg-(--obsidiana) text-(--marmol) antialiased`}>
+    <div style={SCULPTOR_PALETTE} className={`${archivo.variable} ${instrumentPreload.variable} ${jetbrainsPreload.variable} h-svh overflow-hidden bg-(--obsidiana) text-(--marmol) antialiased`}>
       <Atmosphere />
       <Deck autonomous={single.autonomous} steps={single.n} accuracy={single.p} />
     </div>

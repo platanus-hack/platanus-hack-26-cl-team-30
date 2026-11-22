@@ -2,7 +2,6 @@
 
 import { useId, type ReactNode } from "react";
 import { CircleCheck, Clock3, Hourglass, Lock, LoaderCircle, TriangleAlert, Users, WifiOff } from "lucide-react";
-import "@fontsource-variable/manrope";
 import type { ConnectionStatus } from "@/lib/client/use-room";
 import type { AccentColor, StakesView } from "@/lib/genome/schema";
 import { Mark, SCULPTOR_HOME } from "@/components/landing/mark";

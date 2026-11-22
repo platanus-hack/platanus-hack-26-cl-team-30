@@ -10,12 +10,13 @@
 import { z } from "zod";
 import type { EngineErrorCode } from "../engine/deterministic";
 import { GateModeSchema } from "../genome/schema";
+import { REASON_MAX_LENGTH } from "./limits";
+
+export { REASON_MAX_LENGTH };
 
 // Topes de largo: todo texto que llega de un cliente tiene un máximo, porque
 // parte de él termina en la bitácora y viaja a todas las pantallas.
 const id = z.string().min(1).max(64);
-/** Largo máximo de la razón de una decisión. La interfaz debe limitar el campo a esto. */
-export const REASON_MAX_LENGTH = 500;
 const reason = z.string().max(REASON_MAX_LENGTH);
 
 const actor = {

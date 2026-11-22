@@ -14,6 +14,7 @@ import { Origin } from "@/components/sculptor/origin";
 import { Principles } from "@/components/sculptor/principles";
 import { Reliability } from "@/components/sculptor/reliability";
 import { Team } from "@/components/sculptor/team";
+import { instrumentPreload, jetbrainsPreload } from "@/components/sculptor/fonts";
 import { SCULPTOR_PALETTE } from "@/components/sculptor/theme";
 import "./sculptor.css";
 
@@ -33,7 +34,8 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   openGraph: { title, description, type: "website", locale: "es_CL", images: ["/sculptor/logo.png"] },
-  icons: { icon: "/sculptor/logo.png" },
+  // El ícono de la pestaña es el logo reducido a 192 px (16 KB): el PNG de 1000 px pesaba 189 KB y competía con lo primero que se ve.
+  icons: { icon: "/sculptor/logo-icono-192.png" },
 };
 
 
@@ -43,7 +45,7 @@ export default function SculptorPage() {
     <div
       id="top"
       style={SCULPTOR_PALETTE}
-      className={`${archivo.variable} min-h-svh bg-(--obsidiana) text-(--marmol) antialiased selection:bg-(--cincel) selection:text-(--obsidiana)`}
+      className={`${archivo.variable} ${instrumentPreload.variable} ${jetbrainsPreload.variable} min-h-svh bg-(--obsidiana) text-(--marmol) antialiased selection:bg-(--cincel) selection:text-(--obsidiana)`}
     >
       <SculptorShell>
         <Atmosphere />

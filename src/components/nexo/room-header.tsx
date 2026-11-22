@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { HoverPrefetchLink } from "@/components/ui/hover-prefetch-link";
 import type { ReactNode } from "react";
 import { Mark, SCULPTOR_HOME } from "@/components/landing/mark";
 import { Disclaimer } from "./disclaimer";
@@ -10,10 +10,10 @@ export function RoomHeader({ subtitle, children }: { subtitle: ReactNode; childr
       <Disclaimer />
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
-          <Link href={SCULPTOR_HOME} className="flex items-center gap-2" aria-label="Ir a la landing de Sculptor">
+          <HoverPrefetchLink href={SCULPTOR_HOME} className="flex items-center gap-2" aria-label="Ir a la landing de Sculptor">
             <Mark size={28} />
             <span className="text-lg font-semibold tracking-tight">Sculptor</span>
-          </Link>
+          </HoverPrefetchLink>
           <span className="min-w-0 truncate text-sm text-muted-foreground">{subtitle}</span>
           <div className="ml-auto flex items-center gap-2">{children}</div>
         </div>

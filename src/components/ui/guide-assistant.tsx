@@ -8,6 +8,7 @@
 // guía no toca la sala: su estado lo pide con una herramienta que solo devuelve lo público.
 
 import { useEffect, useRef, useState } from "react";
+import { preconnect } from "react-dom";
 import { LoaderCircle, MessageSquareText, Mic, Send, X } from "lucide-react";
 import { Mark } from "@/components/landing/mark";
 
@@ -29,6 +30,13 @@ export function GuideAssistant({ page, roomId }: { page: string; roomId?: string
   useEffect(() => {
     list.current?.lastElementChild?.scrollIntoView({ block: "end" });
   }, [lines]);
+
+  // El SDK de ElevenLabs (unos 640 KB) no viaja con la página: se pide recién al abrir
+  // el panel, junto con la conexión a su servidor, para que al elegir voz o texto ya esté.
+  function warm() {
+    preconnect("https://api.elevenlabs.io");
+    void import("@elevenlabs/client").catch(() => {});
+  }
 
   async function start(next: Mode) {
     setMode(next);
@@ -132,7 +140,10 @@ export function GuideAssistant({ page, roomId }: { page: string; roomId?: string
       )}
       <button
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          if (!open) warm();
+          setOpen((value) => !value);
+        }}
         aria-expanded={open}
         className="inline-flex min-h-12 items-center gap-2.5 rounded-full border border-border bg-card py-2 pr-5 pl-3 text-base font-bold text-foreground shadow-lift transition-colors hover:bg-muted"
       >

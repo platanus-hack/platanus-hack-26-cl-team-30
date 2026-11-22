@@ -6,7 +6,6 @@
 // en lenguaje simple. La bitácora no va a la vista principal: queda en «Ver
 // registro», colapsado.
 
-import "@fontsource-variable/manrope";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import {

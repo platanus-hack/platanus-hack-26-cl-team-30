@@ -1,9 +1,25 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, JetBrains_Mono } from "next/font/google";
-// Una sans para toda la app: Manrope, la misma de la pantalla grande y del teléfono.
-import "@fontsource-variable/manrope";
+import localFont from "next/font/local";
 import "./globals.css";
 import { THEME_SCRIPT } from "@/components/ui/theme-script";
+
+// Tipografías (docs/DECISIONES.md, «Rendimiento de carga»):
+// - Manrope es la letra de casi todo, así que es la única que se precarga en todas
+//   las rutas. Solo el subconjunto latino (cubre el español entero: tildes, ñ, ¿ y ¡),
+//   variable de 200 a 800, servido desde el paquete @fontsource-variable/manrope.
+// - Instrument Serif y JetBrains Mono aparecen en detalles chicos (una razón entre
+//   comillas, una etiqueta), nunca en lo primero que se lee: no se precargan, y el
+//   navegador las baja solo en la página que de verdad las usa.
+// - Archivo es solo de la landing y de /presentacion: se declara en esas páginas.
+
+// Una sans para toda la app: Manrope, la misma de la pantalla grande y del teléfono.
+const manrope = localFont({
+  src: "../../node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2",
+  variable: "--font-manrope",
+  weight: "200 800",
+  display: "swap",
+});
 
 // La segunda voz: serif itálica para la parte humana de un título y para la razón de un veto.
 const instrument = Instrument_Serif({
@@ -12,6 +28,7 @@ const instrument = Instrument_Serif({
   weight: "400",
   style: ["normal", "italic"],
   display: "swap",
+  preload: false,
 });
 
 // Solo para códigos técnicos en la consola de auditoría.
@@ -19,6 +36,7 @@ const jetbrains = JetBrains_Mono({
   variable: "--font-jetbrains",
   subsets: ["latin"],
   display: "swap",
+  preload: false,
 });
 
 const title = "Sculptor: decidir juntos sin mostrar los datos";
@@ -49,7 +67,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     // suppressHydrationWarning: THEME_SCRIPT pone data-theme en <html> antes de que React hidrate.
-    <html lang="es-CL" className={`${instrument.variable} ${jetbrains.variable} h-full`} suppressHydrationWarning>
+    <html lang="es-CL" className={`${manrope.variable} ${instrument.variable} ${jetbrains.variable} h-full`} suppressHydrationWarning>
       <head>
         {/* Tema antes del primer pintado: sin destello blanco en modo oscuro (src/components/ui/theme.ts). */}
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />

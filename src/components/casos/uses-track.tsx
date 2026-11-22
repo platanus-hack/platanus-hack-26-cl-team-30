@@ -7,6 +7,7 @@
 // o con prefers-reduced-motion, es una fila que se desliza con el dedo.
 
 import Link from "next/link";
+import { HoverPrefetchLink } from "@/components/ui/hover-prefetch-link";
 import { useRef } from "react";
 import { MOTION_OK, gsap, useGSAP } from "@/components/landing/gsap";
 import type { CaseUse } from "./types";
@@ -92,9 +93,9 @@ export function UsesTrack({ uses }: { uses: CaseUse[] }) {
           <li className="flex w-[300px] shrink-0 snap-start flex-col justify-center gap-6 md:w-[400px]">
             <p className="text-[2rem] leading-[1.05] font-extrabold tracking-[-0.035em] md:text-[2.6rem]">¿Y en tu organización?</p>
             <p className="cs-body max-w-[22rem] text-muted-foreground">Sirve para cualquiera que deba decidir con otra sin mostrar sus datos.</p>
-            <Link href="/" className="cs-body inline-flex min-h-11 w-fit items-center font-semibold underline decoration-border underline-offset-4 hover:decoration-brand">
+            <HoverPrefetchLink href="/" className="cs-body inline-flex min-h-11 w-fit items-center font-semibold underline decoration-border underline-offset-4 hover:decoration-brand">
               Qué es Sculptor
-            </Link>
+            </HoverPrefetchLink>
           </li>
         </ul>
       </div>

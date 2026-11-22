@@ -68,7 +68,7 @@ const styles = `
 .sc-logo[data-layout="inline"] { flex-direction: row; gap: .4em; }
 .sc-logo svg { overflow: visible; display: block; }
 .sc-px { transform-box: fill-box; transform-origin: center; }
-.sc-word { font-family: "Manrope Variable", Manrope, system-ui, sans-serif; font-weight: 800; letter-spacing: -.04em; color: inherit; }
+.sc-word { font-family: var(--font-manrope), "Manrope Variable", Manrope, system-ui, sans-serif; font-weight: 800; letter-spacing: -.04em; color: inherit; }
 
 .sc-logo[data-play="true"] .sc-px {
   animation: sc-px .9s cubic-bezier(.16,1,.3,1) both;

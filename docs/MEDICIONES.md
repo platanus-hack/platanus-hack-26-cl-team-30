@@ -156,6 +156,39 @@ Además de las pruebas automáticas (que reemplazan a Kapso y ElevenLabs por dob
 
 **No probado en vivo:** el botón «Recibir resumen por WhatsApp» (wa.me con el código de la sala) y el acta en nota de voz después de ese botón; las notas de voz con la voz «Fer» después del cambio; la conversación con el asistente de voz desde el navegador; la llamada telefónica (necesita un número de Twilio vinculado en ElevenLabs, que no tenemos).
 
+## Rendimiento de carga con Lighthouse (rama `rendimiento`)
+
+- **Qué:** `scripts/lighthouse.mjs`, Lighthouse 12, solo la categoría de rendimiento. Cuatro páginas: la portada (`/`), un caso (`/casos/hospitales`), la pantalla grande (`/demo`, que abre una sala nueva) y el celular de una sala recién creada (`/room/CÓDIGO`). Móvil con el perfil por defecto (4G lento y CPU 4 veces más lenta, simulados) y escritorio (`--preset=desktop`). Tres corridas por combinación; cada cifra es la mediana.
+- **Cómo se comparó:** con `--comparar`, el build de `main` (`115d71d`, ya con las imágenes en WebP) y el de la rama `rendimiento` corrieron a la vez con `next start` en dos puertos, medidos de forma intercalada, corrida por corrida. Así los dos sufren la misma carga de la máquina. Una primera medición del antes y el después hecha con 40 minutos de diferencia mostraba el TBT del celular subiendo de 18 a 242 ms. Pero la máquina tenía carga 19 por otros procesos, y Lighthouse calcula el TBT con la duración observada de las tareas. Intercalados, los dos builds dan lo mismo.
+- **Dónde:** notebook M4 (macOS), Chrome sin pantalla, servidor y Lighthouse en la misma máquina, sin red de por medio. No mide el deploy en Render.
+- **Cuándo:** 22 de noviembre de 2026, 02:35 a 03:00.
+
+| Página | Modo | Puntaje | FCP | LCP | TBT | CLS | Peso total | JS | Tipografías | Imágenes | Peticiones |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `/` antes | Móvil | 62 | 1,57 s | 3,81 s | 1442 ms | 0,000 | 657 KB | 228 KB | 192 KB | 0 KB | 27 |
+| `/` después | Móvil | 65 | 1,24 s | 3,60 s | 1403 ms | 0,000 | 485 KB | 228 KB | 192 KB | 0 KB | 26 |
+| `/` antes | Escritorio | 80 | 0,56 s | 1,15 s | 364 ms | 0,000 | 657 KB | 228 KB | 192 KB | 0 KB | 27 |
+| `/` después | Escritorio | 94 | 0,30 s | 0,83 s | 192 ms | 0,000 | 485 KB | 228 KB | 192 KB | 0 KB | 26 |
+| `/casos/hospitales` antes | Móvil | 90 | 1,36 s | 3,60 s | 8 ms | 0,001 | 746 KB | 307 KB | 183 KB | 192 KB | 42 |
+| `/casos/hospitales` después | Móvil | 92 | 1,36 s | 3,37 s | 11 ms | 0,000 | 512 KB | 201 KB | 64 KB | 192 KB | 28 |
+| `/casos/hospitales` antes | Escritorio | 100 | 0,33 s | 0,74 s | 0 ms | 0,002 | 658 KB | 307 KB | 183 KB | 104 KB | 39 |
+| `/casos/hospitales` después | Escritorio | 100 | 0,33 s | 0,66 s | 0 ms | 0,000 | 424 KB | 201 KB | 64 KB | 104 KB | 25 |
+| `/demo` antes | Móvil | 87 | 1,21 s | 4,06 s | 11 ms | 0,000 | 452 KB | 214 KB | 183 KB | 0 KB | 27 |
+| `/demo` después | Móvil | 95 | 1,06 s | 2,96 s | 7 ms | 0,000 | 291 KB | 214 KB | 25 KB | 0 KB | 20 |
+| `/demo` antes | Escritorio | 99 | 0,34 s | 0,94 s | 0 ms | 0,000 | 530 KB | 283 KB | 183 KB | 0 KB | 32 |
+| `/demo` después | Escritorio | 100 | 0,29 s | 0,67 s | 0 ms | 0,000 | 334 KB | 248 KB | 25 KB | 0 KB | 25 |
+| `/room/CÓDIGO` antes | Móvil | 91 | 1,21 s | 3,48 s | 16 ms | 0,001 | 387 KB | 221 KB | 95 KB | 0 KB | 22 |
+| `/room/CÓDIGO` después | Móvil | 95 | 0,91 s | 2,87 s | 22 ms | 0,001 | 269 KB | 187 KB | 25 KB | 0 KB | 18 |
+| `/room/CÓDIGO` antes | Escritorio | 100 | 0,30 s | 0,75 s | 0 ms | 0,000 | 381 KB | 221 KB | 95 KB | 0 KB | 22 |
+| `/room/CÓDIGO` después | Escritorio | 100 | 0,25 s | 0,62 s | 0 ms | 0,000 | 276 KB | 187 KB | 25 KB | 0 KB | 18 |
+
+Las columnas de JS, tipografías e imágenes son bytes transferidos (comprimidos) según Lighthouse; incluyen lo que se baja por prefetch durante la medición. Por eso el JS de los casos baja de 307 a 201 KB aunque su propio código casi no cambió: ya no baja el de la pantalla grande. Lo que no cambió no es mérito de esta rama: la portada sigue bajando las cuatro tipografías porque las usa todas arriba.
+
+- **TBT de la portada en móvil:** sigue alto (unos 1,4 s; el valor depende mucho de la carga de la máquina). Un perfil de CPU con 4× de lentitud lo reparte entre la animación de la intro (estilos y diseño de las celdas del logo) y unos 250 ms de llamadas de dibujo del fondo WebGL (`atmosphere.tsx`). En Chrome sin pantalla, WebGL se dibuja por software en la CPU; en un teléfono lo hace la GPU, así que esa parte es menor en un teléfono real (no medido). Bajarlo más exige tocar el diseño (menos estrellas, menos resolución o una intro más corta).
+- **CLS de la portada:** 0,0082 con red 4G y CPU 4× simuladas en Playwright, igual en `main` y en la rama (dos desplazamientos chicos al llegar Archivo y JetBrains Mono). Una versión intermedia de la rama, sin precargar JetBrains Mono ni Instrument Serif en la portada, subía el CLS a 0,051; por eso esas dos se precargan en la portada y en `/presentacion`.
+- **Mismo diseño:** capturas de 390 px con movimiento reducido, `main` contra la rama. `/casos/hospitales` (página completa) y `/centro` quedaron idénticas byte a byte, en claro y en oscuro. La portada completa, también, sin el lienzo de estrellas, que se genera al azar en cada carga (`main` contra `main` difiere igual si se deja).
+- **La demo sigue igual:** `scripts/novato-demo.mjs` contra el build de la rama pasó con `--rapido` (5 personas, acta en 33,5 s) y con `--iniciar` (2 personas y 3 bots, acta en 76,5 s), sin fugas ni atascos.
+
 ## Lo que no está medido
 
 - Cuadros por segundo de la pantalla grande en un equipo distinto del notebook M4 (por ejemplo, el que se conecte al proyector).
@@ -163,4 +196,5 @@ Además de las pruebas automáticas (que reemplazan a Kapso y ElevenLabs por dob
 - Latencia del modelo local en el DGX Spark.
 - Latencia de los turnos de agente con Claude.
 - Carga en el deploy.
+- Rendimiento de carga del deploy en Render y en teléfonos reales: lo de arriba es Lighthouse local con red y CPU simuladas.
 - Ensayos con personas y teléfonos reales en la red de la sede.
