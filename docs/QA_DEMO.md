@@ -23,9 +23,11 @@ Sale con 0 si pasó, 1 si falló y 2 si no pudo empezar.
 ## Uso
 
 ```
-node scripts/novato-demo.mjs <url> <carpeta> [--rapido] [--comite aceptar|rechazar]
+node scripts/novato-demo.mjs <url> <carpeta> [--rapido] [--iniciar] [--comite aceptar|rechazar]
      [--atasco 60] [--limite 900] [--pausa-entrada 1500] [--lectura 2000] [--headed]
 ```
+
+Con `--iniciar` entran solo 2 personas y el narrador toca «Iniciar» en la pantalla grande: los 3 asientos libres los toma un bot y el Comité lo decide el plan B. La prueba revisa que el contador diga «2/5 personas» antes y «2/5 personas · 3 automáticos» después, y guarda `iniciar-1-antes.png` e `iniciar-2-despues.png`. El 22 de noviembre de 2026, contra un build local de la rama `demo-iniciar`, pasaron `--iniciar` (acta a los 83,3 s, 1 toque del narrador y 1 por persona) y `--rapido` (acta a los 52 s), sin fugas ni atascos.
 
 Contra un build local: `npm run build`, después `npx next start -p <puerto>` y la prueba contra `http://localhost:<puerto>`. Si se rehace el build con el servidor andando, la pantalla grande no abre la sala (el script lo avisa): hay que reiniciar el servidor.
 

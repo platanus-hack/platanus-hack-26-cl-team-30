@@ -13,8 +13,17 @@ export const negotiationStyles = `
 .nx-ng-code { font-size: clamp(88px, 15.5vw, 236px); font-weight: 850; line-height: .92; letter-spacing: .05em; color: var(--nx-ng-accent);
   font-variant-numeric: tabular-nums; margin-block: 6px 10px; white-space: nowrap; }
 .nx-ng-code[data-small="true"] { font-size: clamp(40px, 4.4vw, 68px); margin: 0; }
-.nx-ng-count { font-size: clamp(20px, 1.9vw, 30px); font-weight: 700; color: var(--gd-muted); }
-.nx-ng-count b { color: var(--gd-ink); font-weight: 850; font-variant-numeric: tabular-nums; }
+.nx-ng-count { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 16px; font-size: clamp(22px, 2.1vw, 34px); font-weight: 720; color: var(--gd-muted); }
+.nx-ng-tally { font-size: clamp(56px, 6.4vw, 104px); line-height: 1; color: var(--gd-ink); font-weight: 850; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.nx-ng-count[data-compact="true"] { margin-block-start: 10px; font-size: clamp(18px, 1.5vw, 24px); }
+.nx-ng-count[data-compact="true"] .nx-ng-tally { font-size: clamp(32px, 3vw, 48px); }
+.nx-ng-bots { white-space: nowrap; }
+.nx-ng-bots svg { display: inline; inline-size: .9em; block-size: .9em; vertical-align: -.1em; }
+.nx-ng-start { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 22px; margin-block-start: clamp(16px, 2vh, 28px); }
+.gd-primary.nx-ng-start-btn { min-block-size: clamp(64px, 7.5vh, 88px); padding-inline: clamp(30px, 3vw, 48px); border-radius: 999px; font-size: clamp(26px, 2.4vw, 38px); font-weight: 850; gap: 14px; }
+.gd-primary.nx-ng-start-btn svg { width: 1em; height: 1em; }
+.nx-ng-start-btn:disabled { opacity: .7; cursor: progress; }
+.nx-ng-start-note { font-size: clamp(16px, 1.3vw, 21px); font-weight: 650; color: var(--gd-muted); max-inline-size: 22em; }
 .nx-ng-qr { flex-direction: column; align-items: center; gap: 14px; padding: clamp(16px, 1.6vw, 24px); }
 .nx-ng-qr figcaption { max-inline-size: none; font-size: clamp(20px, 1.7vw, 28px); text-align: center; }
 

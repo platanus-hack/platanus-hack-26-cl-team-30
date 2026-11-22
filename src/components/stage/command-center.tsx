@@ -199,7 +199,7 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
               <div className="gd-content" data-view={view}>
                 {view === "mando" &&
                   (negotiation ? (
-                    <NegotiationView room={room} negotiation={negotiation} theme={theme} baseUrl={baseUrl} onControl={control} onNewDemo={newDemo} />
+                    <NegotiationView room={room} negotiation={negotiation} theme={theme} baseUrl={baseUrl} onControl={control} onNewDemo={newDemo} onStart={demo ? () => startDemo(room.roomId) : undefined} />
                   ) : joining ? (
                     <JoinView room={room} seats={allSeats} theme={theme} baseUrl={baseUrl} />
                   ) : (
@@ -250,6 +250,23 @@ async function narratorControl(roomId: string, host: HostCredentials, action: Na
       headers: { "Content-Type": "application/json", "x-host-token": host.hostToken },
       body: JSON.stringify({ action }),
     });
+  } catch {
+    // Sin red: el indicador de conexión de arriba ya lo dice.
+  }
+}
+
+/**
+ * «Iniciar» de la demo: POST /api/rooms/:id/start, sin token de anfitrión. El
+ * servidor llena con bots los asientos libres y arranca la negociación; lo acepta
+ * solo en el paso Unirse. El cambio llega por el SSE; si lo rechaza, se avisa.
+ */
+async function startDemo(roomId: string): Promise<void> {
+  try {
+    const res = await fetch(`/api/rooms/${encodeURIComponent(roomId)}/start`, { method: "POST" });
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      window.alert(data?.error ?? "No se pudo iniciar la demo.");
+    }
   } catch {
     // Sin red: el indicador de conexión de arriba ya lo dice.
   }
