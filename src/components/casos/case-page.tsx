@@ -165,8 +165,12 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
         <section className="cs-section border-t border-border" aria-labelledby="mas-titulo">
           <div className="wrap max-w-5xl">
             <h2 id="mas-titulo" className="cs-h2 max-w-[16ch]">
-              Sirve para cualquier recurso escaso.
+              ¿Dónde más pasa esto?
             </h2>
+            {/* El patrón, para que cada persona reconozca su propio caso: «para cualquier recurso» no orienta. */}
+            <p className="cs-lede mt-6 max-w-[34rem] text-muted-foreground">
+              Cada vez que dos equipos piden lo mismo y ninguno puede mostrar sus números.
+            </p>
             <ul className="mt-12 divide-y divide-border border-y border-border">
               {otherUses(slug).map((item) => (
                 <li key={item.title}>

@@ -65,10 +65,10 @@ export const CASE_ORDER: CaseSlug[] = ["hospitales", "construccion", "logistica"
 
 /** Usos del mismo esqueleto. Los que tienen página llevan su enlace; presupuestos todavía no. */
 const USES: Record<CaseSlug | "presupuestos", CaseUse> = {
-  hospitales: { icon: BedDouble, title: "Salud", detail: "Dos hospitales, una cama UCI.", href: "/casos/hospitales" },
-  construccion: { icon: Construction, title: "Construcción", detail: "Dos obras, una grúa compartida.", href: "/casos/construccion" },
-  logistica: { icon: Truck, title: "Logística", detail: "Dos distribuidoras, un camión refrigerado.", href: "/casos/logistica" },
-  presupuestos: { icon: Wallet, title: "Presupuestos", detail: "Dos áreas, lo que queda del trimestre." },
+  hospitales: { icon: BedDouble, title: "Salud", detail: "¿A quién va la última cama UCI?", href: "/casos/hospitales" },
+  construccion: { icon: Construction, title: "Construcción", detail: "¿Qué obra usa la grúa el jueves?", href: "/casos/construccion" },
+  logistica: { icon: Truck, title: "Logística", detail: "¿Qué carga sube primero al camión frío?", href: "/casos/logistica" },
+  presupuestos: { icon: Wallet, title: "Presupuestos", detail: "¿Qué área se queda con lo que sobra del trimestre?" },
 };
 
 /** «Sculptor sirve para más»: los otros dos casos y presupuestos. */
