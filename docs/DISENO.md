@@ -183,7 +183,7 @@ Reglas de texto (feedback del mentor: «bombardean con texto todo»): título de
 
 | Qué | Dónde |
 |---|---|
-| Portada (landing) | `src/app/page.tsx` y `src/components/landing/` |
+| Portada (landing) | `src/app/page.tsx` y `src/components/landing/` (el dibujo del héroe, «el puente», en `bridge.tsx`; sus textos en `content.ts`) |
 | Casos de uso (salud, construcción, logística) | `src/app/casos/<rubro>/page.tsx` y `src/components/casos/` (texto en `content.ts`, cifras, nombres y acta del motor en `data.ts`; piezas adaptadas de 21st.dev sin dependencias: `kinetic-hero`, `stage-scroll`, `steps-scroll`, `phone-trio`, `ticker`, `encrypted-text`, `acta-feed`, `seen-bento`; capturas reales en `public/casos/`) |
 | Piezas de marca para la landing general | `src/components/brand/` (`dither-background`, `logo-particles`, `multiplayer-cursors`), a la vista en `/marca` |
 | Pantalla grande | `src/app/stage/[roomId]/stage-client.tsx` y `src/components/stage/` (la negociación en `negotiation-view.tsx`, sus estilos en `negotiation-styles.ts`) |

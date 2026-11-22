@@ -1,5 +1,22 @@
 // Textos y listas editables de la landing. Cambia el texto aquí, no en los componentes.
 
+/**
+ * El héroe de la portada: un titular en dos voces (la segunda va en serif itálica)
+ * y las escenas del dibujo. Siempre dos organizaciones, sus datos reservados (solo
+ * el nombre del dato, nunca el valor) y una sola cosa que escasea.
+ */
+export const HERO = {
+  title: "Comparte la decisión,",
+  accent: "no tus datos.",
+} as const;
+
+export const HERO_SCENES = [
+  { a: "Clínica Andes", b: "Hospital Rural", resource: "1 cama UCI", icon: "bed", tag: "El ejemplo", data: ["Costo", "Ocupación", "Pacientes"] },
+  { a: "Constructora Norte", b: "Constructora Sur", resource: "1 grúa torre", icon: "construction", data: ["Atraso", "Multas", "Margen"] },
+  { a: "Distribuidora Centro", b: "Distribuidora Costa", resource: "1 camión refrigerado", icon: "truck", data: ["Margen", "Clientes", "Rutas"] },
+  { a: "Ventas", b: "Operaciones", resource: "1 presupuesto", icon: "wallet", data: ["Sueldos", "Contratos", "Metas"] },
+] as const;
+
 export const TEAM = [
   { name: "Ramón Molina", short: "Ramón", github: "rm004607" },
   { name: "Nahum Mateo Díaz López", short: "Nahum", github: "nadilopoff" },
