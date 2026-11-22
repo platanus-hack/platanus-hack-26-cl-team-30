@@ -179,11 +179,13 @@ Cada celda es el número de tema de este documento. Ejemplo: la pregunta 4 del j
 
 > «La lámina 3 dice "Un caso real · TopSol… pudimos organizar todo". Su arquitectura dice que no validaron con usuarios. ¿Cuál es cierta?»
 
+**Actualizado el 22 de noviembre:** la lámina de TopSol se sacó de la presentación (commit `c6578c7`). El bot solo llega a esta pregunta si lee el historial de git o si alguien lo menciona; la respuesta sigue valiendo.
+
 **Respuesta (20 s):** Las dos, cada una a su escala. No validamos el caso de salud ni la decisión entre organizaciones. Lo de TopSol es el testimonio de una empresa que probó el sistema para priorizar su presupuesto anual; los audios no están en el repo y las salas no guardan historial. No lo presentamos como validación del producto, sino como una señal de que el problema existe fuera de salud.
 
-**Respaldo:** `src/components/presentacion/deck.tsx` (lámina 3). `.gitignore` (`/public/presentacion/validacion/`). `docs/ARQUITECTURA.md`, «Qué es real y qué es simulado» (fila «Validación con usuarios»).
+**Respaldo:** commit `c6578c7` (se saca la lámina). `.gitignore` (`/public/presentacion/validacion/`). `docs/ARQUITECTURA.md`, «Qué es real y qué es simulado» (fila «Validación con usuarios»).
 
-**Cómo decirlo:** si el bot nota que la barra de la portada dice «Ejemplo real» y enlaza a `/casos/logistica` (datos simulados, `src/components/sculptor/chrome.tsx`), admitir que la etiqueta está mal.
+**Cómo decirlo:** la barra de la portada decía «Ejemplo real» y enlazaba a `/casos/logistica`, que usa datos simulados. Se corrigió el 22 de noviembre a «Ver un caso» (`src/components/sculptor/chrome.tsx`). Si el bot lo encuentra en el historial, admitir que la etiqueta estaba mal.
 
 ## F. Robustez, abuso y acta
 
@@ -243,4 +245,4 @@ Solo se tocaron documentos; el código (`src/`) y `CLAUDE.md` quedan iguales.
 - `docs/PENDIENTES.md`: i4 resuelto (142 de 142), «Nexo» resuelto y una sección nueva con lo que encontró este ensayo.
 - `project-description.md`, en un commit aparte: describía la demo vieja de 3 personas y decía «toda decisión la dispara una persona» y «el modelo nunca decide quién puede ver qué».
 
-**Lo que sigue diciendo más de lo que hace el código** (fuera de `docs/`, no se tocó): la portada (`src/components/sculptor/content.ts`: «Ningún agente cambia el estado», «500 conexiones», «97/97»; `chrome.tsx`: «Ejemplo real»), el texto de la guía (`src/integrations/guide-status.ts` y `GUIDE_PROMPT`) y `CLAUDE.md` («permisos… sin modelo»).
+**Corregido después, el 22 de noviembre:** la portada (`src/components/sculptor/content.ts`) ya no dice «Ningún agente cambia el estado» ni «en el mismo segundo», y la cifra del recorrido pasó de «97/97» a «142/142» (`docs/MEDICIONES.md`); «500 conexiones» sigue, con «en un notebook» al lado. `chrome.tsx` dice «Ver un caso» en vez de «Ejemplo real». El texto de la guía (`src/integrations/guide-status.ts` y `GUIDE_PROMPT`) y `CLAUDE.md` («permisos… sin modelo») se corrigen en la rama `guia-al-dia`.

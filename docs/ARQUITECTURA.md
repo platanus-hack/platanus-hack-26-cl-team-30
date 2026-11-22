@@ -355,7 +355,7 @@ Esta tabla es la respuesta honesta a "¿esto funciona de verdad?".
 | "Ningún dato sale a la nube" | Cierto solo en modo local | **El deploy público usa Claude:** los datos sí salen, y la telemetría lo muestra |
 | Datos del caso | | **Simulados.** Pacientes, obras, cargas, costos, puntajes y plazos vienen de `src/lib/genome/seeds.ts`. No son datos reales ni estadísticas. Con esas semillas el ganador de cada escenario está fijado de antemano: las posturas y el debate no cambian el puntaje |
 | Organizaciones | | **Ficticias.** No hay integración con ningún hospital, constructora, distribuidora ni sistema externo |
-| Validación con usuarios | | **No se validó** el flujo con personas del área de salud ni entre organizaciones. La lámina 3 de la presentación usa dos audios de una empresa (TopSol) que probó el sistema para priorizar su presupuesto anual: es un testimonio de una sola organización, los audios no están en el repo (`.gitignore`) y no hay registro de qué usó |
+| Validación con usuarios | | **No se validó** el flujo con personas del área de salud ni entre organizaciones. Una empresa (TopSol) probó el sistema para priorizar su presupuesto anual, pero es el testimonio de una sola organización: los audios no están en el repo (`.gitignore`), no hay registro de qué usó y la lámina que lo mostraba se sacó de la presentación el 22 de noviembre |
 
 ## Límites conocidos
 

@@ -1,5 +1,7 @@
 # Guion de la demo en vivo (ronda 20)
 
+> **Para el domingo 22 vale `docs/DEMO_DIA.md`** (3:00 exactos, con la presentación `/presentacion`). Este guion de 3:30 queda como referencia de la demo y de sus cifras.
+
 Pitch de 3:30 con una demo en vivo de unos 90 s: 5 personas del público, cada una con su agente, deciden quién se queda con la última cama UCI. El narrador guía en voz alta y llama a cada persona por su **rol** («Urgencias de la Clínica», «Comité»), nunca por número. Las personas no leen: escuchan y aprietan. La versión para imprimir está al final.
 
 ## Lo que hay que saber antes de subir
@@ -21,7 +23,7 @@ Pitch de 3:30 con una demo en vivo de unos 90 s: 5 personas del público, cada u
 | 0:30–1:05 | Debate | «Ahora negocian los agentes. Cada uno defiende a su organización, pero ningún costo sale de su celular.» | Nadie | Un mensaje cada 7 s, con «escribiendo…». La Clínica habla desde la izquierda y el Hospital Rural desde la derecha. |
 | 1:05–1:15 | Propuesta | «La propuesta no la escribe la IA: la calcula la regla. 0,52 contra 0,53, casi empate. Gana quien tiene más necesidad sin cubrir: el Hospital Rural.» | Nadie | «Hospital Rural recibiría el recurso. La calculó el código, no un agente.» |
 | 1:15–1:25 | Comité | «Comité: ¿acepta o rechaza? Su razón ya está escrita.» | Comité: **Aceptar** o **Rechazar** | «Comité: ¿aceptas o rechazas?», con la cuenta regresiva de 20 s. |
-| 1:25–1:30 | Acta | «Listo. Todas las pantallas cambiaron en el mismo segundo, y quedó el acta. Comité: toque "Recibir resumen por WhatsApp".» | Comité: **WhatsApp** | «Listo: Hospital Rural recibe el recurso» y la razón del Comité. |
+| 1:25–1:30 | Acta | «Listo. Todas las pantallas cambiaron a la vez, y quedó el acta. Comité: toque "Recibir resumen por WhatsApp".» | Comité: **WhatsApp** | «Listo: Hospital Rural recibe el recurso» y la razón del Comité. |
 
 **Si el Comité rechaza:** la cama va a la Clínica en ese mismo toque. El narrador dice: «El Comité rechazó la propuesta: la cama va a la Clínica, y su razón queda en el acta». No se agrega tiempo.
 

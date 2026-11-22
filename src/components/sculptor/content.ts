@@ -28,7 +28,7 @@ export const PRINCIPLES = [
   },
   {
     title: "Nada se mueve sin una persona.",
-    body: "Ningún agente cambia el estado ni sella por su cuenta. Cada cambio nace de una acción humana y llega a todas las pantallas en el mismo segundo.",
+    body: "Ningún agente firma, sella ni veta. Las decisiones son de personas y llegan a todas las pantallas a la vez, sin recargar. Lo que el sistema hace solo queda marcado como automático.",
   },
   {
     title: "El secreto no viaja por la red.",
@@ -85,7 +85,7 @@ export const MEASURED = {
   title: "Cifras con cómo y dónde.",
   items: [
     { value: "500", label: "conexiones en vivo a la vez", detail: "p95 de 51,5 ms. En un notebook, sin red de por medio." },
-    { value: "97/97", label: "pasos del recorrido completo", detail: "Seis participantes contra el deploy en Render, sin modelo. Versión del 21 de noviembre." },
+    { value: "142/142", label: "pasos del recorrido completo", detail: "Recorrido por HTTP contra el deploy en Render. Versión del 22 de noviembre." },
     { value: "60", label: "cuadros por segundo", detail: "Pantalla grande con la galaxia, Apple M4 con GPU." },
   ],
   source: "Fuente: docs/MEDICIONES.md. Si una cifra no está ahí, no está medida.",

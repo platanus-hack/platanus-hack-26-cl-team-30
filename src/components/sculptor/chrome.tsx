@@ -19,7 +19,7 @@ const LINKS = [
 ];
 
 /** Un caso completo, jugado en la demo: sale de la landing hacia su página. */
-const EXAMPLE_LINK = { href: "/casos/logistica", label: "Ejemplo real" };
+const EXAMPLE_LINK = { href: "/casos/logistica", label: "Ver un caso" };
 const LINK_CLASS = "rounded-full px-4 py-2 text-sm font-semibold text-(--piedra) transition-colors hover:text-(--marmol)";
 
 export function Nav() {

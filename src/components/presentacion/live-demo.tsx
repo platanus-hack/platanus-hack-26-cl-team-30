@@ -16,7 +16,7 @@
 //
 // De dónde salen los datos de la galaxia: el flujo SSE de la sala en la vista «stage»
 // (sin datos reservados). No hay base de datos: las salas viven en la memoria del
-// servidor. Cada mensaje actualiza las dos vistas en el mismo segundo.
+// servidor. Cada mensaje actualiza las dos vistas a la vez.
 //
 // Teclas en esta lámina: P pausa o reanuda el debate, S adelanta un paso, B abre una
 // sala nueva (ronda nueva). La lámina no se desmonta al cambiar de lámina: si la
