@@ -109,6 +109,23 @@ Recorrido con 5 celulares (Playwright, 390 × 844, claro y oscuro) contra `next 
 
 No está medido cuánto tarda Claude en escribir cada frase ni cuántas veces cae al respaldo en el deploy.
 
+## Peso de las imágenes de `public/` (JPG y PNG a WebP)
+
+- **Qué:** bytes en disco de las 26 imágenes convertidas, antes y después. Fotos y capturas con `cwebp -q 80 -m 6 -metadata none`; logos con `-q 90 -alpha_q 100`. Ninguna pasaba de 2000 px de ancho, así que no se redujo ninguna.
+- **Dónde:** en un notebook (macOS), rama `imagenes-webp`, con `stat` sobre cada archivo.
+- **Cuándo:** 22 de noviembre de 2026, madrugada.
+
+| Grupo | Archivos | Antes | Después | Baja |
+| --- | --- | --- | --- | --- |
+| Capturas de `public/casos/` | 21 | 2.701 KB | 1.217 KB | 55 % |
+| Fotos de `public/sculptor/equipo/` | 3 | 1.187 KB | 859 KB | 28 % |
+| Logos de `public/brand/` | 2 | 145 KB | 28 KB | 81 % |
+| **Total** | **26** | **4.033 KB** | **2.104 KB** | **48 %** |
+
+1 KB = 1.000 bytes.
+
+Es el peso del archivo de origen. Las páginas piden estas imágenes por `next/image`, que las vuelve a comprimir al ancho de cada pantalla; no se midió el tiempo de carga en el deploy.
+
 ## Pruebas automáticas
 
 - **Qué:** `npm test` (Vitest, sin modelo).

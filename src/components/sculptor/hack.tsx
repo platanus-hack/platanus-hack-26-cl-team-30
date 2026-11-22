@@ -79,7 +79,7 @@ export function Hack() {
             <div data-hang className="mx-auto w-full max-w-[340px]">
             <figure data-photo className="rounded-2xl bg-(--obsidiana) p-3 pb-4 shadow-[0_30px_60px_-20px_rgba(12,14,13,0.55)]">
               <Image
-                src="/sculptor/equipo/equipo-vertical-2.jpg"
+                src="/sculptor/equipo/equipo-vertical-2.webp"
                 alt="El equipo 30 frente al cartel de Platanus Hack 26 en Santiago."
                 width={1125}
                 height={2000}

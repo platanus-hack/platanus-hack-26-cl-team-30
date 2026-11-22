@@ -481,7 +481,7 @@ function Equipo() {
     <div className="grid items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">
       <div data-in className="overflow-hidden rounded-[28px] border border-(--basalto)">
         <Image
-          src="/sculptor/equipo/equipo-horizontal.jpg"
+          src="/sculptor/equipo/equipo-horizontal.webp"
           alt="El equipo 30 frente al cartel de Platanus Hack 26."
           width={2000}
           height={1125}
