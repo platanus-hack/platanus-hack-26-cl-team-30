@@ -24,20 +24,20 @@ export const SLIDES: Slide[] = [
   {
     id: "problema",
     time: "0:07–0:27",
-    say: "Una organización no es una máquina: es un choque de fuerzas. Un área contra otra, un hospital contra otro. Cuando necesitan el mismo recurso, no pueden decidir juntas: cada una tiene datos que no puede mostrarle a la otra. Y hoy metemos agentes de IA en medio de esa tensión. Si cada agente tira para su lado, no obtenemos inteligencia: obtenemos caos más rápido. En un modelo simple, diez pasos con 92 % de acierto cada uno dan 43 %.",
-    do: "Sale de docs/DEMO_DIA.md (narrativa, frases 1 y 2) y de pⁿ (docs/DECISIONES.md). Sin estadística externa: si un juez pregunta por el 43 %, es un modelo ilustrativo que calcula el motor.",
+    say: "Una organización no es una máquina: es un choque de fuerzas. Dos hospitales necesitan la misma cama UCI, y ninguno puede mostrarle sus datos al otro: no pueden decidir juntos, y después nadie puede explicar por qué ganó uno. Y hoy metemos agentes de IA en medio. Si cada agente tira para su lado, no obtenemos inteligencia: obtenemos caos más rápido. En un modelo simple, diez pasos con 92 % de acierto cada uno dan 43 %.",
+    do: "Sale de docs/DEMO_DIA.md (narrativa, frases 1 y 2) y de pⁿ (docs/DECISIONES.md). Sin estadística externa: el caso de los dos hospitales es el de la demo (datos simulados) y, si un juez pregunta por el 43 %, es un modelo ilustrativo que calcula el motor.",
   },
   {
     id: "solucion",
-    time: "0:27–0:42",
-    say: "Sculptor sienta a personas y agentes en la misma mesa. Cada persona tiene un agente que la asesora, los agentes negocian a la vista, y la última palabra es de una persona. No se los quiero contar: saquen el celular.",
+    time: "0:27–0:45",
+    say: "Sculptor sienta a personas y agentes en la misma mesa. Cada persona tiene un agente que la asesora, los agentes negocian a la vista, y la última palabra es de una persona. Lo que está en juego es quién recibe la última cama, y queda un acta que explica por qué. Saquen el celular.",
     do: "Al terminar la frase Ramón toca «Ahora ustedes» (o →): pasa a la lámina en vivo, con la pantalla grande y su QR a la izquierda. Sebastián: «¡Ustedes cinco!».",
   },
   {
     id: "demo",
-    time: "0:42–2:40",
+    time: "0:45–2:40",
     say: "Unirse: «Escaneen de a uno. La primera es Urgencias de la Clínica; la segunda, su Administración; después Turno y Administración del Hospital Rural. La quinta es el Comité». Posturas: «Su agente les escribió un consejo privado. Elijan su postura: un toque». Debate: «Ahora negocian los agentes. Ningún costo sale de su lado: el servidor ni siquiera se lo envía al otro». Propuesta: «Los agentes conversan, el código gobierna. Casi empate, 0,52 contra 0,53: desempata la necesidad sin cubrir». Comité: «La última palabra es humana: ¿acepta o rechaza? Su razón ya está escrita». Acta: «Todas las pantallas cambiaron a la vez, sin recargar, y quedó un acta con la razón».",
-    do: "Izquierda: la pantalla grande real (código y QR). Derecha: la galaxia, que enciende dos nodos por persona conectada, converge en el debate y, al sellarse el acta, se aleja hasta NGC 253. Para usar espacio (pausa) y → (adelantar) en la pantalla grande, primero un clic sobre ella; para volver a las láminas, un clic en la barra de arriba. Plan B: si a los 15 s falta alguien, Sebastián entra con datos móviles; si alguien no actúa en 20 s, juega el piloto (queda marcado como automático).",
+    do: "Izquierda: la pantalla grande real (código y QR). Derecha: la galaxia, que enciende dos nodos por persona conectada, converge en el debate y, al sellarse el acta, se aleja hasta NGC 253. `P` pausa o reanuda el debate, `S` adelanta un paso y `B` abre una sala nueva. Plan B: si a los 15 s falta alguien, Sebastián entra con datos móviles; si alguien no actúa en 20 s, juega el piloto (queda marcado como automático).",
   },
   {
     id: "desarrollo",

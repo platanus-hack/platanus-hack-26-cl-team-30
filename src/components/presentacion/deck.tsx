@@ -281,12 +281,12 @@ function Problema({ autonomous, steps, accuracy }: { autonomous: number; steps: 
           Una organización es un <span className="font-serif font-normal text-(--eucalipto) italic [font-stretch:100%]">choque de fuerzas.</span>
         </h2>
         <p data-in className="mt-8 max-w-3xl text-[clamp(1.5rem,2.6vw,2.8rem)] leading-[1.15] text-(--marmol)">
-          Un área contra otra. Un hospital contra otro. Cuando necesitan lo mismo,{" "}
-          <span className="text-(--senal)">no pueden decidir juntas:</span> cada una tiene datos que no puede mostrar.
+          Dos hospitales necesitan la misma cama UCI. Ninguno puede mostrarle sus datos al otro:{" "}
+          <span className="text-(--senal)">no pueden decidir juntos,</span> y después nadie explica por qué ganó uno.
         </p>
       </div>
       <div data-in className="rounded-[32px] border border-(--basalto) bg-(--grafito)/70 p-8 backdrop-blur-md">
-        <p className="font-mono text-sm tracking-[0.14em] text-(--piedra) uppercase">Agentes que tiran cada uno para su lado</p>
+        <p className="font-mono text-[clamp(0.95rem,1.2vw,1.25rem)] tracking-[0.14em] text-(--piedra) uppercase">Agentes que tiran cada uno para su lado</p>
         <p className="mt-4 text-[clamp(5rem,10vw,10rem)] leading-none font-extrabold tracking-[-0.05em] text-(--senal) tabular-nums">
           {pct(autonomous)}
         </p>
@@ -295,7 +295,7 @@ function Problema({ autonomous, steps, accuracy }: { autonomous: number; steps: 
           <br />
           <span className="text-(--eucalipto)">No es inteligencia: es caos más rápido.</span>
         </p>
-        <p className="mt-4 font-mono text-xs tracking-[0.12em] text-(--piedra) uppercase">Modelo ilustrativo · pⁿ</p>
+        <p className="mt-4 font-mono text-[clamp(0.9rem,1.1vw,1.15rem)] tracking-[0.12em] text-(--piedra) uppercase">Modelo ilustrativo · pⁿ</p>
       </div>
     </div>
   );
@@ -324,11 +324,15 @@ function Solucion({ onNext }: { onNext: () => void }) {
           </li>
         ))}
       </ol>
+      <p data-in className="mt-10 max-w-4xl text-[clamp(1.4rem,2.3vw,2.4rem)] leading-tight text-(--marmol)">
+        En juego: <span className="text-(--senal)">quién recibe la última cama.</span>{" "}
+        <span className="text-(--piedra)">Y queda un acta que explica por qué.</span>
+      </p>
       <button
         data-in
         type="button"
         onClick={onNext}
-        className="mt-12 inline-flex items-center gap-4 rounded-full bg-(--cincel) px-9 py-5 text-[clamp(1.2rem,1.8vw,1.8rem)] font-extrabold text-(--obsidiana) transition-transform duration-300 ease-out hover:-translate-y-1"
+        className="mt-10 inline-flex items-center gap-4 rounded-full bg-(--cincel) px-9 py-5 text-[clamp(1.2rem,1.8vw,1.8rem)] font-extrabold text-(--obsidiana) transition-transform duration-300 ease-out hover:-translate-y-1"
       >
         Ahora ustedes: saquen el celular <span aria-hidden>→</span>
       </button>

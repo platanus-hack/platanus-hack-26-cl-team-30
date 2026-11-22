@@ -7,9 +7,9 @@ La presentación del domingo es una página de la app: **`/presentacion`**. Sigu
 | # | Lámina | Tramo | Qué se muestra |
 | --- | --- | --- | --- |
 | 1 | Hola | 0:00–0:07 | Nombre, una línea y el equipo |
-| 2 | Problema | 0:07–0:27 | Una organización es un choque de fuerzas; pⁿ de agentes que tiran cada uno para su lado (modelo ilustrativo, calculado por el motor) |
-| 3 | Solución | 0:27–0:42 | «Los agentes conversan. El código gobierna.» y el botón que pasa a la demo |
-| 4 | En vivo | 0:42–2:40 | La pantalla grande real con su QR y, al lado, el planeta 3D sin textos (solo el logo): dos nodos por persona que entra, convergencia en el debate y, con el acta, alejamiento hasta la galaxia. Un clic en el planeta hace un salto a velocidad luz hacia la lámina siguiente |
+| 2 | Problema | 0:07–0:27 | Una organización es un choque de fuerzas: dos hospitales, una cama UCI y datos que no pueden mostrarse; pⁿ de agentes que tiran cada uno para su lado (modelo ilustrativo, calculado por el motor) |
+| 3 | Solución | 0:27–0:45 | «Los agentes conversan. El código gobierna.», lo que está en juego («quién recibe la última cama», con acta) y el botón que pasa a la demo |
+| 4 | En vivo | 0:45–2:40 | La pantalla grande real con su QR y, al lado, el planeta 3D sin textos (solo el logo): dos nodos por persona que entra, convergencia en el debate y, con el acta, alejamiento hasta la galaxia. Un clic en el planeta hace un salto a velocidad luz hacia la lámina siguiente |
 | 5 | Desarrollo | 2:40–2:50 | La landing `/` y el caso de logística `/casos/logistica` lado a lado, bajando solas de corrido |
 | 6 | Cierre | 2:50–3:00 | «SCULPTOR \| Donde el caos aprende a evolucionar» |
 | 7 | Equipo | Preguntas | Foto, nombres y roles (AI Product Strategist, Software Engineer, AI Engineer) sobre un collage de fotos del equipo en movimiento |
