@@ -134,3 +134,8 @@ Lo encontraron tres revisores sin contexto leyendo el código; las respuestas pa
 - **La telemetría informa la configuración, no lo observado,** y no cuenta lo que sale a ElevenLabs ni a Kapso.
 - **El prompt de la guía describe la demo de 3 personas** y `guide-status.ts` dice que la propuesta sale «con el resultado del debate», lo que no es cierto.
 - **Textos fuera de `docs/` que afirman más que el código** (no se tocaron en este ensayo): «Ningún agente cambia el estado» y «Ejemplo real» en la landing (`src/components/sculptor/content.ts`, `chrome.tsx`), «500 conexiones» y «97/97» en la landing, y en `CLAUDE.md` «permisos… sin modelo» (en la mutación los propone el modelo).
+
+## Agregado con «tres jueces escanean a la vez» (22 de noviembre)
+
+- **El escaneo simultáneo está probado contra un build local, no contra Render.** `tests/tres-jueces.test.ts`, `node scripts/e2e.mjs` y `scripts/novato-demo.mjs --iniciar` (3 navegadores a la vez) pasaron en `next start` local. Falta repetirlo con 3 celulares reales contra el deploy, en el wifi de la sede (también por el límite de peticiones por IP).
+- **El botón de WhatsApp del Comité se revisó con capturas a 390 px, pero las pruebas no lo tocan**: abrir wa.me en un celular real y que llegue el acta al decidir sigue dependiendo de Kapso en el deploy (ver i5).

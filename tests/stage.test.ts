@@ -159,10 +159,11 @@ describe("sala de demo: 3 personas", () => {
 // una sala de demo proyectada, para probar la lectura sin motor ni modelo.
 describe("negociación entre agentes en la pantalla grande", () => {
   const LABELS: Record<string, [number, string]> = {
+    // Orden de llegada: los dos casos, el Comité (3) y las dos Administraciones.
     "clinica_andes/role_a": [1, "Clínica · Urgencias"],
-    "clinica_andes/role_b": [2, "Clínica · Administración"],
-    "hospital_rural/role_a": [3, "Hospital Rural · Turno"],
-    "hospital_rural/role_b": [4, "Hospital Rural · Administración"],
+    "hospital_rural/role_a": [2, "Hospital Rural · Turno"],
+    "clinica_andes/role_b": [4, "Clínica · Administración"],
+    "hospital_rural/role_b": [5, "Hospital Rural · Administración"],
   };
   const base = (state: RoomState): ProjectedRoomState => {
     const room = stage({ ...state, demo: true });
@@ -170,7 +171,7 @@ describe("negociación entre agentes en la pantalla grande", () => {
       ...room,
       roomCode: "k7qmp",
       orgs: room.orgs.map((org) => ({ ...org, roles: org.roles.map((role) => ({ ...role, seatOrder: LABELS[`${org.orgId}/${role.id}`]?.[0], seatLabel: LABELS[`${org.orgId}/${role.id}`]?.[1] })) })),
-      scarcity: room.scarcity && { ...room.scarcity, arbiter: { ...room.scarcity.arbiter, seatOrder: 5, seatLabel: "Comité" } },
+      scarcity: room.scarcity && { ...room.scarcity, arbiter: { ...room.scarcity.arbiter, seatOrder: 3, seatLabel: "Comité" } },
     };
   };
   const negotiation = (over: Partial<Negotiation> = {}): Negotiation => ({ phase: "positions", paused: false, nextAt: null, stepMs: 7000, typing: null, positions: [], messages: [], ...over });
@@ -185,7 +186,7 @@ describe("negociación entre agentes en la pantalla grande", () => {
 
   it("son 5 sillas de persona, en orden de llegada, con el nombre que manda el servidor", () => {
     const people = stageSeats(base(empty)).filter((seat) => seat.human).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    expect(people.map((seat) => seat.short)).toEqual(["Clínica · Urgencias", "Clínica · Administración", "Hospital Rural · Turno", "Hospital Rural · Administración", "Comité"]);
+    expect(people.map((seat) => seat.short)).toEqual(["Clínica · Urgencias", "Hospital Rural · Turno", "Comité", "Clínica · Administración", "Hospital Rural · Administración"]);
     expect(seatParts("Clínica · Urgencias")).toEqual({ org: "Clínica", role: "Urgencias" });
     expect(seatParts("Comité")).toEqual({ org: "", role: "Comité" });
   });

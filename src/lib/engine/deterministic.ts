@@ -644,8 +644,9 @@ const titleCase = (text: string) => (text ? text.charAt(0).toUpperCase() + text.
 
 /**
  * Asientos humanos de una sala de demo, en el orden en que se reparten al llegar:
- * quien presenta el primer caso, quien presenta el segundo y el Comité. El orden
- * es fijo para que el narrador sepa quién es quién.
+ * quien presenta el primer caso, quien presenta el segundo y el Comité (en la
+ * negociación, después vienen las dos Administraciones). El orden es fijo para que
+ * el narrador sepa quién es quién.
  */
 export function demoSeats(state: RoomState): DemoSeat[] {
   if (!state.demo || !state.scarcity) return [];
@@ -654,17 +655,21 @@ export function demoSeats(state: RoomState): DemoSeat[] {
     return DEMO_SEAT_LABELS[orgId] ?? (orgName.split(" ").slice(1).join(" ") || orgName);
   };
   const arbiter = state.scarcity.arbiter;
-  // Negociación entre agentes: 5 asientos. Por cada organización, quien presenta el
-  // caso y su administración; al final, el Comité. Los vacíos los juega un bot.
+  // Negociación entre agentes: 5 asientos, en este orden de llegada: quien presenta
+  // cada caso (Clínica · Urgencias, Hospital Rural · Turno), el Comité y al final las
+  // dos Administraciones. Así, con 3 personas y «Iniciar», el tercero es el Comité y
+  // los bots toman las Administraciones (docs/DECISIONES.md, «Tres jueces escanean…»).
   if (state.negotiation) {
-    const seats: DemoSeat[] = [];
+    const proposers: Omit<DemoSeat, "seatOrder">[] = [];
+    const admins: Omit<DemoSeat, "seatOrder">[] = [];
     for (const candidate of state.scarcity.candidates) {
       const genome = findGenome(state, candidate.orgId);
       const proposerTag = genome?.roles.find((role) => role.id === candidate.proposerRoleId)?.shortTag ?? "Caso";
-      seats.push({ seat: { orgId: candidate.orgId, roleId: candidate.proposerRoleId }, seatOrder: seats.length + 1, label: `${orgLabel(candidate.orgId)} · ${titleCase(proposerTag)}`, action: "submit" });
-      if (genome) seats.push({ seat: { orgId: candidate.orgId, roleId: genome.authorityRule.approverRoleId }, seatOrder: seats.length + 1, label: `${orgLabel(candidate.orgId)} · Administración`, action: "position" });
+      proposers.push({ seat: { orgId: candidate.orgId, roleId: candidate.proposerRoleId }, label: `${orgLabel(candidate.orgId)} · ${titleCase(proposerTag)}`, action: "submit" });
+      if (genome) admins.push({ seat: { orgId: candidate.orgId, roleId: genome.authorityRule.approverRoleId }, label: `${orgLabel(candidate.orgId)} · Administración`, action: "position" });
     }
-    return [...seats, { seat: { orgId: arbiter.orgId, roleId: arbiter.roleId }, seatOrder: seats.length + 1, label: "Comité", action: "decide" }];
+    const committee: Omit<DemoSeat, "seatOrder"> = { seat: { orgId: arbiter.orgId, roleId: arbiter.roleId }, label: "Comité", action: "decide" };
+    return [...proposers, committee, ...admins].map((entry, i) => ({ ...entry, seatOrder: i + 1 }));
   }
   const cases = state.scarcity.candidates.map((candidate, i): DemoSeat => {
     return { seat: { orgId: candidate.orgId, roleId: candidate.proposerRoleId }, seatOrder: i + 1, label: orgLabel(candidate.orgId), action: "submit" };

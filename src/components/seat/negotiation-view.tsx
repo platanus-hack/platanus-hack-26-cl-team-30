@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { Bot, FastForward, LoaderCircle, Pause, Play, Star } from "lucide-react";
 import type { RoleViewer } from "@/components/organs/format";
-import { loadHostCredentials, negotiationControl, type Act, type HostCredentials } from "@/lib/client/use-room";
+import { loadHostCredentials, negotiationControl, type Act, type HostCredentials, type RoomSession } from "@/lib/client/use-room";
 import type { ProjectedRoomState } from "@/lib/genome/schema";
 import { AGENT_INTRO } from "./agent-text";
-import { demoSeatList, orgOfLabel, withArticle } from "./demo-view";
+import { demoSeatList, orgOfLabel, WhatsAppSummary, withArticle } from "./demo-view";
 import { SeatMain } from "./seat-shell";
 
 const PHASES = [
@@ -29,7 +29,7 @@ const PHASES = [
  * últimos mensajes. La decisión y el acta las muestra la vista de demo.
  * Todo viene del servidor (room.negotiation), ya filtrado para este rol.
  */
-export function NegotiationSeatView({ room, me, act }: { room: ProjectedRoomState; me: RoleViewer; act: Act }) {
+export function NegotiationSeatView({ room, me, act, session }: { room: ProjectedRoomState; me: RoleViewer; act: Act; session?: RoomSession | null }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const negotiation = room.negotiation!;
@@ -60,6 +60,9 @@ export function NegotiationSeatView({ room, me, act }: { room: ProjectedRoomStat
         <p className="st-demo-who">{committee ? "Eres el Comité" : `Eres ${withArticle(orgOfLabel(mine.label))}`}</p>
         <p className="st-demo-line">{committee ? "Escucha a los agentes y decide al final." : mine.label.split(" · ")[1] ?? mine.label}</p>
       </section>
+
+      {/* El Comité, apenas entra: el acta por WhatsApp, destacado (sigue visible en la decisión, en la vista de demo). */}
+      {committee && <WhatsAppSummary roomId={room.roomId} session={session ?? null} featured />}
 
       <ol className="st-flow-steps" aria-label={`Paso ${phaseIndex + 1} de ${PHASES.length}`}>
         {PHASES.map((phase, i) => (

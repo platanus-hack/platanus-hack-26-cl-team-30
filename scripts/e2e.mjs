@@ -23,6 +23,10 @@
 //               0; con el acta cerrada, «Nueva ronda» no pide token de anfitrión.
 //   plan B      demo pauteada: los asientos llegan en orden (Clínica, Hospital
 //               Rural, Comité) y si nadie actúa, el piloto juega cada turno.
+//   negociación 5 personas por orden de llegada (Urgencias, Turno, Comité y las dos
+//               Administraciones), posturas, debate, propuesta y decisión.
+//   3 jueces    3 uniones en paralelo reciben 3 asientos distintos (Urgencias,
+//               Turno, Comité); «Iniciar» deja las Administraciones a un bot.
 //   frase       POST /api/rooms con description crea una sala nueva ya mutada.
 //               Intenta el modelo (máximo 15 s) y acepta la semilla de respaldo:
 //               el resultado no depende del modelo, pero contra el deploy gasta una
@@ -1338,14 +1342,15 @@ async function negotiationJourney() {
     });
 
     const seats = [];
-    await step("5 personas sin clave, por orden de llegada: Clínica · Urgencias, Clínica · Administración, Hospital Rural · Turno, Hospital Rural · Administración y Comité; la sexta, 409", async () => {
+    await step("5 personas sin clave, por orden de llegada: Clínica · Urgencias, Hospital Rural · Turno, Comité, Clínica · Administración y Hospital Rural · Administración; la sexta, 409", async () => {
       for (let i = 0; i < 5; i++) {
         const res = await drawSeat(roomId);
         expectOk(res);
         seats.push({ ...res.data.seat, token: res.data.token });
       }
       const labels = [...stage.state.orgs.flatMap((org) => org.roles.filter((role) => role.seatLabel).map((role) => `${role.seatOrder}:${role.seatLabel}`)), `${stage.state.scarcity.arbiter.seatOrder}:${stage.state.scarcity.arbiter.seatLabel}`];
-      check(labels.join() === "1:Clínica · Urgencias,2:Clínica · Administración,3:Hospital Rural · Turno,4:Hospital Rural · Administración,5:Comité", `Asientos inesperados: ${labels.join(", ")}`);
+      check(labels.sort().join() === "1:Clínica · Urgencias,2:Hospital Rural · Turno,3:Comité,4:Clínica · Administración,5:Hospital Rural · Administración", `Asientos inesperados: ${labels.join(", ")}`);
+      check(seats.map(seatId).join() === "clinica_andes/role_a,hospital_rural/role_a,comite_red/role_c,clinica_andes/role_b,hospital_rural/role_b", `Orden de llegada inesperado: ${seats.map(seatId).join(", ")}`);
       expectError(await drawSeat(roomId), 409, "NO_FREE_SEAT");
       return seats.map(seatId).join(", ");
     });
@@ -1356,8 +1361,9 @@ async function negotiationJourney() {
       await person.listen();
       people.push(person);
     }
-    const committee = people[4];
-    const negotiators = people.slice(0, 4);
+    const arbiterId = seatId(stage.state.scarcity.arbiter);
+    const committee = people.find((person) => seatId(person) === arbiterId);
+    const negotiators = people.filter((person) => person !== committee);
 
     await step("cada celular recibe el consejo de su agente (solo el suyo) y sus opciones de postura; la pantalla grande no ve ningún consejo", async () => {
       for (const person of people) {
@@ -1410,6 +1416,78 @@ async function negotiationJourney() {
       check(again.ok && again.data.roomCode !== roomId, `La sala nueva debía tener otro código: ${describeResponse(again)}`);
       hosts.set(again.data.roomId, { hostToken: again.data.hostToken, committeeKey: again.data.committeeKey });
       await request(baseUrl, "DELETE", `/api/rooms/${again.data.roomId}`, undefined, hostHeaders(again.data.roomId));
+    });
+  } finally {
+    stage?.close();
+    for (const person of people) person.close();
+    await discardRoom(roomId, null, { sealedDemo: true });
+  }
+}
+
+// --- Tres jueces escanean al mismo tiempo y el narrador toca «Iniciar» -----------------
+
+async function threeJudgesJourney() {
+  title("pitch: 3 jueces escanean el QR al mismo tiempo, el narrador toca «Iniciar» y los bots toman las Administraciones");
+  let roomId = null;
+  let stage = null;
+  const people = [];
+  try {
+    const created = await request(baseUrl, "POST", "/api/rooms", { mode: "cross_org", demo: true, stepMs: 400, turnMs: 0 });
+    check(created.ok && typeof created.data?.roomId === "string", `POST /api/rooms debía crear la sala: ${describeResponse(created)}`);
+    roomId = created.data.roomId;
+    hosts.set(roomId, { hostToken: created.data.hostToken, committeeKey: created.data.committeeKey });
+    stage = new Participant(roomId, "pantalla general");
+    await stage.listen();
+
+    const seats = [];
+    await step("3 uniones en el mismo instante: 3 asientos distintos (Clínica · Urgencias, Hospital Rural · Turno, Comité) y 3 tokens distintos", async () => {
+      const results = await Promise.all([drawSeat(roomId), drawSeat(roomId), drawSeat(roomId)]);
+      for (const res of results) {
+        expectOk(res);
+        seats.push({ ...res.data.seat, token: res.data.token });
+      }
+      const ids = seats.map(seatId);
+      check(new Set(ids).size === 3, `Dos celulares recibieron el mismo asiento: ${ids.join(", ")}`);
+      check(new Set(seats.map((seat) => seat.token)).size === 3, "Dos celulares recibieron el mismo token");
+      check([...ids].sort().join() === "clinica_andes/role_a,comite_red/role_c,hospital_rural/role_a", `Asientos inesperados: ${ids.join(", ")}`);
+      await stage.waitFor((state) => {
+        const roles = state.orgs.flatMap((org) => org.roles.map((role) => ({ ...role, orgId: org.orgId })));
+        return state.scarcity.arbiter.connected && ["clinica_andes/role_a", "hospital_rural/role_a"].every((key) => roles.some((role) => `${role.orgId}/${role.id}` === key && role.connected));
+      }, "las 3 personas conectadas en la pantalla grande");
+      return ids.join(", ");
+    });
+
+    for (const seat of seats) {
+      const person = new Participant(roomId, seatId(seat), seat.orgId, seat.roleId);
+      person.token = seat.token;
+      await person.listen();
+      people.push(person);
+    }
+    const arbiterId = seatId(stage.state.scarcity.arbiter);
+    const committee = people.find((person) => seatId(person) === arbiterId);
+    const negotiators = people.filter((person) => person !== committee);
+
+    await step("el narrador toca «Iniciar» (sin clave): las 2 Administraciones quedan en bot, marcadas como automáticas; el Comité sigue siendo persona", async () => {
+      const res = await request(baseUrl, "POST", `/api/rooms/${roomId}/start`, {});
+      expectOk(res);
+      const bots = (res.data.bots ?? []).map(seatId).sort();
+      check(bots.join() === "clinica_andes/role_b,hospital_rural/role_b", `Los bots debían tomar las Administraciones y tomaron: ${bots.join(", ")}`);
+      await stage.waitFor((state) => state.negotiation.positions.filter((position) => position.automatic).length === 2, "las 2 posturas automáticas de Administración");
+      check(stage.state.scarcity.arbiter.bot !== true, "Un bot tomó el puesto del Comité");
+      return bots.join(", ");
+    });
+
+    await step("Urgencias y Turno dan su postura y los agentes negocian hasta la propuesta", async () => {
+      for (const person of negotiators) {
+        await person.waitFor((state) => (state.negotiation.myOptions ?? []).length >= 2, `${person.label}: sus opciones de postura`);
+        expectOk(await person.act("SET_POSITION", { optionId: person.state.negotiation.myOptions[0].id }));
+      }
+      await stage.waitFor((state) => state.negotiation.phase === "decision", "la propuesta lista para el Comité", 60_000);
+    });
+
+    await step("el Comité (una persona) acepta y todas las pantallas ven el acta cerrada", async () => {
+      expectOk(await committee.act("ALLOCATION_SEAL", PAYLOADS.allocationSeal("Se acepta la propuesta por equidad.")));
+      await allSee([stage, ...people], (state) => state.allocation?.status === "SEALED", "acta cerrada");
     });
   } finally {
     stage?.close();
@@ -1523,6 +1601,7 @@ async function main() {
   if (!ONLY) await demoPlanBJourney();
   if (!ONLY) await demoVetoJourney();
   if (!ONLY) await negotiationJourney();
+  if (!ONLY) await threeJudgesJourney();
   if (!ONLY) await mutatedRoomJourney();
 
   console.log(`\nResultado: ${passed} pasos OK, ${failures.length} con FALLA.`);

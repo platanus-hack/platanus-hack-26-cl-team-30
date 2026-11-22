@@ -1455,6 +1455,31 @@
 .st-wa-result[data-tone="wait"] {
   color: var(--st-warn);
 }
+/* Comité de la demo: destacado apenas entra y hasta que decide, con el color de su asiento. */
+.st-wa[data-featured] {
+  gap: 10px;
+  border-color: color-mix(in srgb, var(--st-accent) 60%, transparent);
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--st-accent) 16%, transparent), transparent 75%),
+    var(--st-card);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--st-accent) 18%, transparent);
+}
+.st-wa-why {
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--st-ink);
+}
+.st-wa[data-compact] .st-btn {
+  min-block-size: 48px;
+  font-size: 15.5px;
+}
+.st-btn[data-kind="wa"] {
+  min-block-size: 58px;
+  font-size: 17px;
+  color: var(--st-primary-ink);
+  background: var(--st-accent);
+}
 
 @media (prefers-reduced-motion: reduce) {
   .st-ecg-beat,

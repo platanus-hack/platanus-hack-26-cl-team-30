@@ -2,7 +2,7 @@
 
 Plan para mañana: 3:00 exactos de demo y luego 2:00 de preguntas, solo de los jueces. Esta versión une dos guiones:
 
-- la demo en vivo de 5 personas de `docs/GUION_DEMO.md`, que es lo que corre en la app;
+- la demo en vivo de `docs/GUION_DEMO.md`, que es lo que corre en la app: 3 jueces escanean a la vez y los bots juegan las dos Administraciones;
 - el guion de Nahum («SCULPTOR — Guion de Práctica en Vivo», PDF de 3:00), del que se toman la apertura «choque de fuerzas», el giro «la cama fue solo el primer átomo», la frase «la IA conversa, el código gobierna», el cierre con la galaxia NGC 253 y la válvula de escape.
 
 Reemplaza el pitch de 3:30 de `docs/GUION_DEMO.md`: la charla oficial dice que son 3 minutos exactos y que a los 3:00 se corta el micrófono.
@@ -23,7 +23,6 @@ El PDF describe piezas que solo existen en los prototipos de diseño (`docs/dise
 | El Juez 3 desliza la tarjeta hacia arriba o hacia abajo | Botones **Aceptar** y **Rechazar**, con la razón precargada | `src/components/seat/demo-view.tsx` |
 | Botón «Espiar rival (403)» en el celular | En la sala de demo no existe. El «Ver» con 403 está en las salas normales, en la pestaña Secretos | `docs/PREGUNTAS.md` (17 y 20) |
 | «Toquen el botón de su Agente» | Cada persona elige una **postura** entre 3, con un toque. Su agente ya le escribió un consejo | `docs/ARQUITECTURA.md` («Negociación entre agentes») |
-| «3 jueces + 2 bots, el Juez 3 es el Comité» | Los asientos se reparten por orden de llegada y el **Comité es el 5.º** | `demoSeats` en `src/lib/engine/deterministic.ts` |
 | 80 tests · 60 SSE | **516 pruebas** · **500 conexiones con p95 de 51,5 ms, en local**. 60 es solo la prueba chica de cada `npm test` | `npx vitest run` (ver abajo), `docs/MEDICIONES.md` |
 | «7 órganos del esqueleto» | Los órganos apilados se reemplazaron por la silla del celular | `docs/DECISIONES.md` («La silla del celular reemplaza a los órganos apilados») |
 | «Cero hola, somos el equipo 30» | La charla pide empezar con el nombre y una frase | Charla «Cómo hacer un buen demo» |
@@ -44,7 +43,9 @@ El PDF describe piezas que solo existen en los prototipos de diseño (`docs/dise
 
 ---
 
-## (b) Guion de 3:00 · Opción A (recomendada): 5 personas del público
+## (b) Guion de 3:00 · Opción A (decidida): los 3 jueces escanean a la vez
+
+Orden de llegada de los asientos (`demoSeats` en `src/lib/engine/deterministic.ts`): 1.º Clínica · Urgencias, 2.º Hospital Rural · Turno, 3.º Comité, 4.º Clínica · Administración y 5.º Hospital Rural · Administración. Con 3 jueces y «Iniciar», los bots toman las dos Administraciones, marcadas «automático», y el Comité es una persona. Si los 3 escanean en el mismo segundo, cada uno recibe un asiento distinto: el servidor reparte de a una petición (`joinRandomSeat`, prueba en `tests/tres-jueces.test.ts`). «El primero» es el primero que llega al servidor, no el primero que levanta el celular: cada celular dice en grande quién es.
 
 ### Quién hace qué
 
@@ -52,29 +53,29 @@ El PDF describe piezas que solo existen en los prototipos de diseño (`docs/dise
 |---|---|
 | **Nahum** | Narra todo. Es la única voz durante los 3:00. |
 | **Ramón** | Opera la pantalla grande desde el computador del proyector: deck, `/stage/demo-cross`, **Pausa** (espacio) y **Siguiente** (→). |
-| **Sebastián** | Está con el público: elige a las 5 personas, ayuda a quien no entra y activa el plan B. En las preguntas responde lo técnico. |
+| **Sebastián** | Está junto a los 3 jueces: les pide el celular desbloqueado, ayuda a quien no entra y activa el plan B. En las preguntas responde lo técnico. |
 
 ### Antes de empezar a hablar (no cuenta en los 3:00)
 
 - La lámina 1 de la presentación ya está en pantalla completa (`/presentacion`, tecla `F`; notas del orador con `N` y reloj de 3:00 con `T`). El deck anterior sigue en `/pitch/index.html` como respaldo.
 - La lámina 4 (en vivo) trae la pantalla grande real a la izquierda y la galaxia a la derecha. Pasar una vez por la lámina 4 antes de empezar: ahí se abre la sala y su QR, y queda abierta aunque se vuelva a la lámina 1. No recargar la página después: la pantalla grande abriría otra sala.
 - En otra pestaña del **mismo computador** ya está abierta `/stage/demo-cross`, con su código y su QR. Pausa y Siguiente solo funcionan en el navegador que creó la sala.
-- Sebastián tiene a 5 personas elegidas en primera fila, con el celular desbloqueado. Les dice antes: «Escaneen de a uno cuando yo los apunte».
+- Sebastián avisa a los 3 jueces antes de empezar: «Les vamos a pedir que escaneen un QR los tres a la vez». No hace falta orden: el celular de cada uno dice qué rol le tocó.
 
 ### Segundo a segundo
 
 | Tiempo | Bloque | Nahum dice | Pantalla grande (Ramón) | Sebastián |
 |---|---|---|---|---|
-| 0:00–0:07 | **Nombre y una frase** | «Hola, soy Nahum, del equipo 30. Esto es Sculptor: organizaciones que deciden juntas sin mostrarse sus datos.» | Lámina 1: logo de la galaxia y «1 cama UCI esperando · 2 vidas en riesgo». | Junto a las 5 personas. |
+| 0:00–0:07 | **Nombre y una frase** | «Hola, soy Nahum, del equipo 30. Esto es Sculptor: organizaciones que deciden juntas sin mostrarse sus datos.» | Lámina 1: logo de la galaxia y «1 cama UCI esperando · 2 vidas en riesgo». | Junto a los 3 jueces. |
 | 0:07–0:27 | **Problema (20 s)** | «Una organización no es una máquina: es un choque de fuerzas. Un área contra otra, un hospital contra otro. Cuando necesitan el mismo recurso, no pueden decidir juntas: cada una tiene datos que no puede mostrarle a la otra. Y hoy metemos agentes de IA en medio de esa tensión. Si cada agente tira para su lado, no obtenemos inteligencia: obtenemos caos más rápido. En un modelo simple, diez pasos con 92 % de acierto cada uno dan 43 %.» | Lámina 2: «Una organización es un choque de fuerzas» y el 43 % de pⁿ rotulado «modelo ilustrativo». | — |
-| 0:27–0:42 | **Solución (15 s)** | «Sculptor sienta a personas y agentes en la misma mesa. Cada persona tiene un agente que la asesora, los agentes negocian a la vista, y la última palabra es de una persona. No se los quiero contar: saquen el celular.» | Lámina 3, «Ahora ustedes». A los 0:40, clic en «Abrir la pantalla grande»: aparecen el código gigante y el QR. | Levanta la mano: «¡Ustedes cinco!» |
-| 0:42–1:00 | **Demo · Unirse (18 s)** | «Escaneen de a uno. La primera persona es Urgencias de la Clínica; la segunda, su Administración. Después, Turno y Administración del Hospital Rural. La quinta es el Comité.» Mientras escanean: «Fíjense en la galaxia: cada punto es una persona que acaba de entrar.» | Código, QR y «N de 5 personas conectadas». La galaxia enciende un nodo por persona. | Apunta a cada persona en orden. Si a los 15 s falta alguien, entra él con datos móviles. |
-| 1:00–1:15 | **Demo · Posturas (15 s)** | «Su agente ya les escribió un consejo privado: solo lo ve cada uno. Elijan su postura: un toque.» | Cada asiento se enciende con su color y su postura. | Repite en voz baja, por rol, a quien no aprieta. |
+| 0:27–0:42 | **Solución (15 s)** | «Sculptor sienta a personas y agentes en la misma mesa. Cada persona tiene un agente que la asesora, los agentes negocian a la vista, y la última palabra es de una persona. No se los quiero contar: saquen el celular.» | Lámina 3, «Ahora ustedes». A los 0:40, clic en «Abrir la pantalla grande»: aparecen el código gigante y el QR. | Se acerca a la mesa de los jueces. |
+| 0:42–1:00 | **Demo · Unirse (18 s)** | «Ustedes tres escaneen; el primero es la Clínica, el segundo el Hospital Rural y el tercero el Comité.» Mientras escanean: «Fíjense en la galaxia: cada punto es una persona que acaba de entrar. Las dos Administraciones las juega un bot, y queda marcado.» | Código, QR y el contador «3/5 personas». Con los 3 adentro, Ramón toca **Iniciar**: «3/5 personas · 2 automáticos» y las dos Administraciones con su chip «automático». | Mira que los 3 celulares muestren su rol. Si a los 15 s falta alguien, entra él con datos móviles. |
+| 1:00–1:15 | **Demo · Posturas (15 s)** | «Clínica y Hospital Rural: su agente ya les escribió un consejo privado, solo lo ve cada uno. Elijan su postura: un toque. Comité: mientras tanto, toque "Recibir resumen por WhatsApp" y envíe el mensaje; ahí le va a llegar el acta.» | Cada asiento se enciende con su color y su postura; las dos Administraciones ya tienen la suya, marcada «automático». | Repite en voz baja, por rol, a quien no aprieta. Ayuda al Comité a enviar el WhatsApp. |
 | 1:15–2:00 | **Demo · Debate (~45 s)** | A los 1:20: «Ahora negocian los agentes. Cada uno defiende a su organización.» A los 1:40: «Ningún costo sale de su lado: el servidor ni siquiera se lo envía al otro, y si un agente intenta escribir uno, el servidor lo tapa.» | Un mensaje cada 7 s, con «escribiendo…». La Clínica habla a la izquierda y el Hospital Rural a la derecha. Si Nahum necesita aire: espacio para pausar. Si va lento: →. | Mira el reloj. A los 1:55 le hace la seña «propuesta» a Ramón. |
 | 2:00–2:12 | **Demo · Propuesta (12 s)** | «Los agentes conversan, el código gobierna. La propuesta no la escribe la IA: la calcula una regla. Casi empate, 0,52 contra 0,53. Desempata la necesidad sin cubrir: el Hospital Rural.» | Tarjeta «Hospital Rural recibiría el recurso. La calculó el código, no un agente». En escala de 1 a 50: 26 contra 27. | — |
 | 2:12–2:25 | **Demo · Comité (13 s)** | «Pero la última palabra es humana. Comité: ¿acepta o rechaza? Su razón ya está escrita.» | «Comité: ¿aceptas o rechazas?», con la cuenta regresiva de 20 s. | Junto al Comité. |
-| 2:25–2:40 | **Demo · Acta (15 s)** | «Todas las pantallas cambiaron en el mismo segundo, y quedó un acta con la razón. Cinco personas, cinco agentes, una decisión que nadie podía tomar solo.» Si se probó esa mañana: «Comité, toque "Recibir resumen por WhatsApp"». | «Listo: Hospital Rural recibe el recurso», con la razón del Comité. La galaxia se pone verde. | Acerca el celular del Comité al micrófono si llega la nota de voz. |
-| 2:40–3:00 | **Giro y cierre (20 s)** | «Esa cama fue solo el primer átomo. El mismo motor ya corre para dos constructoras y una grúa, y para dos distribuidoras y un camión. Por eso nos llamamos Sculptor: la galaxia que vemos desde Chile, donde del choque de fuerzas nacen estrellas nuevas. Ustedes cinco acaban de crear el primer mundo. Sculptor: donde el caos aprende a evolucionar.» | Se queda la galaxia verde del acta. | — |
+| 2:25–2:40 | **Demo · Acta (15 s)** | «Todas las pantallas cambiaron en el mismo segundo, y quedó un acta con la razón. Tres personas, cinco agentes, una decisión que nadie podía tomar solo.» Si el Comité envió el WhatsApp y llegó: «Comité, ¿le llegó el acta?». | «Listo: Hospital Rural recibe el recurso», con la razón del Comité. La galaxia se pone verde. | Acerca el celular del Comité al micrófono si llega la nota de voz. |
+| 2:40–3:00 | **Giro y cierre (20 s)** | «Esa cama fue solo el primer átomo. El mismo motor ya corre para dos constructoras y una grúa, y para dos distribuidoras y un camión. Por eso nos llamamos Sculptor: la galaxia que vemos desde Chile, donde del choque de fuerzas nacen estrellas nuevas. Ustedes tres acaban de crear el primer mundo. Sculptor: donde el caos aprende a evolucionar.» | Se queda la galaxia verde del acta. | — |
 
 **Si el Comité rechaza:** «El Comité rechazó: la cama va a la Clínica, y su razón queda en el acta.» Se dice en el mismo tiempo; no se agrega nada.
 
@@ -89,15 +90,13 @@ El PDF describe piezas que solo existen en los prototipos de diseño (`docs/dise
 - **«La galaxia que vemos desde Chile»:** NGC 253 está en la constelación del Escultor, en el cielo austral. Es una galaxia con mucha formación de estrellas. El cierre la usa como metáfora; no dar cifras de la galaxia.
 - **La skill de pitch frente a la charla:** la skill Hackathon Pitch Builder propone abrir con un gancho y cerrar con un *ask*. La charla pide un saludo con nombre y nada que vender. Seguimos la charla: el gancho va después del nombre, y el cierre muestra ambición en lugar de pedir algo.
 
-### Opción B: los 3 jueces juegan
+### Opción B: 5 personas del público
 
-Más memorable, pero más frágil. Se usa solo si sale limpia en el ensayo 2.
+Se usa si los jueces prefieren seguir leyendo el repo o no tienen señal.
 
-- **El problema:** los asientos se reparten por orden de llegada (Clínica · Urgencias, Clínica · Administración, Hospital Rural · Turno, Hospital Rural · Administración, Comité). Si escanean solo 3 jueces, el tercero queda en Turno del Hospital Rural, no en el Comité.
-- **Orden obligatorio:** Juez 1 → Sebastián → Juez 2 → una persona aliada del público → Juez 3. Así los jueces quedan en Urgencias de la Clínica, Turno del Hospital Rural y el Comité. Sebastián apunta a cada uno y nadie escanea antes de su turno.
-- **Cambios al guion:** en Unirse, Nahum dice «Juez 1, usted es Urgencias de la Clínica…» y nombra a cada uno. Unirse sube a unos 25 s; se recorta lo mismo en el debate apretando → una vez.
-- **Riesgos:** dos personas escanean a la vez y el Comité queda en otro asiento. Un juez prefiere seguir leyendo el repo. Un juez sin señal. En los tres casos se pasa a la opción A con el público, sin comentarlo.
-- **Sebastián no puede atender el plan B mientras ocupa un asiento.** En la opción B, Ramón cubre el plan B desde la pantalla grande.
+- **Orden de llegada:** 1.º Clínica · Urgencias, 2.º Hospital Rural · Turno, 3.º Comité, 4.º Clínica · Administración, 5.º Hospital Rural · Administración. No hace falta tocar «Iniciar»: con los 5 adentro la ronda arranca sola.
+- **Cambios al guion:** en Unirse, Nahum dice «Escaneen este código. La primera persona es Urgencias de la Clínica; la segunda, Turno del Hospital Rural; la tercera, el Comité; la cuarta y la quinta, las Administraciones». En Posturas eligen las cuatro organizaciones. En el cierre: «Ustedes cinco».
+- **Si llegan solo 3 o 4:** Ramón toca «Iniciar» y los asientos libres (siempre las Administraciones primero) los toma un bot marcado «automático».
 
 ---
 
@@ -222,7 +221,8 @@ Tres cosas: guardar las salas en una base de datos con un bus compartido, para q
 | Render no carga o la sala no aparece | Ramón cambia a la pestaña del **video de respaldo**, que se graba en el ensayo 2 (todavía no existe). Nahum narra encima con el mismo guion: «Esto lo grabamos a las siete con cinco personas; así se ve». | Ramón y Nahum |
 | No escanean, o falta alguien a los 15 s | Sebastián entra con datos móviles. Las sillas que sigan vacías las juega un bot marcado «automático». | Sebastián |
 | Nadie del público quiere subir | 2 personas aliadas de otro equipo ya avisadas, más los celulares del equipo. Por verificar: conseguirlas antes de las 9:00. | Sebastián |
-| Opción B: un juez no quiere o no tiene señal | Se pasa a la opción A con el público, sin comentarlo. | Sebastián |
+| Un juez no quiere o no tiene señal | Sebastián escanea en su lugar con datos móviles; si faltan más, se pasa a la opción B con el público, sin comentarlo. | Sebastián |
+| Dos jueces escanean en el mismo segundo | Nada: el servidor reparte de a uno y cada celular dice qué rol le tocó (probado con 3 y con 6 uniones en paralelo, `tests/tres-jueces.test.ts`). | — |
 | Alguien no elige postura | Se repite una vez por su rol. Después, → pone las posturas que faltan, marcadas «automático». | Ramón |
 | El debate va lento o rápido | Espacio pausa; → adelanta un mensaje. | Ramón |
 | El modelo tarda | Nada: sale el texto de respaldo y la propuesta es la misma. Nahum puede decir «incluso sin el modelo, el código gobierna». | — |
@@ -234,7 +234,7 @@ Tres cosas: guardar las salas en una base de datos con un bus compartido, para q
 
 **Datos de respaldo:** la sala fija `demo-construccion` corre otro escenario si `demo-cross` queda trabada. Con el acta cerrada, «Nueva demo» abre otra sala con un código nuevo.
 
-**Riesgo por verificar:** 5 celulares en el mismo wifi pueden compartir una IP. El límite de peticiones por IP no está verificado detrás de Render (`docs/ARQUITECTURA.md`, «Límite de peticiones»). Hay que probarlo en el ensayo 2 con 5 celulares en el wifi de la sede.
+**Riesgo por verificar:** 3 a 5 celulares en el mismo wifi pueden compartir una IP. El límite de peticiones por IP no está verificado detrás de Render (`docs/ARQUITECTURA.md`, «Límite de peticiones»). Hay que probarlo en el ensayo 2 con 5 celulares en el wifi de la sede.
 
 ### Lista de chequeo, 10 minutos antes
 
@@ -244,10 +244,10 @@ Tres cosas: guardar las salas en una base de datos con un bus compartido, para q
 4. [ ] El deck está en la lámina 1, en pantalla completa y en modo oscuro. La lámina 2 tiene el dato con su fuente, o no tiene cifra.
 5. [ ] El video de respaldo está abierto en una pestaña, en pausa y en el segundo 0.
 6. [ ] El hotspot del celular de Sebastián está encendido, con nombre y clave a mano.
-7. [ ] Si el WhatsApp sigue en el guion: el Comité de prueba tiene sesión iniciada y ya mandó «Hola» al número de Kapso para abrir la ventana de 24 h. Si no responde, se saca del guion.
+7. [ ] WhatsApp del Comité: escanear con un celular de prueba hasta quedar de Comité, tocar «Recibir resumen por WhatsApp» (abre wa.me al +1 208 485 0157 con «Hola, soy el Comité de la sala <código>»), enviarlo y confirmar que responde «Listo: cuando el Comité decida…». Si no responde, se saca del guion la frase del WhatsApp.
 8. [ ] Brillo de los celulares de apoyo al máximo, sin modo ahorro y con el sonido activado para la nota de voz.
 9. [ ] Hay un cronómetro visible para Nahum: un celular en la mano o el reloj del deck (tecla `N`).
-10. [ ] Las 5 personas están elegidas, en primera fila, con el celular desbloqueado y saben que escanean de a una. Está decidido si va la opción A o la B.
+10. [ ] Los 3 jueces saben que van a escanear a la vez, con el celular desbloqueado. Para la opción B, 5 personas del público ya elegidas. Ramón sabe que con los 3 adentro toca «Iniciar».
 
 ---
 
@@ -259,7 +259,7 @@ La charla dice que a partir del 3.er o 4.º ensayo empieza a fluir, y que con 6 
 |---|---|---|---|
 | 6:00–6:30 | **Narrativa.** Nahum se aprende las 5 frases y busca la cifra del problema con su fuente. Sebastián confirma que el deploy trae la ronda 20 y corre `node scripts/e2e.mjs <url-del-deploy>`. | — | Cifra con fuente, o la frase sin número. Resultado del e2e anotado en `docs/MEDICIONES.md`. |
 | 6:30–6:45 | **Ensayo 1, en seco.** Los 3 solos, con 5 celulares del equipo. | Cada bloque contra la tabla de (b). **Medir cuánto dura el debate en el deploy.** | Si el debate dura más de 45 s: decidir cuántas veces aprieta → Ramón. Cortar toda frase que pase su tiempo. |
-| 7:00–7:20 | **Ensayo 2, grabado: es el video de respaldo.** 5 personas de otro equipo, en el wifi de la sede. Probar también la opción B con 3 de ellas haciendo de jueces. | Los 3:00 completos, con A y con B. | El video queda guardado en el Mac del proyector y en un celular. **Elegir A o B:** B solo si el Comité quedó bien asignado a la primera. Revisar si 5 celulares en el mismo wifi chocan con el límite por IP. |
+| 7:00–7:20 | **Ensayo 2, grabado: es el video de respaldo.** 3 personas de otro equipo hacen de jueces y escanean a la vez (opción A); después, 5 personas para la opción B. En el wifi de la sede. | Los 3:00 completos, con A y con B. | El video queda guardado en el Mac del proyector y en un celular. A es la decidida; B queda de respaldo. Revisar que el tercero quede de Comité y vea el botón de WhatsApp, y si los celulares en el mismo wifi chocan con el límite por IP. |
 | 7:30–7:50 | **Ensayo 3, con fallas provocadas.** El Comité no aprieta, alguien no escanea, se corta el wifi a la mitad y a los 2:40 no hay acta. | Que cada plan B entre sin pasar los 3:00. | Que Sebastián y Ramón actúen sin mirarse. Nahum practica las frases de rescate y la válvula de escape. |
 | 8:00–8:20 | **Ensayo 4, completo, más preguntas.** Otra persona hace de jurado y elige 4 preguntas de (c) al azar. | 3:00 de demo y 2:00 de preguntas. | Respuestas de más de 20 s. Toda respuesta que no nombre un archivo. Toda respuesta que use una cifra del PDF viejo (80, 60, GB10, cero bytes). En las láminas, sacar el texto que no se dice en voz alta. |
 | 8:30–8:45 | **Ensayo 5, con el equipo de verdad.** El Mac del proyector, si lo dejan, o el que se va a conectar. Probar la duplicación del iPhone y el modo oscuro en el proyector. | 3:00. | Letra legible desde el fondo. Pausa y Siguiente en ese navegador. |
