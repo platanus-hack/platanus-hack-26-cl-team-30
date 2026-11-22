@@ -2,7 +2,7 @@
 // de hasta 6 palabras y una frase de hasta 12. Las cifras y los nombres de cada
 // organización no van aquí: salen del motor, igual que en la demo (data.ts).
 
-import { BedDouble, Construction, Truck, Wallet } from "lucide-react";
+import { BedDouble, Construction, Truck } from "lucide-react";
 import type { CaseStudy, CaseUse } from "./types";
 
 const STEP_DECIDE = { title: "El Comité decide con razón", detail: "Acepta o rechaza. Queda el acta." };
@@ -63,15 +63,22 @@ export type CaseSlug = keyof typeof CASES;
 /** Orden de la fila de enlaces entre casos. */
 export const CASE_ORDER: CaseSlug[] = ["hospitales", "construccion", "logistica"];
 
-/** Usos del mismo esqueleto. Los que tienen página llevan su enlace; presupuestos todavía no. */
-const USES: Record<CaseSlug | "presupuestos", CaseUse> = {
-  hospitales: { icon: BedDouble, title: "Salud", detail: "¿A quién va la última cama UCI?", href: "/casos/hospitales" },
-  construccion: { icon: Construction, title: "Construcción", detail: "¿Qué obra usa la grúa el jueves?", href: "/casos/construccion" },
-  logistica: { icon: Truck, title: "Logística", detail: "¿Qué carga sube primero al camión frío?", href: "/casos/logistica" },
-  presupuestos: { icon: Wallet, title: "Presupuestos", detail: "¿Qué área se queda con lo que sobra del trimestre?" },
+/**
+ * Dónde más sirve el mismo esqueleto: la misma lista de rubros que la landing de Sculptor
+ * («Mismo esqueleto, otro genoma», src/components/sculptor/content.ts), dicha como la
+ * pregunta que se hace la gente. Los rubros con página llevan su enlace.
+ */
+const USES: Record<CaseSlug | "ventas" | "rrhh" | "banca" | "mineria", CaseUse> = {
+  hospitales: { title: "Salud", detail: "¿A quién va la última cama UCI?", status: "Ver el caso", href: "/casos/hospitales" },
+  construccion: { title: "Construcción", detail: "¿Qué obra usa la grúa el jueves?", status: "Ver el caso", href: "/casos/construccion" },
+  logistica: { title: "Logística", detail: "¿Qué carga sube primero al camión frío?", status: "Ver el caso", href: "/casos/logistica" },
+  ventas: { title: "Ventas B2B", detail: "¿Cuánto descuento le damos sin mostrar el margen?", status: "Genoma listo" },
+  rrhh: { title: "RR.HH.", detail: "¿Quién asciende sin que se filtren los sueldos?", status: "Desde una frase" },
+  banca: { title: "Banca", detail: "¿Se aprueba el crédito si riesgo y comercial no coinciden?", status: "Desde una frase" },
+  mineria: { title: "Minería", detail: "¿Qué faena se queda con la pala este turno?", status: "Desde una frase" },
 };
 
-/** «Sculptor sirve para más»: los otros dos casos y presupuestos. */
+/** «¿Dónde más pasa esto?»: los otros dos casos primero y después el resto de los rubros. */
 export function otherUses(slug: CaseSlug): CaseUse[] {
-  return [...CASE_ORDER.filter((entry) => entry !== slug).map((entry) => USES[entry]), USES.presupuestos];
+  return [...CASE_ORDER.filter((entry) => entry !== slug).map((entry) => USES[entry]), USES.ventas, USES.rrhh, USES.banca, USES.mineria];
 }

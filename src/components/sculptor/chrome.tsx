@@ -18,6 +18,10 @@ const LINKS = [
   { href: "#equipo", label: "Equipo" },
 ];
 
+/** Un caso completo, jugado en la demo: sale de la landing hacia su página. */
+const EXAMPLE_LINK = { href: "/casos/logistica", label: "Ejemplo real" };
+const LINK_CLASS = "rounded-full px-4 py-2 text-sm font-semibold text-(--piedra) transition-colors hover:text-(--marmol)";
+
 export function Nav() {
   const root = useRef<HTMLElement>(null);
 
@@ -47,13 +51,22 @@ export function Nav() {
         <ul className="hidden items-center gap-1 lg:flex">
           {LINKS.map((l) => (
             <li key={l.href}>
-              <a href={l.href} className="rounded-full px-4 py-2 text-sm font-semibold text-(--piedra) transition-colors hover:text-(--marmol)">
+              <a href={l.href} className={LINK_CLASS}>
                 {l.label}
               </a>
             </li>
           ))}
+          <li>
+            <Link href={EXAMPLE_LINK.href} className={LINK_CLASS}>
+              {EXAMPLE_LINK.label}
+            </Link>
+          </li>
         </ul>
-        <span className="rounded-full bg-(--grafito) px-4 py-2 font-mono text-[11px] tracking-[0.16em] text-(--cincel) uppercase">
+        {/* En el celular no hay menú: el único link que queda a la vista es el del ejemplo. */}
+        <Link href={EXAMPLE_LINK.href} className={`${LINK_CLASS} ml-auto px-3 lg:hidden`}>
+          {EXAMPLE_LINK.label}
+        </Link>
+        <span className="shrink-0 rounded-full bg-(--grafito) px-4 py-2 font-mono text-[11px] tracking-[0.16em] text-(--cincel) uppercase">
           Equipo 30
         </span>
       </nav>
