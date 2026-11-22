@@ -112,14 +112,14 @@ No está medido cuánto tarda Claude en escribir cada frase ni cuántas veces ca
 ## Pruebas automáticas
 
 - **Qué:** `npm test` (Vitest, sin modelo).
-- **Dónde:** en un notebook (macOS), en la rama de la landing de Sculptor.
+- **Dónde:** en un notebook (macOS), rama `docs` (ronda 20 más la landing de Sculptor).
 - **Cuándo:** 21 de noviembre de 2026, noche.
 
 | Archivos de prueba | Pruebas | Resultado |
 | --- | --- | --- |
-| 11 | 415 | 415 pasan |
+| 16 | 507 | 507 pasan |
 
-El dossier y el guion del pitch citan otras cifras (216 y 80 pruebas) de versiones anteriores; la vigente es esta.
+El dossier y el guion del pitch citan otras cifras (216 y 80 pruebas) de versiones anteriores; la vigente es esta. Antes de la ronda 20 eran 415 en 11 archivos.
 
 ## Lo que no está medido
 

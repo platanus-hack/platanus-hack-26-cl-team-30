@@ -57,11 +57,11 @@ Revisión del dossier contra el código y de la entrega. Detalle de las diferenc
 
 | # | Pendiente | Qué hay que hacer |
 | --- | --- | --- |
-| y1 | **Conviven dos nombres.** La landing `/sculptor`, el logo y el dossier dicen Sculptor; `platanus-hack-project.jsonc`, `project-description.md`, `README.md`, `CLAUDE.md`, `src/app/layout.tsx` y la interfaz de la sala dicen Nexo. | Decidir (ver la fila a). Si queda Sculptor, cambiar primero el nombre y el resumen del `jsonc` y de `project-description.md`, que son lo que lee la votación. |
-| y2 | **La portada `/` sigue siendo la de Nexo.** La landing nueva vive en `/sculptor`. | Decidir si `/sculptor` pasa a ser `/` antes de presentar, o si se enlazan las dos. |
+| y1 | **«Nexo» como nombre de la implementación en salud.** Sculptor es el sistema; la clínica sería su primera implementación («Nexo»). Hoy la interfaz dice Sculptor en todas partes y «Nexo» solo queda en identificadores internos. | Decidir si se usa «Nexo» en el pitch o en la página del caso hospitalario (`/casos/hospitales`). |
+| y2 | **Hay dos landings.** `/` es la portada original (ya con la marca Sculptor, ejemplos, formulario y entrevista) y `/sculptor` es la landing nueva del protocolo (intro animada, pⁿ, mercado, simulación orbital, equipo). | Decidir cuál es la principal antes de presentar y enlazar la otra. |
 | y3 | **El guion y el deck dicen cosas que el código no hace:** deslizar arriba o abajo, «80 tests» (`docs/diseno/nahum/guion_pitch_3m30_platanus.md`, `pitch_platanus_interactivo.html`), «el desempate le da la cama al rural», «0 bytes a la nube» con el deploy. | Ajustar el guion con `docs/dossier/README.md` y `docs/PREGUNTAS.md` antes de ensayar. |
 | y4 | **La simulación orbital depende de internet.** Carga Three.js desde jsDelivr y un video desde CloudFront. En la landing y en el pitch, sin red queda en negro. | Si la red de la sede falla, abrir la app sin esa sección o descargar Three.js al repo. |
-| y5 | **Commit de lo nuevo.** Landing (`src/app/sculptor/`, `src/components/sculptor/`, `public/sculptor/`), marca (`public/brand/`, `docs/diseno/sculptor/`), dossier (`docs/dossier/`) y los cambios de `docs/`. | Commit en la rama, revisar el diff y recién ahí fusionar a `main`. |
+| y5 | **Fusionar la rama `docs` a `main`.** Trae la ronda 20, la landing, la marca, el dossier, la investigación y el material del pitch. | Revisar el diff, correr `npm test`, `npm run build` y `scripts/e2e.mjs`, y fusionar. |
 
 ## Agregado por el orquestador (21 de noviembre, mañana)
 
