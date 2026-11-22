@@ -143,8 +143,16 @@ export const MAX_DEMO_TURN_TIMEOUT_MS = 120_000;
 export const NEGOTIATION_MODEL_TIMEOUT_MS = 6000;
 /** Plazo para fijar posturas desde que entra la primera persona; después, un bot pone las que falten. */
 export const NEGOTIATION_POSITIONS_MS = 60_000;
+/** Demo sin «Iniciar» y con alguna silla libre: no corre ningún plazo, se espera al narrador. Con las 5 sillas ocupadas no hay a quién esperar. */
+function waitingForStart(record: RoomRecord): boolean {
+  if (record.state.negotiation?.started !== false) return false;
+  return engine.demoSeats(record.state).some((entry) => !record.tokens.has(tokenKey(entry.seat)));
+}
+
 /** Con todas las posturas puestas, el debate empieza tras esta pausa corta. */
 export const NEGOTIATION_POSITIONS_GRACE_MS = 2500;
+/** Demo: plazo de posturas desde que el narrador toca «Iniciar». */
+export const NEGOTIATION_START_POSITIONS_MS = 30_000;
 function envMs(name: string, fallback: number, max: number): number {
   const raw = process.env[name];
   if (raw === undefined || raw.trim() === "") return fallback;
@@ -1188,7 +1196,8 @@ function onNegotiationJoin(roomId: string, record: RoomRecord, seat: engine.Acto
     if (entry.action === "decide") publish({ text: negotiation.fallbackLine(record.state, seat, "advice"), fallback: false });
     else void writeNegotiationText(roomId, record, seat, "advice").then(publish);
   }
-  if (!run.tick && !current.paused) {
+  // En la demo el plazo de posturas no corre hasta que el narrador toca «Iniciar».
+  if (!run.tick && !current.paused && !waitingForStart(record)) {
     scheduleNegotiation(roomId, record, "positions", negotiationPositionsMs(), now);
     emit(roomId);
   }
@@ -1197,7 +1206,7 @@ function onNegotiationJoin(roomId: string, record: RoomRecord, seat: engine.Acto
 /** Con todas las posturas puestas no hace falta esperar el plazo: el debate empieza tras una pausa corta. */
 function onPositionSet(roomId: string, record: RoomRecord, now: number) {
   const current = record.state.negotiation;
-  if (!current || current.phase !== "positions" || current.paused || !negotiation.allPositionsSet(record.state)) return;
+  if (!current || current.phase !== "positions" || current.paused || waitingForStart(record) || !negotiation.allPositionsSet(record.state)) return;
   scheduleNegotiation(roomId, record, "positions", Math.min(NEGOTIATION_POSITIONS_GRACE_MS, current.stepMs), now);
   emit(roomId);
 }
@@ -1330,7 +1339,7 @@ export function controlNegotiation(roomId: string, action: "pause" | "resume" | 
     if (run.tick) scheduleNegotiation(roomId, record, run.tick, run.remainingMs ?? current.stepMs, now);
     syncDemoTurn(roomId, record, now);
   } else if (action === "advance" && (current.phase === "positions" || current.phase === "debate" || current.phase === "proposal")) {
-    if (current.paused) record.state = negotiation.patchNegotiation(record.state, { paused: false });
+    if (current.paused || current.started === false) record.state = negotiation.patchNegotiation(record.state, { paused: false, started: true });
     // Sin nadie adentro todavía no hay paso programado: adelantar cierra las posturas.
     if (!run.tick) run.tick = "positions";
     runNegotiationTick(roomId, record, now);
@@ -1347,7 +1356,7 @@ export function controlNegotiation(roomId: string, action: "pause" | "resume" | 
  */
 export function isJoining(state: RoomState): boolean {
   const current = state.negotiation;
-  return state.demo === true && !!current && current.phase === "positions" && state.decisionSealedAt === null && current.positions.every((entry) => entry.optionId === null);
+  return state.demo === true && !!current && current.phase === "positions" && state.decisionSealedAt === null && current.started !== true;
 }
 
 export type StartDemoResponse = { status: 200; body: { ok: true; phase: string; bots: engine.ActorRef[] } } | { status: 404 | 409; body: ActionError };
@@ -1378,16 +1387,19 @@ export function startDemo(roomId: string, now: number = Date.now()): StartDemoRe
     const positioned = option ? negotiation.setPosition(state, seat, option.id, now, true) : null;
     if (positioned?.ok) state = positioned.state;
   }
-  if (state.negotiation?.paused) state = negotiation.patchNegotiation(state, { paused: false });
+  state = negotiation.patchNegotiation(state, { paused: false, started: true });
   record.state = state;
 
   const run = negotiationRunOf(record);
+  if (run.timer) clearTimeout(run.timer);
+  run.timer = null;
+  run.tick = null;
   if (negotiation.allPositionsSet(record.state)) {
-    // Todas las posturas puestas (solo bots): el debate empieza tras la pausa corta.
+    // Todas las posturas puestas: el debate empieza tras la pausa corta.
     scheduleNegotiation(roomId, record, "positions", Math.min(NEGOTIATION_POSITIONS_GRACE_MS, record.state.negotiation!.stepMs), now);
-  } else if (!run.timer) {
-    // Personas que aún eligen y ningún plazo corriendo (nadie había entrado, o estaba en pausa): corre el plazo de posturas.
-    scheduleNegotiation(roomId, record, "positions", run.remainingMs ?? negotiationPositionsMs(), now);
+  } else {
+    // Personas que aún eligen: desde «Iniciar» tienen 30 s; después su agente elige por ellas.
+    scheduleNegotiation(roomId, record, "positions", Math.min(NEGOTIATION_START_POSITIONS_MS, negotiationPositionsMs()), now);
   }
   syncDemoTurn(roomId, record, now);
   emit(roomId);

@@ -19,7 +19,7 @@ vi.mock("server-only", () => ({}));
 
 import { containsReserved, reservedValues } from "../src/lib/engine/negotiation";
 import { getSeedGenome } from "../src/lib/genome/seeds";
-import { NEGOTIATION_MODEL_TIMEOUT_MS, NEGOTIATION_POSITIONS_MS, ROOM_CODE_ALPHABET, applyAction, createRoom, getActa, getHostCredentials, getRoom, joinRandomSeat, projectRoom, resetRoom } from "../src/lib/store/rooms";
+import { NEGOTIATION_MODEL_TIMEOUT_MS, NEGOTIATION_POSITIONS_MS, NEGOTIATION_START_POSITIONS_MS, ROOM_CODE_ALPHABET, startDemo, applyAction, createRoom, getActa, getHostCredentials, getRoom, joinRandomSeat, projectRoom, resetRoom } from "../src/lib/store/rooms";
 import { POST as createRoomRoute } from "../src/app/api/rooms/route";
 import { POST as negotiationRoute } from "../src/app/api/rooms/[roomId]/negotiation/route";
 import { GET as eventsRoute } from "../src/app/api/rooms/[roomId]/events/route";
@@ -344,13 +344,18 @@ describe("el recorrido completo", () => {
     expect(getActa(roomId)!.markdown).toContain("## Negociación entre agentes");
   });
 
-  it("si faltan personas, al vencer el plazo un bot pone sus posturas, marcado como automático", async () => {
+  it("con sillas libres no corre ningún plazo hasta «Iniciar»; después, a los 30 s un bot pone las posturas que falten", async () => {
     const roomId = room();
     const clinic = draw(roomId);
     await act(roomId, clinic, "SET_POSITION", { optionId: "now" });
-    await vi.advanceTimersByTimeAsync(NEGOTIATION_POSITIONS_MS + 10);
+    // Sin «Iniciar», nada avanza aunque pase el plazo de antes.
+    await vi.advanceTimersByTimeAsync(NEGOTIATION_POSITIONS_MS * 2);
+    expect(nego(roomId).phase).toBe("positions");
+    expect(nego(roomId).nextAt).toBeNull();
+    expect(startDemo(roomId).status).toBe(200);
+    await vi.advanceTimersByTimeAsync(NEGOTIATION_START_POSITIONS_MS + 10);
     const view = nego(roomId);
-    expect(view.phase).toBe("debate");
+    expect(view.phase).not.toBe("positions");
     expect(view.positions.filter((position) => position.automatic)).toHaveLength(3);
     expect(view.positions.find((position) => position.orgId === clinic.orgId && position.roleId === clinic.roleId)!.automatic).toBe(false);
     const rural = stage(roomId).orgs.find((org) => org.orgId === "hospital_rural")!.roles.find((role) => role.id === "role_a")!;

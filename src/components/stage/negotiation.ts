@@ -23,6 +23,8 @@ export type Negotiation = {
   typing: { orgId: string; roleId: string; agentLabel: string } | null;
   positions: NegotiationPosition[];
   messages: NegotiationMessage[];
+  /** Demo: false hasta que el narrador toca «Iniciar». */
+  started?: boolean;
 };
 
 /** Paso que muestra la pantalla: las fases del servidor, más «Unirse» mientras nadie ha dado su postura. */
@@ -69,6 +71,9 @@ export function stageStep(room: ProjectedRoomState, negotiation: Negotiation): S
   if (negotiation.phase !== "positions") return negotiation.phase;
   const anyPosition = negotiation.positions.some((entry) => entry.position);
   const freeSeat = stageSeats(room).some((seat) => seat.human && !seat.connected);
+  // Demo: «Unirse» hasta que el narrador toca «Iniciar» (o hasta que no queda silla libre).
+  if (negotiation.started === false) return freeSeat ? "join" : "positions";
+  if (negotiation.started === true) return "positions";
   return !anyPosition && freeSeat ? "join" : "positions";
 }
 

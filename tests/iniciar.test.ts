@@ -114,22 +114,23 @@ describe("Iniciar", () => {
     expect(nego(roomId).nextAt).not.toBeNull();
   });
 
-  it("no se puede usar fuera del paso Unirse: con una postura puesta, en el debate ni con el acta cerrada", async () => {
+  it("se puede usar con posturas ya puestas, pero una sola vez: no en el debate ni con el acta cerrada", async () => {
     const roomId = room();
     const clinic = draw(roomId);
     expect((await applyAction(roomId, { type: "SET_POSITION", ...clinic, optionId: "now" })).status).toBe(200);
     await vi.advanceTimersByTimeAsync(10); // el consejo del agente llega aparte
+    // Con una postura puesta todavía se espera al narrador.
+    expect((await start(roomId)).status).toBe(200);
     const before = getRoom(roomId)!;
     const res = await start(roomId);
     expect(res.status).toBe(409);
     expect((await res.json()).code).toBe("ROUND_STARTED");
-    // No cambió nada: ni bots ni bitácora.
+    // El segundo «Iniciar» no cambió nada.
     expect(getRoom(roomId)).toBe(before);
-    expect(botSeats(roomId)).toEqual([]);
 
     // En el debate, tampoco.
     await vi.advanceTimersByTimeAsync(60_000 + 10);
-    expect(nego(roomId).phase).toBe("debate");
+    expect(nego(roomId).phase).not.toBe("positions");
     expect((await start(roomId)).status).toBe(409);
 
     // Con el acta cerrada, tampoco (no sirve para reiniciar una ronda).

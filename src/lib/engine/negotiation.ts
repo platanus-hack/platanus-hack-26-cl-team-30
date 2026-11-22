@@ -170,7 +170,7 @@ export function positionPrompt(state: RoomState, seat: ActorRef): PositionPrompt
 export function initialNegotiation(state: RoomState, stepMs: number): NegotiationState {
   // Los asientos se calculan como si la negociación ya existiera (son 5).
   const seats = negotiatingSeats({ ...state, negotiation: emptyNegotiation(stepMs) });
-  return { ...emptyNegotiation(stepMs), positions: seats.map((entry) => ({ ...entry.seat, optionId: null, automatic: false })) };
+  return { ...emptyNegotiation(stepMs), ...(state.demo === true ? { started: false } : {}), positions: seats.map((entry) => ({ ...entry.seat, optionId: null, automatic: false })) };
 }
 
 function emptyNegotiation(stepMs: number): NegotiationState {
@@ -371,6 +371,7 @@ export function projectNegotiation(state: RoomState, viewer: Viewer): ProjectedN
     paused: negotiation.paused,
     nextAt: negotiation.nextAt,
     stepMs: negotiation.stepMs,
+    ...(negotiation.started !== undefined ? { started: negotiation.started } : {}),
     typing: negotiation.typing,
     positions: negotiation.positions.map((item) => ({
       orgId: item.orgId,

@@ -328,6 +328,8 @@ export const NegotiationStateSchema = z.object({
   messages: z.array(NegotiationMessageSchema),
   /** Cuántos agentes ya hablaron en el debate. */
   debateIndex: z.number().int().min(0),
+  /** Demo: false hasta que el narrador toca «Iniciar». Antes no corre ningún plazo. */
+  started: z.boolean().optional(),
 });
 
 /** Lo que viaja a un cliente: sin los consejos de otros roles y con las opciones del propio. */
@@ -336,6 +338,7 @@ export const ProjectedNegotiationSchema = z.object({
   paused: z.boolean(),
   nextAt: z.number().nullable(),
   stepMs: z.number(),
+  started: z.boolean().optional(),
   typing: z.object({ orgId: z.string(), roleId: z.string(), agentLabel: z.string() }).nullable(),
   positions: z.array(z.object({ orgId: z.string(), roleId: z.string(), seatLabel: z.string(), position: z.string().nullable(), automatic: z.boolean() })),
   messages: z.array(NegotiationMessageSchema),
