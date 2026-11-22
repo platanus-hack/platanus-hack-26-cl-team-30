@@ -12,9 +12,9 @@ export const HERO = {
 
 export const ORIGIN = {
   kicker: "[01] El problema",
-  title: "Las decisiones más caras se siguen coordinando por WhatsApp.",
-  body: "Asignar la única cama UCI de una red, aprobar un descuento con margen confidencial, destrabar un presupuesto de RR.HH.: todo pasa por llamadas, chats y planillas. Cada rol maneja datos que no puede mostrarle a la otra parte. Darle a cada persona un agente aislado solo acelera el ruido.",
-  channels: ["WhatsApp", "Llamadas", "Excel", "Correos", "Reuniones"],
+  title: "Una organización es un choque de fuerzas.",
+  body: "Un área contra otra, un hospital contra otro. Cuando necesitan el mismo recurso, no pueden decidir juntas: cada una tiene datos que no puede mostrarle a la otra. Y si a esa tensión le sumamos agentes de IA que tiran cada uno para su lado, no obtenemos inteligencia: obtenemos caos más rápido.",
+  channels: ["Área contra área", "Urgencia contra presupuesto", "Hospital contra hospital", "Agente contra agente"],
   name: {
     title: "¿Por qué Sculptor?",
     body: "Por la Galaxia del Escultor, NGC 253, visible desde el cielo austral de Chile. Antes se llamó «Cupo» y «Nexo».",

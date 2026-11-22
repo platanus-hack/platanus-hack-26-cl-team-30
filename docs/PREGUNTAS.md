@@ -64,7 +64,7 @@ Guardar las salas en una base de datos para que sobrevivan a un reinicio y se re
 Las nueve preguntas de la sección 11 del plan, con lo que hay que mostrar en pantalla además de decir.
 
 **16. ¿A quién ayuda en tres minutos?**
-A dos equipos que necesitan la misma cama UCI y hoy la piden por teléfono y WhatsApp, sin ver el caso del otro. En la demo, dos hospitales presentan a su paciente, el tablero ordena con una regla visible y el Comité decide desde un teléfono. **Mostrar:** la pantalla general de `demo-cross` con el contador corriendo. Los casos son simulados.
+A dos equipos que necesitan la misma cama UCI y no pueden decidir juntos, porque ninguno puede ver los datos del otro. En la demo, dos hospitales presentan a su paciente, el tablero ordena con una regla visible y el Comité decide desde un teléfono. **Mostrar:** la pantalla general de `demo-cross` con el contador corriendo. Los casos son simulados.
 
 **17. ¿Por qué no puede decidir una sola organización?**
 Porque cada una tiene un dato que la otra no puede ver: su costo de cobertura. Si decide una sola, decide con la mitad de la información o exige ver lo que no le corresponde. Sculptor ordena los casos sin que ninguna vea el costo de la otra (`canViewCoverageCost` en `src/lib/engine/deterministic.ts`). **Mostrar:** en una sala normal (no de demo), la pestaña «Secretos» del celular: el costo del otro hospital es una barra de franjas, y «Ver» responde «Este dato nunca llegó a tu celular». En la sala de demo los 3 asientos no tienen pestañas; ahí se ve en la pantalla grande, con el candado sobre el costo de cada hospital.

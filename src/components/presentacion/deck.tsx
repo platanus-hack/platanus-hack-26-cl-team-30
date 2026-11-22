@@ -237,24 +237,23 @@ function Problema({ autonomous, steps, accuracy }: { autonomous: number; steps: 
         <p data-in className={KICK}>
           El problema
         </p>
-        <h2 data-in className={`mt-6 ${H1}`}>
-          1 cama UCI.
-          <br />2 hospitales.
+        <h2 data-in className={`mt-6 ${H2}`}>
+          Una organización es un <span className="font-serif font-normal text-(--eucalipto) italic [font-stretch:100%]">choque de fuerzas.</span>
         </h2>
         <p data-in className="mt-8 max-w-3xl text-[clamp(1.5rem,2.6vw,2.8rem)] leading-[1.15] text-(--marmol)">
-          Ninguno puede mostrarle sus datos al otro. Hoy se arregla por teléfono:{" "}
-          <span className="text-(--senal)">sin regla y sin registro.</span>
+          Un área contra otra. Un hospital contra otro. Cuando necesitan lo mismo,{" "}
+          <span className="text-(--senal)">no pueden decidir juntas:</span> cada una tiene datos que no puede mostrar.
         </p>
       </div>
       <div data-in className="rounded-[32px] border border-(--basalto) bg-(--grafito)/70 p-8 backdrop-blur-md">
-        <p className="font-mono text-sm tracking-[0.14em] text-(--piedra) uppercase">Agentes solos, en cadena</p>
+        <p className="font-mono text-sm tracking-[0.14em] text-(--piedra) uppercase">Agentes que tiran cada uno para su lado</p>
         <p className="mt-4 text-[clamp(5rem,10vw,10rem)] leading-none font-extrabold tracking-[-0.05em] text-(--senal) tabular-nums">
           {pct(autonomous)}
         </p>
         <p className="mt-4 text-[clamp(1.1rem,1.6vw,1.6rem)] leading-snug text-(--marmol)">
           {steps} pasos con {pct(accuracy)} de acierto cada uno.
           <br />
-          <span className="text-(--eucalipto)">Caos más rápido.</span>
+          <span className="text-(--eucalipto)">No es inteligencia: es caos más rápido.</span>
         </p>
         <p className="mt-4 font-mono text-xs tracking-[0.12em] text-(--piedra) uppercase">Modelo ilustrativo · pⁿ</p>
       </div>

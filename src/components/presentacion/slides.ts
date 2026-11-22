@@ -24,8 +24,8 @@ export const SLIDES: Slide[] = [
   {
     id: "problema",
     time: "0:07–0:27",
-    say: "Una organización no es una máquina: es un choque de fuerzas. Un área contra otra, un hospital contra otro. Hoy, dos hospitales que necesitan la misma cama UCI lo arreglan por teléfono: sin regla y sin registro. Y si les ponemos agentes de IA que tiran cada uno para su lado, no obtenemos inteligencia: obtenemos caos más rápido. Es un modelo ilustrativo: diez pasos con 92 % de acierto cada uno dan 43 %.",
-    do: "«Lo arreglan por teléfono» es el relato del equipo, no un dato medido: si un juez pregunta, se dice así.",
+    say: "Una organización no es una máquina: es un choque de fuerzas. Un área contra otra, un hospital contra otro. Cuando necesitan el mismo recurso, no pueden decidir juntas: cada una tiene datos que no puede mostrarle a la otra. Y hoy metemos agentes de IA en medio de esa tensión. Si cada agente tira para su lado, no obtenemos inteligencia: obtenemos caos más rápido. En un modelo simple, diez pasos con 92 % de acierto cada uno dan 43 %.",
+    do: "Sale de docs/DEMO_DIA.md (narrativa, frases 1 y 2) y de pⁿ (docs/DECISIONES.md). Sin estadística externa: si un juez pregunta por el 43 %, es un modelo ilustrativo que calcula el motor.",
   },
   {
     id: "solucion",

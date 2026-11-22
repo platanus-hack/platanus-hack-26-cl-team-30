@@ -1,7 +1,7 @@
 "use client";
 
-// El problema y el nombre. Los canales de siempre (WhatsApp, Excel…) flotan
-// desordenados y, al bajar, se "tallan" en una fila: del caos al protocolo.
+// El problema y el nombre. Las fuerzas en choque (área contra área, agente contra
+// agente…) flotan desordenadas y, al bajar, se "tallan" en una fila: del caos al protocolo.
 
 import { useRef } from "react";
 import { EXPO, MOTION_OK, SplitText, gsap, useGSAP } from "@/components/landing/gsap";
@@ -44,12 +44,6 @@ export function Origin() {
             scrollTrigger: { trigger: "[data-chips]", start: "top 90%", end: "center 45%", scrub: 1 },
           },
         );
-        gsap.to("[data-chip-strike]", {
-          scaleX: 1,
-          ease: "none",
-          stagger: 0.1,
-          scrollTrigger: { trigger: "[data-chips]", start: "center 60%", end: "center 30%", scrub: 1 },
-        });
         gsap.from("[data-name-card]", {
           y: 60,
           opacity: 0,
@@ -76,19 +70,14 @@ export function Origin() {
         <div className="mt-14 grid gap-14 lg:grid-cols-[1.1fr_0.9fr]">
           <div>
             <p className="max-w-xl text-lg leading-relaxed text-pretty text-(--piedra)">{ORIGIN.body}</p>
-            <ul data-chips aria-label="Cómo se coordina hoy" className="mt-12 flex flex-wrap gap-3">
+            <ul data-chips aria-label="Fuerzas en choque" className="mt-12 flex flex-wrap gap-3">
               {ORIGIN.channels.map((c) => (
                 <li
                   key={c}
                   data-chip
-                  className="relative rounded-full border border-(--basalto) bg-(--grafito)/80 px-5 py-2.5 font-mono text-sm text-(--marmol) backdrop-blur"
+                  className="rounded-full border border-(--basalto) bg-(--grafito)/80 px-5 py-2.5 font-mono text-sm text-(--marmol) backdrop-blur"
                 >
                   {c}
-                  <span
-                    data-chip-strike
-                    aria-hidden
-                    className="absolute inset-x-4 top-1/2 h-px origin-left scale-x-0 bg-(--senal) motion-reduce:scale-x-100"
-                  />
                 </li>
               ))}
             </ul>
