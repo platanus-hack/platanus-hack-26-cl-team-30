@@ -113,14 +113,14 @@ No está medido cuánto tarda Claude en escribir cada frase ni cuántas veces ca
 ## Pruebas automáticas
 
 - **Qué:** `npm test` (Vitest, sin modelo).
-- **Dónde:** en un notebook (macOS), rama `docs` (ronda 20 más la landing de Sculptor).
-- **Cuándo:** 21 de noviembre de 2026, noche.
+- **Dónde:** en un notebook (macOS), sobre `origin/main` (commit `4a06eab`).
+- **Cuándo:** 22 de noviembre de 2026, 02:08.
 
 | Archivos de prueba | Pruebas | Resultado |
 | --- | --- | --- |
-| 16 | 507 | 507 pasan |
+| 17 | 516 | 516 pasan (48,7 s) |
 
-Borradores anteriores del pitch citaban 216 y 80 pruebas; la cifra vigente es esta. Antes de la ronda 20 eran 415 en 11 archivos.
+Ninguna llama a un modelo real: los agentes se reemplazan por dobles (`vi.mock`) o por un servidor simulado compatible con OpenAI. Son pruebas del motor, los permisos, el almacén y la API, no evaluaciones de la calidad del modelo. Antes: 507 en 16 archivos (21 de noviembre, noche), 415 en 11 (antes de la ronda 20); borradores del pitch citaban 216 y 80.
 
 ## Canales del Comité contra los servicios reales (Kapso y ElevenLabs)
 

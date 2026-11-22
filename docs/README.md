@@ -18,6 +18,7 @@ Mapa de esta carpeta. Si vienes a entender el sistema, empieza por `RECORRIDO.md
 | [`DECISIONES.md`](DECISIONES.md) | Por qué se eligió cada cosa y qué se descartó |
 | [`MEDICIONES.md`](MEDICIONES.md) | Cifras medidas, con cómo, dónde y cuándo. Si una cifra no está aquí, no está medida |
 | [`PREGUNTAS.md`](PREGUNTAS.md) | Preguntas probables del jurado con respuestas cortas |
+| [`PREGUNTAS_JUECES.md`](PREGUNTAS_JUECES.md) | Ensayo del bot de los jueces: 30 preguntas difíciles de tres revisores sin contexto, verificadas contra el código, con respuesta de 20 s y archivo de respaldo |
 | [`PENDIENTES.md`](PENDIENTES.md) | Lo que sigue abierto o sin verificar |
 | [`DISENO.md`](DISENO.md) | Paleta, tipografía y reglas visuales de la app |
 
