@@ -20,6 +20,15 @@ export function remoteDemoBase(): string | null {
   }
 }
 
+/**
+ * Sala fija para la demo (PRESENTACION_DEMO_SALA, por ejemplo CSCGZ): la lámina en vivo
+ * usa esa sala en vez de abrir una nueva. Vive en el deploy remoto si hay uno, o aquí.
+ */
+export function fixedDemoRoom(): string | null {
+  const raw = process.env.PRESENTACION_DEMO_SALA?.trim();
+  return raw && ROOM_ID.test(raw) ? raw : null;
+}
+
 /** Ids de sala válidos: letras, números, guion y guion bajo. */
 export const ROOM_ID = /^[A-Za-z0-9_-]{1,40}$/;
 

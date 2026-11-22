@@ -527,8 +527,8 @@ function Desarrollo() {
         </ul>
       </div>
       <div data-in className="mt-6 grid min-h-0 flex-1 gap-4 md:grid-cols-2">
-        <Pane initial={PAGES[0].href} />
-        <Pane initial={PAGES[1].href} />
+        <Pane initial="/" />
+        <Pane initial="/casos/logistica" />
       </div>
     </div>
   );
