@@ -213,7 +213,10 @@ export function demoTurn(room: ProjectedRoomState): DemoTurn | null {
   if (!isDemoRoom(room) || !room.allocation || !room.scarcity) return null;
   const allocation = room.allocation;
   if (allocation.status === "SEALED") return null;
-  const seats = stageSeats(room).filter((seat) => seat.human && seat.order);
+  // En orden de llegada: la primera silla libre es la que sigue en el QR (en la negociación, el Comité es la 3.ª).
+  const seats = stageSeats(room)
+    .filter((seat) => seat.human && seat.order)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const make = (seatId: string, action: "submit" | "decide" | "join", server?: ServerTurn): DemoTurn | null => {
     const seat = seats.find((entry) => entry.id === seatId);
     if (!seat || !seat.order) return null;

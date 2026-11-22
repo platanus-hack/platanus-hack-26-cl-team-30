@@ -56,6 +56,9 @@ export function DemoSeatView({ room, me, act, acta, session }: { room: Projected
           <p className="st-demo-line">{line}</p>
         </section>
 
+        {/* Mientras decide, el WhatsApp sigue a la vista: compacto y arriba, para que la barra de Aceptar/Rechazar no lo tape. */}
+        {!mine.isCase && !sealed && myTurn && turn.action === "decide" && <WhatsAppSummary roomId={room.roomId} session={session ?? null} compact />}
+
         {sealed ? (
           <section className="st-card st-demo-state st-reveal" data-tone="done">
             <CircleCheck aria-hidden />
@@ -91,8 +94,8 @@ export function DemoSeatView({ room, me, act, acta, session }: { room: Projected
           </section>
         )}
 
-        {/* El Comité puede pedir el acta por WhatsApp antes o después de decidir (no mientras decide). */}
-        {!mine.isCase && !(myTurn && turn?.action === "decide") && <WhatsAppSummary roomId={room.roomId} session={session ?? null} />}
+        {/* El Comité pide el acta por WhatsApp: destacado hasta que decide; después, discreto (si lo pide tarde, el acta sale igual). */}
+        {!mine.isCase && !(myTurn && turn?.action === "decide" && !sealed) && <WhatsAppSummary roomId={room.roomId} session={session ?? null} featured={!sealed} />}
 
         {error && (
           <p role="alert" className="st-alert">
@@ -200,17 +203,37 @@ const WHATSAPP_NUMBER = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "12084850157
 /** «12084850157» → «+1 208 485 0157». */
 const WHATSAPP_DISPLAY = WHATSAPP_NUMBER.length === 11 && WHATSAPP_NUMBER.startsWith("1") ? `+1 ${WHATSAPP_NUMBER.slice(1, 4)} ${WHATSAPP_NUMBER.slice(4, 7)} ${WHATSAPP_NUMBER.slice(7)}` : `+${WHATSAPP_NUMBER}`;
 
+/** Enlace wa.me al número de Sculptor con «Hola, soy el Comité de la sala <código>» ya escrito. */
+export function committeeWhatsAppHref(roomId: string): string {
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hola, soy el Comité de la sala ${roomId}`)}`;
+}
+
 /**
  * «Recibir resumen por WhatsApp». El botón abre WhatsApp con el mensaje
  * prellenado «Hola, soy el Comité de la sala <código>»: al enviarlo, el servidor
- * asocia ese número a la sala y, al decidir, le manda el acta (texto y nota de
- * voz). Alternativa: escribir el número aquí. El número no se guarda en el celular.
+ * asocia ese número a la sala y, al decidir, le manda el acta (texto y, si está
+ * activada, nota de voz). Alternativa: escribir el número aquí. El número no se
+ * guarda en el celular. `featured`: el Comité lo ve apenas entra, lleno y con una
+ * línea que dice para qué sirve, hasta que decide (en el pitch, un juez lo prueba).
+ * `compact`: solo el botón, mientras decide, para no empujar la decisión.
  */
-function WhatsAppSummary({ roomId, session }: { roomId: string; session: RoomSession | null }) {
+export function WhatsAppSummary({ roomId, session, featured = false, compact = false }: { roomId: string; session: RoomSession | null; featured?: boolean; compact?: boolean }) {
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
+  const [opened, setOpened] = useState(false);
   const [result, setResult] = useState<{ tone: "done" | "wait"; text: string } | null>(null);
-  const href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hola, soy el Comité de la sala ${roomId}`)}`;
+  const href = committeeWhatsAppHref(roomId);
+
+  if (compact) {
+    return (
+      <section className="st-wa" data-compact aria-label="Resumen por WhatsApp">
+        <a className="st-btn" data-kind="wa" href={href} target="_blank" rel="noopener noreferrer">
+          <MessageCircle aria-hidden />
+          Recibir resumen por WhatsApp
+        </a>
+      </section>
+    );
+  }
 
   async function submit() {
     if (!session) return;
@@ -223,11 +246,13 @@ function WhatsAppSummary({ roomId, session }: { roomId: string; session: RoomSes
   }
 
   return (
-    <section className="st-card st-wa" aria-label="Resumen por WhatsApp">
-      <a className="st-btn" data-kind="line" href={href} target="_blank" rel="noopener noreferrer">
+    <section className="st-card st-wa" data-featured={featured || undefined} aria-label="Resumen por WhatsApp">
+      {featured && <p className="st-wa-why">Cuando decidas, te llega el acta a tu WhatsApp. Un toque y envía el mensaje que ya viene escrito.</p>}
+      <a className="st-btn" data-kind={featured ? "wa" : "line"} href={href} target="_blank" rel="noopener noreferrer" onClick={() => setOpened(true)}>
         <MessageCircle aria-hidden />
         Recibir resumen por WhatsApp
       </a>
+      {featured && opened && <p className="st-wa-result" data-tone="done">Envía el mensaje en WhatsApp y vuelve aquí para decidir.</p>}
       <details className="st-why">
         <summary>O escriba su número</summary>
         <form

@@ -697,8 +697,11 @@ export function joinRandomSeat(roomId: string, rawBody: unknown, now: number = D
   );
   if (pool.length === 0) return reject(409, "NO_FREE_SEAT", holding ? "No queda otra silla libre en esta sala" : "No quedan sillas libres en esta sala");
 
-  // Sala de demo: por orden de llegada (primer caso, segundo caso, Comité), para que el
-  // narrador sepa quién es quién. En las demás salas, al azar.
+  // Sala de demo: por orden de llegada (primer caso, segundo caso, Comité y, en la
+  // negociación, las dos Administraciones), para que el narrador sepa quién es quién.
+  // En las demás salas, al azar. Es atómico: desde que se calcula `pool` hasta que se
+  // guarda el token no hay ningún await, así que dos celulares en el mismo instante
+  // nunca reciben la misma silla (tests/tres-jueces.test.ts).
   const seat = record.state.demo ? pool[0] : pool[Math.min(pool.length - 1, Math.max(0, Math.floor(random() * pool.length)))];
   const joined = engine.markRoleJoined(record.state, seat, now, { assigned: "random" });
   if (!joined.ok) return settle(roomId, record, joined);

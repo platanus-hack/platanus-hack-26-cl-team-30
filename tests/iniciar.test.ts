@@ -1,6 +1,7 @@
 // Pruebas de «Iniciar» (paso Unirse de la demo con negociación) y del contador de
 // personas de la pantalla grande. Lo que se comprueba:
-//   1. Iniciar llena con bots los asientos sin persona, marcados como automáticos
+//   1. Iniciar llena con bots los asientos sin persona (con 3 personas, las dos
+//      Administraciones), marcados como automáticos
 //      (role.bot, postura automática y { bot: true } en la bitácora), y la
 //      negociación arranca sin esperar a nadie más: posturas → debate.
 //   2. Con los 5 asientos ocupados, Iniciar no agrega bots: solo arranca.
@@ -21,7 +22,8 @@ import { POST as startRoute } from "../src/app/api/rooms/[roomId]/start/route";
 const STEP = 1000;
 type Seat = { orgId: string; roleId: string; token: string };
 const id = (seat: { orgId: string; roleId: string }) => `${seat.orgId}/${seat.roleId}`;
-const ALL_SEATS = ["clinica_andes/role_a", "clinica_andes/role_b", "hospital_rural/role_a", "hospital_rural/role_b", "comite_red/role_c"];
+/** Los 5 asientos en orden de llegada: Urgencias, Turno, Comité, Adm. Clínica, Adm. Rural. */
+const ALL_SEATS = ["clinica_andes/role_a", "hospital_rural/role_a", "comite_red/role_c", "clinica_andes/role_b", "hospital_rural/role_b"];
 
 const room = (extra: Record<string, unknown> = {}) => createRoom({ mode: "cross_org", demo: true, negotiationStepMs: STEP, turnTimeoutMs: 0, ...extra }).roomId;
 const stage = (roomId: string) => projectRoom(roomId, "stage")!;
@@ -53,24 +55,28 @@ afterEach(() => {
 });
 
 describe("Iniciar", () => {
-  it("con 2 personas, los 3 asientos libres los toma un bot marcado y la negociación arranca sin esperar", async () => {
+  it("con 3 personas (Urgencias, Turno, Comité), las 2 Administraciones las toma un bot marcado y la negociación arranca sin esperar", async () => {
     const roomId = room();
-    const people = [draw(roomId), draw(roomId)];
+    const [clinic, rural, committee] = [draw(roomId), draw(roomId), draw(roomId)];
+    expect([clinic, rural, committee].map(id)).toEqual(ALL_SEATS.slice(0, 3));
+    const people = [clinic, rural];
     expect(isJoining(getRoom(roomId)!)).toBe(true);
 
     const res = await start(roomId);
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.bots.map(id)).toEqual(ALL_SEATS.slice(2));
+    expect(body.bots.map(id).sort()).toEqual(ALL_SEATS.slice(3).sort());
 
     // Marcados como automáticos: en la vista, en las posturas y en la bitácora.
-    expect(botSeats(roomId).sort()).toEqual(ALL_SEATS.slice(2).sort());
+    expect(botSeats(roomId).sort()).toEqual(ALL_SEATS.slice(3).sort());
     const positions = nego(roomId).positions;
-    expect(positions.filter((entry) => entry.automatic).map(id)).toEqual(["hospital_rural/role_a", "hospital_rural/role_b"]);
+    expect(positions.filter((entry) => entry.automatic).map(id)).toEqual(["clinica_andes/role_b", "hospital_rural/role_b"]);
     expect(positions.filter((entry) => !entry.automatic).every((entry) => entry.position === null)).toBe(true);
     const log = getRoom(roomId)!.auditLog;
     expect(log.some((event) => event.type === "AUTOPILOT" && event.detail?.via === "iniciar" && event.detail?.automatic === true)).toBe(true);
-    expect(log.filter((event) => event.detail?.bot === true && event.detail?.via === "iniciar")).toHaveLength(3);
+    expect(log.filter((event) => event.detail?.bot === true && event.detail?.via === "iniciar")).toHaveLength(2);
+    // El Comité sigue siendo una persona: el bot no lo toma.
+    expect(botSeats(roomId)).not.toContain(ALL_SEATS[2]);
     // Ya no es el paso Unirse: un segundo toque no hace nada.
     expect(isJoining(getRoom(roomId)!)).toBe(false);
     expect((await start(roomId)).status).toBe(409);

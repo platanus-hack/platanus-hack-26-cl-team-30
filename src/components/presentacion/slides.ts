@@ -19,7 +19,7 @@ export const SLIDES: Slide[] = [
     id: "hola",
     time: "0:00–0:07",
     say: "Hola, soy Nahum, del equipo 30. Esto es Sculptor: organizaciones que deciden juntas sin mostrarse sus datos.",
-    do: "Sebastián ya está junto a las 5 personas de primera fila, con el celular desbloqueado.",
+    do: "Sebastián ya está junto a los 3 jueces, que tienen el celular desbloqueado y saben que escanean a la vez.",
   },
   {
     id: "problema",
@@ -31,13 +31,13 @@ export const SLIDES: Slide[] = [
     id: "solucion",
     time: "0:27–0:45",
     say: "Sculptor sienta a personas y agentes en la misma mesa. Cada persona tiene un agente que la asesora, los agentes negocian a la vista, y la última palabra es de una persona. Lo que está en juego es quién recibe la última cama, y queda un acta que explica por qué. Saquen el celular.",
-    do: "Al terminar la frase Ramón toca «Ahora ustedes» (o →): pasa a la lámina en vivo, con la pantalla grande y su QR a la izquierda. Sebastián: «¡Ustedes cinco!».",
+    do: "Al terminar la frase Ramón toca «Ahora ustedes» (o →): pasa a la lámina en vivo, con la pantalla grande y su QR a la izquierda. Sebastián se acerca a la mesa de los jueces.",
   },
   {
     id: "demo",
     time: "0:45–2:40",
-    say: "Unirse: «Escaneen de a uno. La primera es Urgencias de la Clínica; la segunda, su Administración; después Turno y Administración del Hospital Rural. La quinta es el Comité». Posturas: «Su agente les escribió un consejo privado. Elijan su postura: un toque». Debate: «Ahora negocian los agentes. Ningún costo sale de su lado: el servidor ni siquiera se lo envía al otro». Propuesta: «Los agentes conversan, el código gobierna. Casi empate, 0,52 contra 0,53: desempata la necesidad sin cubrir». Comité: «La última palabra es humana: ¿acepta o rechaza? Su razón ya está escrita». Acta: «Todas las pantallas cambiaron a la vez, sin recargar, y quedó un acta con la razón».",
-    do: "Izquierda: la pantalla grande real (código y QR). Derecha: la galaxia, que enciende dos nodos por persona conectada, converge en el debate y, al sellarse el acta, se aleja hasta NGC 253. `P` pausa o reanuda el debate, `S` adelanta un paso y `B` abre una sala nueva. Plan B: si a los 15 s falta alguien, Sebastián entra con datos móviles; si alguien no actúa en 20 s, juega el piloto (queda marcado como automático).",
+    say: "Unirse: «Ustedes tres escaneen: el primero es la Clínica, el segundo el Hospital Rural y el tercero el Comité. Las dos Administraciones las juega un bot, y queda marcado». Posturas: «Clínica y Hospital Rural: su agente les escribió un consejo privado. Elijan su postura: un toque. Comité: toque \"Recibir resumen por WhatsApp\" y envíe el mensaje». Debate: «Ahora negocian los agentes. Ningún costo sale de su lado: el servidor ni siquiera se lo envía al otro». Propuesta: «Los agentes conversan, el código gobierna. Casi empate, 0,52 contra 0,53: desempata la necesidad sin cubrir». Comité: «La última palabra es humana: ¿acepta o rechaza? Su razón ya está escrita». Acta: «Todas las pantallas cambiaron a la vez, sin recargar, y quedó un acta con la razón. Tres personas, cinco agentes, una decisión que nadie podía tomar solo».",
+    do: "Izquierda: la pantalla grande real (código y QR). Derecha: la galaxia, que enciende dos nodos por persona conectada, converge en el debate y, al sellarse el acta, se aleja hasta NGC 253. `P` pausa o reanuda el debate, `S` adelanta un paso y `B` abre una sala nueva. Con los 3 adentro, Ramón toca «Iniciar» en la pantalla grande (un clic dentro de ella): las dos Administraciones quedan como «automático». Plan B: si a los 15 s falta alguien, Sebastián entra con datos móviles; si alguien no actúa en 20 s, juega el piloto (queda marcado como automático).",
   },
   {
     id: "desarrollo",
@@ -48,7 +48,7 @@ export const SLIDES: Slide[] = [
   {
     id: "cierre",
     time: "2:50–3:00",
-    say: "Por eso nos llamamos Sculptor: la galaxia que vemos desde Chile, donde del choque de fuerzas nacen estrellas nuevas. Ustedes cinco acaban de crear el primer mundo. Sculptor: donde el caos aprende a evolucionar.",
+    say: "Por eso nos llamamos Sculptor: la galaxia que vemos desde Chile, donde del choque de fuerzas nacen estrellas nuevas. Ustedes tres acaban de crear el primer mundo. Sculptor: donde el caos aprende a evolucionar.",
     do: "Válvula de escape: si a los 2:40 no hay acta, decir solo «Esa cama fue el primer átomo: el mismo motor sirve para una grúa o un camión. Sculptor: donde el caos aprende a evolucionar». Desde la lámina en vivo, un clic en el planeta hace el salto a velocidad luz hacia la lámina siguiente.",
   },
   {
