@@ -228,6 +228,7 @@ export type ActionErrorCode =
   | "BUSY" // 409: ya hay una llamada al modelo en curso para este rol o esta sala, o un ensayo automático corriendo
   | "COMMITTEE_KEY_REQUIRED" // 403: tomar el puesto del Comité sin la clave del QR
   | "HOST_ONLY" // 403: control de la pantalla grande sin el token de anfitrión
+  | "ROUND_STARTED" // 409: «Iniciar» de la demo fuera del paso Unirse
   | "RATE_LIMITED" // 429: demasiadas solicitudes seguidas del mismo cliente
   | "STORAGE_UNAVAILABLE" // 503: Supabase o la tabla no están disponibles
   | "ROOM_LIMIT" // 503: el servidor llegó al tope de salas y ninguna se puede liberar

@@ -29,6 +29,12 @@ export type NegotiationLineInput = {
   position: string | null;
   /** Posturas entre las que puede elegir (advice). */
   options: string[];
+  /**
+   * Postura que le recomienda el código y por qué (advice). La calcula
+   * positionPrompt (src/lib/engine/negotiation.ts) con datos que el rol ya ve:
+   * el agente no la elige, solo la explica en palabras simples.
+   */
+  recommended?: { option: string; because: string } | null;
   /** Lo dicho hasta ahora en público, para no repetir. */
   transcript: { agentLabel: string; text: string }[];
   signal?: AbortSignal;
@@ -53,8 +59,14 @@ function buildInstruction(input: NegotiationLineInput): string {
   if (input.kind === "advice") {
     return [
       ...common,
-      "Le hablas en privado a la persona de tu rol, de tú. Dile qué postura le conviene y por qué, en una frase.",
+      "Le hablas en privado a la persona de tu rol, de tú, como alguien que no sabe nada del sistema.",
       `Sus opciones: ${input.options.map((option) => `«${option}»`).join(", ")}.`,
+      ...(input.recommended
+        ? [
+            `Le recomiendas «${input.recommended.option}». La razón: ${input.recommended.because}.`,
+            `Empieza exactamente con «Te recomiendo «${input.recommended.option}», porque» y explica la razón en palabras simples, sin jerga ni puntajes.`,
+          ]
+        : ["Dile qué postura le conviene y por qué."]),
     ].join("\n");
   }
   return [

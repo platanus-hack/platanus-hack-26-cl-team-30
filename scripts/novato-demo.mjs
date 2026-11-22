@@ -16,6 +16,12 @@
 //   4. Espera la negociación sin acelerarla, para medir el ritmo real. Con
 //      --rapido aprieta «Siguiente» del narrador en la pantalla grande.
 //
+// Con --iniciar entran solo 2 personas y el narrador toca «Iniciar» en la
+// pantalla grande: los 3 asientos libres los toma un bot (marcado como
+// automático) y la negociación arranca sin esperar a nadie más. El Comité es un
+// bot y decide el plan B. Revisa que el contador diga «2/5» antes y
+// «2/5 · 3 automáticos» después, y captura ambos momentos.
+//
 // Registra, por persona y por fase: el título que ve (el texto más grande de la
 // pantalla), cuántas palabras tiene la pantalla, si hay que desplazarse, los
 // botones a la vista, los toques que necesitó y cuánto duró cada fase. Guarda una
@@ -34,10 +40,11 @@
 // están juntos en SEL, marcados con [R20].
 //
 // Uso:
-//   node scripts/novato-demo.mjs <url> <carpeta> [--rapido] [--comite aceptar|rechazar]
+//   node scripts/novato-demo.mjs <url> <carpeta> [--rapido] [--iniciar] [--comite aceptar|rechazar]
 //        [--atasco 60] [--limite 900] [--pausa-entrada 1500] [--lectura 2000] [--headed]
 //
 //   --rapido         aprieta «Siguiente» del narrador en cuanto se puede.
+//   --iniciar        entran 2 personas y el narrador toca «Iniciar» (bots en los 3 asientos libres).
 //   --comite         qué hace el Comité (por defecto aceptar).
 //   --atasco         segundos sin cambios en una pantalla para dar a alguien por trabado (60).
 //   --limite         tope total de la prueba en segundos (900).
@@ -63,6 +70,9 @@ const { flags, positional } = parseArgs(process.argv.slice(2));
 const baseUrl = (positional[0] ?? "").replace(/\/$/, "");
 const outDir = positional[1] ? resolve(positional[1]) : "";
 const RAPIDO = Boolean(flags.rapido);
+const INICIAR = Boolean(flags.iniciar);
+/** Personas que entran: 5, o 2 con --iniciar (el resto lo llenan los bots). */
+const PEOPLE = INICIAR ? 2 : 5;
 const COMITE = flags.comite === "rechazar" ? "rechazar" : "aceptar";
 const STUCK_MS = Number(flags.atasco ?? 60) * 1000;
 const LIMIT_MS = Number(flags.limite ?? 900) * 1000;
@@ -71,7 +81,7 @@ const READ_MS = Number(flags.lectura ?? 2000);
 const HEADED = Boolean(flags.headed);
 
 if (!baseUrl || !outDir || (flags.comite && !["aceptar", "rechazar"].includes(flags.comite))) {
-  console.error("Uso: node scripts/novato-demo.mjs <url> <carpeta> [--rapido] [--comite aceptar|rechazar] [--atasco 60] [--limite 900] [--pausa-entrada 1500] [--lectura 2000] [--headed]");
+  console.error("Uso: node scripts/novato-demo.mjs <url> <carpeta> [--rapido] [--iniciar] [--comite aceptar|rechazar] [--atasco 60] [--limite 900] [--pausa-entrada 1500] [--lectura 2000] [--headed]");
   process.exit(2);
 }
 
@@ -95,6 +105,10 @@ const SEL = {
   /** Botones del Comité (demo-view.tsx), por su texto. */
   approve: /^\s*Aceptar\s*$/,
   reject: /^\s*Rechazar\s*$/,
+  /** Botón «Iniciar» del paso Unirse en la pantalla grande, por su texto. */
+  start: /^\s*Iniciar\s*$/,
+  /** Contador de personas de la pantalla grande («2/5 personas · 3 automáticos»). */
+  peopleCount: ".nx-ng-count",
   /** Botón «Siguiente» del narrador, por su texto. [R20] */
   next: /^\s*Siguiente\s*$/,
   /** Pantallas de entrada genéricas: si aparecen, una persona las toca. */
@@ -340,6 +354,20 @@ async function look(device, forbidden) {
     throw error;
   }
   device.screen = screen;
+  // Un celular que ya recibió su silla puede mostrar sus propios datos antes de que
+  // el bucle de entrada lo anote: se lee su silla aquí para no darlos por fuga.
+  if (!device.seat && device.viewer !== "stage" && device.roomId) {
+    device.seat = await device.page
+      .evaluate((key) => {
+        try {
+          const parsed = JSON.parse(sessionStorage.getItem(key) ?? "null");
+          return parsed?.orgId && parsed?.roleId ? { orgId: parsed.orgId, roleId: parsed.roleId } : null;
+        } catch {
+          return null;
+        }
+      }, `nexo:${device.roomId}:session`)
+      .catch(() => null);
+  }
   const normalized = normalize(screen.text);
   if (normalized !== device.lastNormalized) {
     device.lastNormalized = normalized;
@@ -443,7 +471,7 @@ async function main() {
   }
   const { browser, from } = chromiumInfo;
   log(`Playwright: ${from}`);
-  log(`Servidor: ${baseUrl} · modo ${RAPIDO ? "rápido (Siguiente del narrador)" : "ritmo real"} · Comité: ${COMITE}`);
+  log(`Servidor: ${baseUrl} · modo ${modeLabel()} · Comité: ${INICIAR ? "bot (plan B)" : COMITE}`);
 
   const deadline = setTimeout(() => {
     failures.push(`TIEMPO: la prueba pasó los ${LIMIT_MS / 1000} s sin llegar al acta (fase ${PHASE_NAMES[currentPhase()]}).`);
@@ -554,9 +582,9 @@ async function main() {
     })();
     watcher.catch(() => {}); // la falla se lee en failures; esto evita un rechazo sin atender mientras entran las personas
 
-    // 2. Las 5 personas entran por el QR, en orden.
+    // 2. Las personas (5, o 2 con --iniciar) entran por el QR, en orden.
     const people = [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < PEOPLE; i++) {
       const context = await browser.newContext({
         viewport: { width: 390, height: 844 },
         deviceScaleFactor: 2,
@@ -568,6 +596,7 @@ async function main() {
       const page = await context.newPage();
       page.on("pageerror", (error) => consoleErrors.push(`persona ${i + 1}: ${error.message}`));
       const device = makeDevice({ id: `persona-${i + 1}`, label: `Persona ${i + 1}`, page, viewer: null });
+      device.roomId = roomId;
       devices.push(device);
       people.push(device);
       const scanAt = Date.now();
@@ -606,7 +635,36 @@ async function main() {
       device.byPhase.entrada = { title: screen?.title ?? "", titlePx: screen?.titlePx ?? 0, words: screen?.words ?? 0, scrolls: !!screen?.scrolls, buttons: screen?.buttons ?? [], tapsSoFar: device.taps, file: await capture(device, `entrada-${device.id}`) };
       await sleep(JOIN_GAP_MS);
     }
-    mark("Las 5 personas entraron");
+    mark(`Las ${PEOPLE} personas entraron`);
+
+    // 2b. --iniciar: el narrador toca «Iniciar» y los asientos libres los toma un bot.
+    if (INICIAR) {
+      const readCount = async () => (await stagePage.locator(SEL.peopleCount).first().innerText({ timeout: 5000 }).catch(() => "")).replace(/\s+/g, " ").trim();
+      const before = await readCount();
+      stage.countBefore = before;
+      await capture(stage, "iniciar-1-antes");
+      if (!before.startsWith(`${PEOPLE}/5`)) notes.push(`Antes de «Iniciar» el contador dice «${before}», no «${PEOPLE}/5».`);
+      const tapped = await tapButton(stage, SEL.start, "narrador: Iniciar");
+      if (!tapped) {
+        const shot = await capture(stage, "sin-iniciar");
+        fail(`La pantalla grande no muestra el botón «Iniciar» en el paso Unirse. Captura: ${shot}`);
+      }
+      const botsWanted = 5 - PEOPLE;
+      const startDeadline = Date.now() + 10_000;
+      let after = "";
+      while (Date.now() < startDeadline) {
+        after = await readCount();
+        if (after.includes(`${botsWanted} automático`)) break;
+        await sleep(300);
+      }
+      stage.countAfter = after;
+      await sleep(900);
+      await capture(stage, "iniciar-2-despues");
+      if (!after.startsWith(`${PEOPLE}/5`) || !after.includes(`${botsWanted} automático`)) notes.push(`Después de «Iniciar» el contador dice «${after}», no «${PEOPLE}/5 · ${botsWanted} automáticos».`);
+      const bots = (observed?.negotiation?.positions ?? []).filter((entry) => entry.automatic).length;
+      mark(`Contador: «${before}» → «${after}» · posturas automáticas: ${bots}`);
+      if (bots !== 2) notes.push(`Tras «Iniciar» hay ${bots} posturas automáticas; se esperaban 2 (las 2 sillas de organización sin persona).`);
+    }
 
     // 3. Cada persona juega su celular; la pantalla grande, si --rapido, adelanta.
     const committee = people.find((device) => device.seat.orgId === observed.scarcity?.arbiter?.orgId);
@@ -676,6 +734,11 @@ async function main() {
   }
 }
 
+function modeLabel() {
+  const pace = RAPIDO ? "rápido (Siguiente del narrador)" : "ritmo real, sin adelantar";
+  return INICIAR ? `«Iniciar» con ${PEOPLE} personas, ${pace}` : pace;
+}
+
 /** Promesa que se resuelve cuando aparece la primera falla (o el tope de tiempo). */
 function failurePromise() {
   return new Promise((resolveFailure) => {
@@ -706,7 +769,9 @@ function writeReport(result) {
   const report = {
     ok,
     url: baseUrl,
-    mode: RAPIDO ? "rapido" : "ritmo-real",
+    mode: [INICIAR ? "iniciar" : null, RAPIDO ? "rapido" : "ritmo-real"].filter(Boolean).join("+"),
+    people: PEOPLE,
+    counter: INICIAR ? { before: devices[0]?.countBefore ?? null, after: devices[0]?.countAfter ?? null } : null,
     committee: COMITE,
     totalSeconds: Number(since()),
     failures,
@@ -721,7 +786,8 @@ function writeReport(result) {
 
   const lines = [];
   lines.push(`# Demo de novatos: ${ok ? "PASÓ" : "FALLÓ"}`, "");
-  lines.push(`- Servidor: ${baseUrl}`, `- Modo: ${RAPIDO ? "rápido (Siguiente del narrador)" : "ritmo real, sin adelantar"} · Comité: ${COMITE}`, `- Duración total: ${report.totalSeconds} s`);
+  lines.push(`- Servidor: ${baseUrl}`, `- Modo: ${modeLabel()} · Comité: ${INICIAR ? "bot (plan B)" : COMITE}`, `- Duración total: ${report.totalSeconds} s`);
+  if (report.counter) lines.push(`- Contador de la pantalla grande: «${report.counter.before}» antes de «Iniciar» → «${report.counter.after}» después`);
   if (result?.stats) {
     const s = result.stats;
     lines.push(

@@ -1123,7 +1123,7 @@ async function writeNegotiationText(roomId: string, record: RoomRecord, seat: en
     });
     const transcript = negotiation.publicTranscript(record.state).map((message) => ({ agentLabel: message.agentLabel, text: message.text }));
     const written = await Promise.race([
-      Promise.resolve().then(() => writeNegotiationLine({ view, kind, seatLabel: brief.seatLabel, resource: brief.resource, role: brief.role, position: brief.position, options: brief.options, transcript, signal: controller.signal })),
+      Promise.resolve().then(() => writeNegotiationLine({ view, kind, seatLabel: brief.seatLabel, resource: brief.resource, role: brief.role, position: brief.position, options: brief.options, recommended: brief.recommended, transcript, signal: controller.signal })),
       timeout,
     ]);
     if (!written || typeof written.text !== "string") {
@@ -1335,6 +1335,60 @@ export function controlNegotiation(roomId: string, action: "pause" | "resume" | 
   emit(roomId);
   const after = record.state.negotiation!;
   return { status: 200, body: { ok: true, phase: after.phase, paused: after.paused } };
+}
+
+/**
+ * true mientras la sala de demo está en el paso «Unirse»: negociación en
+ * posturas, nadie dio la suya todavía y el acta abierta. Es la única ventana en
+ * que «Iniciar» se acepta sin clave de anfitrión.
+ */
+export function isJoining(state: RoomState): boolean {
+  const current = state.negotiation;
+  return state.demo === true && !!current && current.phase === "positions" && state.decisionSealedAt === null && current.positions.every((entry) => entry.optionId === null);
+}
+
+export type StartDemoResponse = { status: 200; body: { ok: true; phase: string; bots: engine.ActorRef[] } } | { status: 404 | 409; body: ActionError };
+
+/**
+ * «Iniciar» del narrador (POST /api/rooms/:id/start): los asientos de la demo que
+ * no tienen persona los toma un bot del piloto automático, que fija su postura al
+ * tiro (marcada como automática), y la negociación arranca sin esperar a nadie
+ * más. Con los 5 asientos ocupados solo arranca el plazo de posturas. Solo vale
+ * en el paso «Unirse» (isJoining): no puede adelantar ni reiniciar una ronda en curso.
+ * Los bots quedan en botSeats (role.bot en la proyección) y en la bitácora con
+ * { bot: true } y un AUTOPILOT { via: "iniciar", automatic: true }.
+ */
+export function startDemo(roomId: string, now: number = Date.now()): StartDemoResponse {
+  const record = lookup(roomId);
+  if (!record) return { status: 404, body: { error: "La sala no existe", code: "ROOM_NOT_FOUND" } };
+  if (!record.state.demo || !record.state.negotiation) return { status: 409, body: { error: "«Iniciar» es solo para la demo con negociación entre agentes", code: "WRONG_MODE" } };
+  if (!isJoining(record.state)) return { status: 409, body: { error: "La ronda ya empezó: «Iniciar» solo sirve mientras la gente se une", code: "ROUND_STARTED" } };
+  touch(record);
+
+  const bots = engine.demoSeats(record.state).map((entry) => entry.seat).filter((seat) => !record.tokens.has(tokenKey(seat)));
+  let state = engine.recordAutopilotEvent(record.state, { phase: "start", via: "iniciar", demo: true, automatic: true, simulated: true, botSeats: bots.map(tokenKey) }, now);
+  for (const seat of bots) {
+    const joined = engine.markRoleJoined(state, seat, now, { bot: true, via: "iniciar" });
+    if (joined.ok) state = joined.state;
+    // El bot fija su postura al tiro: la primera opción, marcada como automática. El Comité no fija postura.
+    const option = negotiation.positionOptions(state, seat)[0];
+    const positioned = option ? negotiation.setPosition(state, seat, option.id, now, true) : null;
+    if (positioned?.ok) state = positioned.state;
+  }
+  if (state.negotiation?.paused) state = negotiation.patchNegotiation(state, { paused: false });
+  record.state = state;
+
+  const run = negotiationRunOf(record);
+  if (negotiation.allPositionsSet(record.state)) {
+    // Todas las posturas puestas (solo bots): el debate empieza tras la pausa corta.
+    scheduleNegotiation(roomId, record, "positions", Math.min(NEGOTIATION_POSITIONS_GRACE_MS, record.state.negotiation!.stepMs), now);
+  } else if (!run.timer) {
+    // Personas que aún eligen y ningún plazo corriendo (nadie había entrado, o estaba en pausa): corre el plazo de posturas.
+    scheduleNegotiation(roomId, record, "positions", run.remainingMs ?? negotiationPositionsMs(), now);
+  }
+  syncDemoTurn(roomId, record, now);
+  emit(roomId);
+  return { status: 200, body: { ok: true, phase: record.state.negotiation!.phase, bots } };
 }
 
 function clearResetTimer(record: RoomRecord) {

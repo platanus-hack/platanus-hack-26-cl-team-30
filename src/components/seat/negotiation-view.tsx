@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bot, FastForward, LoaderCircle, Pause, Play } from "lucide-react";
+import { Bot, FastForward, LoaderCircle, Pause, Play, Star } from "lucide-react";
 import type { RoleViewer } from "@/components/organs/format";
 import { loadHostCredentials, negotiationControl, type Act, type HostCredentials } from "@/lib/client/use-room";
 import type { ProjectedRoomState } from "@/lib/genome/schema";
+import { AGENT_INTRO } from "./agent-text";
 import { demoSeatList, orgOfLabel, withArticle } from "./demo-view";
 import { SeatMain } from "./seat-shell";
 
@@ -18,8 +19,12 @@ const PHASES = [
 
 /**
  * Celular en la negociación entre agentes (fases de posturas, debate y propuesta).
- * Arriba, quién eres. Después, «Tu agente»: el consejo privado que redactó tu
- * agente y las opciones de postura, a un toque. Cuando todos eligieron, el flujo
+ * Arriba, quién eres. Después, «Tu agente»: se presenta (antes trabajaba solo,
+ * ahora se conecta con los agentes de los demás), te dice qué decides en concreto
+ * («¿Cuánto autorizas sin pedir firma?»), te recomienda una opción y por qué, y
+ * las opciones van a un toque, con la recomendada marcada. La recomendación la
+ * calcula el servidor (myPrompt) con datos que tu rol ya ve; el consejo lo redacta
+ * tu agente. En el debate, lo que dice tu agente por ti va marcado como tuyo. Cuando todos eligieron, el flujo
  * en vivo de la negociación en versión corta: quién está escribiendo y los
  * últimos mensajes. La decisión y el acta las muestra la vista de demo.
  * Todo viene del servidor (room.negotiation), ya filtrado para este rol.
@@ -46,6 +51,8 @@ export function NegotiationSeatView({ room, me, act }: { room: ProjectedRoomStat
 
   if (!mine) return null;
   const committee = !mine.isCase;
+  const isMe = (ref: { orgId: string; roleId: string }) => ref.orgId === me.orgId && ref.roleId === me.roleId;
+  const choosing = !committee && !!negotiation.myOptions && !negotiation.myPosition;
 
   return (
     <SeatMain>
@@ -67,26 +74,40 @@ export function NegotiationSeatView({ room, me, act }: { room: ProjectedRoomStat
           <p className="st-agent-title">
             <Bot aria-hidden /> Tu agente
           </p>
-          {advice ? (
+          {!negotiation.myPosition && <p className="st-agent-intro">{AGENT_INTRO}</p>}
+          {choosing && negotiation.myPrompt && <p className="st-agent-question">{negotiation.myPrompt.question}</p>}
+          {negotiation.myPosition ? null : advice ? (
             <p className="st-agent-advice">{advice.text}</p>
           ) : (
             <p className="st-agent-advice st-agent-thinking">
               <span className="st-flow-spinner" aria-hidden /> Pensando qué te conviene…
             </p>
           )}
-          {!committee && negotiation.myOptions && !negotiation.myPosition && (
+          {choosing && (
             <div className="st-agent-options" role="group" aria-label="Tu postura">
-              {negotiation.myOptions.map((option) => (
-                <button key={option.id} type="button" className="st-btn" data-kind="line" disabled={busy !== null} onClick={() => choose(option.id)}>
-                  {busy === option.id && <LoaderCircle className="animate-spin" aria-hidden />}
-                  {option.label}
-                </button>
-              ))}
+              {negotiation.myOptions!.map((option) => {
+                const recommended = option.id === negotiation.myPrompt?.recommendedId;
+                return (
+                  <button key={option.id} type="button" className="st-btn st-option" data-kind={recommended ? undefined : "line"} data-recommended={recommended || undefined} disabled={busy !== null} onClick={() => choose(option.id)}>
+                    <span className="st-option-main">
+                      {busy === option.id && <LoaderCircle className="animate-spin" aria-hidden />}
+                      {option.answer ?? option.label}
+                      {recommended && (
+                        <span className="st-option-tag">
+                          <Star aria-hidden /> Recomendado
+                        </span>
+                      )}
+                    </span>
+                    {option.value && <span className="st-option-value">{option.value}</span>}
+                  </button>
+                );
+              })}
             </div>
           )}
-          {negotiation.myPosition && <p className="st-agent-chosen">Tu postura: {negotiation.myPosition}</p>}
+          {negotiation.myPosition && <p className="st-agent-chosen">Tu postura: {chosenAnswer(negotiation.myOptions, negotiation.myPosition)}</p>}
           {(negotiation.myPosition || committee) && (
             <p className="st-support">
+              {negotiation.myPosition ? "Ahora la defiendo ante los agentes de los demás. " : ""}
               {pending > 0 ? `Faltan ${pending} posturas.` : "Listo: empiezan a negociar."}
               {seconds !== null && pending > 0 ? ` Si no llegan en ${seconds} s, las pone un bot.` : ""}
             </p>
@@ -98,13 +119,13 @@ export function NegotiationSeatView({ room, me, act }: { room: ProjectedRoomStat
         <section className="st-card st-talk" aria-label="La negociación en vivo">
           {publicMessages.slice(-3).map((message) => (
             <p key={message.id} className="st-talk-line" data-kind={message.kind} data-mine={message.orgId === me.orgId || undefined}>
-              <b>{message.agentLabel}</b>
+              <b>{isMe(message) ? "Tu agente, por ti en la pantalla grande" : message.agentLabel}</b>
               <span>{message.text}</span>
             </p>
           ))}
           {negotiation.typing && !negotiation.paused && (
             <p className="st-talk-typing">
-              <span className="st-flow-spinner" aria-hidden /> {negotiation.typing.agentLabel} está escribiendo…
+              <span className="st-flow-spinner" aria-hidden /> {isMe(negotiation.typing) ? "Tu agente está escribiendo por ti…" : `${negotiation.typing.agentLabel} está escribiendo…`}
             </p>
           )}
           {negotiation.paused && <p className="st-talk-typing">En pausa: el narrador la reanuda.</p>}
@@ -120,6 +141,11 @@ export function NegotiationSeatView({ room, me, act }: { room: ProjectedRoomStat
       <NarratorControls roomId={room.roomId} paused={negotiation.paused} phase={negotiation.phase} />
     </SeatMain>
   );
+}
+
+/** La respuesta que eligió la persona, tal como la vio en su botón. */
+function chosenAnswer(options: { label: string; answer?: string }[] | undefined, position: string): string {
+  return options?.find((option) => option.label === position)?.answer ?? position;
 }
 
 /** Segundos que faltan para el próximo paso, contados con el reloj del servidor. null si no hay paso programado. */

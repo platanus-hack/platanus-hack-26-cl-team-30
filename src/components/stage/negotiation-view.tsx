@@ -10,12 +10,12 @@
 // servidor (docs/DECISIONES.md, «Negociación entre agentes»); la propuesta y los
 // puntajes son del motor (`allocation`). Esta vista solo dibuja lo que trae el SSE.
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bot, Check, CircleCheck, Lock, Pause, Play, SkipForward, Star } from "lucide-react";
 import type { ProjectedRoomState } from "@/lib/genome/schema";
 import { NewRoundButton } from "./command-parts";
 import { JoinQr } from "./join-view";
-import { debateMessages, lockedFields, progressWindow, proposalMessage, roomCode, seatColor, seatOf, seatParts, stageStep, scorePoints, STAGE_STEPS, type Negotiation, type StageStep } from "./negotiation";
+import { debateMessages, lockedFields, peopleCount, progressWindow, proposalMessage, roomCode, seatColor, seatOf, seatParts, stageStep, scorePoints, STAGE_STEPS, type Negotiation, type StageStep } from "./negotiation";
 import { negotiationStyles } from "./negotiation-styles";
 import { stageSeats, type Seat } from "./seats";
 import { storyMissing, type DemoTurn } from "./story";
@@ -308,6 +308,61 @@ function NarratorBar({ room, negotiation, onControl }: { room: ProjectedRoomStat
   );
 }
 
+/**
+ * Contador grande de personas: «3/5», y «· 2 automáticos» si el piloto ya tomó
+ * asientos. Los bots nunca suman como personas (peopleCount).
+ */
+function PeopleCount({ room, compact = false }: { room: ProjectedRoomState; compact?: boolean }) {
+  const { people, bots, total } = peopleCount(room);
+  return (
+    <p className="nx-ng-count" data-compact={compact || undefined} aria-live="polite" aria-label={`${people} de ${total} personas${bots ? `, ${bots} ${bots === 1 ? "asiento automático" : "asientos automáticos"}` : ""}`}>
+      <b className="nx-ng-tally">
+        {people}/{total}
+      </b>
+      <span>
+        {people === 1 ? "persona" : "personas"}
+        {bots > 0 && (
+          <span className="nx-ng-bots">
+            {" "}
+            · <Bot aria-hidden="true" /> {bots} {bots === 1 ? "automático" : "automáticos"}
+          </span>
+        )}
+      </span>
+    </p>
+  );
+}
+
+/**
+ * «Iniciar» del narrador, en el paso Unirse: los asientos libres los toma un bot
+ * del piloto automático y la negociación arranca. No pide clave: el servidor solo
+ * lo acepta mientras nadie dio su postura (POST /api/rooms/:id/start).
+ */
+function StartButton({ room, onStart }: { room: ProjectedRoomState; onStart: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  const { people, total } = peopleCount(room);
+  const free = total - people;
+  return (
+    <div className="nx-ng-start">
+      <button
+        type="button"
+        className="gd-primary nx-ng-start-btn"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          try {
+            await onStart();
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <Play aria-hidden="true" /> {busy ? "Iniciando…" : "Iniciar"}
+      </button>
+      <span className="nx-ng-start-note">{free > 0 ? `${free === 1 ? "El asiento libre lo toma" : `Los ${free} asientos libres los toma`} un bot automático.` : "Están todos: arranca la negociación."}</span>
+    </div>
+  );
+}
+
 /** Turno del Comité, para la franja grande: la cuenta regresiva es la del plan B del servidor. */
 function committeeTurn(room: ProjectedRoomState): DemoTurn | null {
   const arbiter = room.scarcity?.arbiter;
@@ -333,6 +388,7 @@ export function NegotiationView({
   baseUrl,
   onControl,
   onNewDemo,
+  onStart,
 }: {
   room: ProjectedRoomState;
   negotiation: Negotiation;
@@ -342,10 +398,11 @@ export function NegotiationView({
   onControl?: (action: NarratorAction) => void;
   /** Abre una sala nueva, con código nuevo. */
   onNewDemo?: () => Promise<void>;
+  /** «Iniciar» en el paso Unirse: llena con bots los asientos libres y arranca. Lo ve cualquiera en la demo. */
+  onStart?: () => Promise<void>;
 }) {
   const step = stageStep(room, negotiation);
   const people = peopleOf(room);
-  const connected = people.filter((seat) => seat.connected && !seat.bot).length;
   const freeSeat = people.some((seat) => !seat.connected);
   const code = roomCode(room);
   const turn = step === "decision" ? committeeTurn(room) : null;
@@ -364,9 +421,8 @@ export function NegotiationView({
               <p className="nx-ng-code" aria-label={code.split("").join(" ")}>
                 {code}
               </p>
-              <p className="nx-ng-count" aria-live="polite">
-                <b>{connected}</b> de {people.length} personas conectadas
-              </p>
+              <PeopleCount room={room} />
+              {onStart && <StartButton room={room} onStart={onStart} />}
             </section>
             {baseUrl && <JoinQr room={room} baseUrl={baseUrl} label="Escanea y entra" size={280} className="nx-ng-qr gd-panel" />}
           </div>
@@ -377,7 +433,10 @@ export function NegotiationView({
       {step === "positions" && (
         <>
           <header className="nx-ng-head">
-            <h2 className="nx-ng-title">Cada persona da su postura.</h2>
+            <div>
+              <h2 className="nx-ng-title">Cada persona da su postura.</h2>
+              <PeopleCount room={room} compact />
+            </div>
             {freeSeat && baseUrl && (
               <div className="nx-ng-late">
                 <p className="nx-ng-code" data-small="true" aria-label={`Código de la sala: ${code.split("").join(" ")}`}>

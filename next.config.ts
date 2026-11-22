@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
     return [
       { source: "/sculptor", destination: "/", permanent: false },
       { source: "/demo", destination: "/stage/demo-cross", permanent: false },
+      // La portada del ejemplo (con el diagrama de Venn) se retiró: el ejemplo es /casos/hospitales.
+      { source: "/hospitales", destination: "/casos/hospitales", permanent: false },
     ];
   },
   // El deck del pitch es HTML estático en public/pitch/: que /pitch lo abra directo.

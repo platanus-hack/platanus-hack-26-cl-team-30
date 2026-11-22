@@ -3,7 +3,8 @@
 //
 // Una idea por sección, con ritmo: el héroe a todo el ancho con la pantalla grande
 // real como protagonista; después, los tres pasos con sus capturas, los celulares,
-// la regla, lo que ve cada uno, el acta, por qué firma una persona, otros rubros y
+// la regla, lo que ve cada uno, el acta, por qué firma una persona, otros rubros (una fila de
+// tarjetas como la de la landing) y
 // el llamado final. Todas las capturas son reales (public/casos/). Solo Manrope, titulares grandes y nada de
 // texto menor a 16 px. Las piezas animadas vienen de 21st.dev (docs/diseno/21st/),
 // adaptadas con CSS y GSAP.
@@ -19,11 +20,11 @@ import type { CaseView } from "./data";
 import { ActaFeed } from "./acta-feed";
 import { KineticHero } from "./kinetic-hero";
 import { PhoneTrio } from "./phone-trio";
-import { RuleLab } from "./rule-lab";
 import { SeenBento } from "./seen-bento";
 import { StageScroll } from "./stage-scroll";
 import { StepsScroll } from "./steps-scroll";
 import { Ticker } from "./ticker";
+import { UsesTrack } from "./uses-track";
 
 function DemoButton({ room, large = false }: { room: string; large?: boolean }) {
   return (
@@ -121,19 +122,6 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
           </div>
         </section>
 
-        {/* 4. Angosta: la regla, la única sección con puntajes (cuentan al aparecer). */}
-        <section className="cs-section bg-brand-soft/60" aria-labelledby="regla-titulo">
-          <div className="wrap">
-            <h2 id="regla-titulo" className="cs-h2 max-w-[14ch]">
-              Decide una fórmula, no una opinión.
-            </h2>
-            <p className="cs-lede mt-6 max-w-[34rem] text-muted-foreground">Mueve los pesos y mira cómo cambia el orden.</p>
-            <div className="mt-14">
-              <RuleLab scarcity={view.scarcity} labels={study.ruleLabels} orgLabels={view.orgLabels} />
-            </div>
-          </div>
-        </section>
-
         {/* 5. A todo el ancho, en oscuro: qué recibe cada persona; lo reservado se ve cifrado. */}
         <SeenBento viewers={view.viewers} />
 
@@ -175,34 +163,9 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
           </div>
         </section>
 
-        {/* 8. Angosta: el mismo esqueleto en otros rubros, como enlaces simples. */}
-        <section className="cs-section border-t border-border" aria-labelledby="mas-titulo">
-          <div className="wrap max-w-5xl">
-            <h2 id="mas-titulo" className="cs-h2 max-w-[16ch]">
-              Sirve para cualquier recurso escaso.
-            </h2>
-            <ul className="mt-12 divide-y divide-border border-y border-border">
-              {otherUses(slug).map((item) => (
-                <li key={item.title}>
-                  {item.href ? (
-                    <Link href={item.href} className="group flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-6">
-                      <span className="text-2xl font-bold tracking-tight underline decoration-transparent underline-offset-8 transition-colors group-hover:decoration-brand">{item.title}</span>
-                      <span className="cs-body text-muted-foreground">{item.detail}</span>
-                    </Link>
-                  ) : (
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-6">
-                      <span className="text-2xl font-bold tracking-tight">{item.title}</span>
-                      <span className="cs-body text-muted-foreground">{item.detail}</span>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <Link href="/" className="cs-body mt-8 inline-flex min-h-11 items-center font-semibold underline decoration-border underline-offset-4 hover:decoration-brand">
-              Qué es Sculptor
-            </Link>
-          </div>
-        </section>
+        {/* 8. A todo el ancho: el mismo esqueleto en otros rubros, cada uno con la pregunta que se hace la gente
+            (la misma lista y presentación que «Mismo esqueleto, otro genoma» en la landing de Sculptor). */}
+        <UsesTrack uses={otherUses(slug)} />
 
         {/* 9. A todo el ancho: el llamado final. */}
         <section className="cs-section cs-cta text-center" aria-labelledby="probar-titulo">

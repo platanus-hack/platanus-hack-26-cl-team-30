@@ -120,6 +120,47 @@ describe("asientos y consejo privado", () => {
     expect(nego(roomId).myOptions).toBeUndefined();
   });
 
+  it("cada rol recibe su pregunta concreta y la postura que le recomienda su agente, calculada con lo que ve", async () => {
+    const roomId = room();
+    const [clinic, clinicAdmin, rural, ruralAdmin, committee] = [draw(roomId), draw(roomId), draw(roomId), draw(roomId), draw(roomId)];
+    await vi.advanceTimersByTimeAsync(10);
+    const prompt = (seat: Seat) => projectRoom(roomId, seat)!.negotiation!.myPrompt;
+    // Casi empate (0,52 contra 0,53): desempata la necesidad sin cubrir, que es pública.
+    expect(prompt(clinic)).toEqual({ question: "¿Cómo pides la cama?", recommendedId: "flex" });
+    expect(prompt(rural)).toEqual({ question: "¿Cómo pides la cama?", recommendedId: "now" });
+    // Administración: su costo cabe en su presupuesto (dos datos que solo ve ella).
+    expect(prompt(clinicAdmin)).toEqual({ question: "¿Cuánto autorizas sin pedir firma?", recommendedId: "back" });
+    expect(prompt(ruralAdmin)?.recommendedId).toBe("back");
+    expect(prompt(committee)).toBeUndefined();
+    expect(nego(roomId).myPrompt).toBeUndefined();
+    // Cada administración ve sus propias cifras en sus respuestas; la otra organización no.
+    const clinicValues = optionsOf(roomId, clinicAdmin).map((option) => option.value ?? "").join(" ");
+    expect(clinicValues).toContain("$2.400.000");
+    expect(containsReserved(clinicValues, ["1600000", "1900000"])).toBe(false);
+    const ruralValues = optionsOf(roomId, ruralAdmin).map((option) => option.value ?? "").join(" ");
+    expect(ruralValues).toContain("$1.600.000");
+    expect(containsReserved(ruralValues, ["2400000", "3100000"])).toBe(false);
+    // Las etiquetas públicas (las que se publican y lee la pantalla grande) nunca llevan cifras.
+    for (const seat of [clinic, clinicAdmin, rural, ruralAdmin]) {
+      for (const option of optionsOf(roomId, seat)) expect(containsReserved(option.label, SECRETS)).toBe(false);
+    }
+    // Quien presenta el caso no recibe costos por esta vía.
+    expect(containsReserved(JSON.stringify(projectRoom(roomId, clinic)!.negotiation), ["2400000", "3100000"])).toBe(false);
+  });
+
+  it("el consejo de respaldo dice «Te recomiendo», sin datos que su rol no ve", async () => {
+    agents.writeNegotiationLine.mockRejectedValue(new Error("sin modelo"));
+    const roomId = room();
+    const [clinic, clinicAdmin, rural, ruralAdmin] = [draw(roomId), draw(roomId), draw(roomId), draw(roomId)];
+    await vi.advanceTimersByTimeAsync(10);
+    const advice = (seat: Seat) => projectRoom(roomId, seat)!.negotiation!.messages.find((message) => message.kind === "advice")!.text;
+    expect(advice(clinic)).toMatch(/^Te recomiendo «Pedirla, pero aceptar otra salida», porque/);
+    expect(advice(rural)).toMatch(/^Te recomiendo «Ahora, sin ceder», porque/);
+    expect(advice(clinicAdmin)).toBe("Te recomiendo «Todo el costo», porque el costo cabe en tu presupuesto de $3.100.000 y así la cama no espera una firma.");
+    expect(containsReserved(advice(ruralAdmin), ["2400000", "3100000"])).toBe(false);
+    for (const seat of [clinic, rural]) expect(containsReserved(advice(seat), SECRETS)).toBe(false);
+  });
+
   it("el Comité no fija postura", async () => {
     const roomId = room();
     const seats = [draw(roomId), draw(roomId), draw(roomId), draw(roomId), draw(roomId)];
