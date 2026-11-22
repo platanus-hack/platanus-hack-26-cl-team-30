@@ -105,9 +105,9 @@ export const HACK = {
 } as const;
 
 export const TEAM = [
-  { name: "Ramón Molina", role: "Producto web", detail: "Pantallas y rutas de la API. En la demo, opera la pantalla grande.", handle: "rm004607" },
-  { name: "Sebastián Vargas", role: "Agente e infraestructura", detail: "Modelos, Spark, integraciones y deploy. En la demo, guía al público.", handle: "iswebster1401" },
-  { name: "Nahum Díaz", role: "Negocio y pitch", detail: "Usuarios reales, finanzas y relato. En la demo, la voz.", handle: "nadilopoff" },
+  { name: "Ramón Molina", role: "Software Engineer", detail: "Pantallas y rutas de la API. En la demo, opera la pantalla grande.", handle: "rm004607" },
+  { name: "Sebastián Vargas", role: "AI Engineer", detail: "Modelos, Spark, integraciones y deploy. En la demo, guía al público.", handle: "iswebster1401" },
+  { name: "Nahum Díaz", role: "AI Product Strategist", detail: "Usuarios reales, finanzas y relato. En la demo, la voz.", handle: "nadilopoff" },
 ] as const;
 
 export const CLOSING = "Con Sculptor, el recurso deja de esperar.";

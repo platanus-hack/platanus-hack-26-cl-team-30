@@ -74,11 +74,11 @@ El PDF describe piezas que solo existen en los prototipos de diseño (`docs/dise
 | 2:00–2:12 | **Demo · Propuesta (12 s)** | «Los agentes conversan, el código gobierna. La propuesta no la escribe la IA: la calcula una regla. Casi empate, 0,52 contra 0,53. Desempata la necesidad sin cubrir: el Hospital Rural.» | Tarjeta «Hospital Rural recibiría el recurso. La calculó el código, no un agente». En escala de 1 a 50: 26 contra 27. | — |
 | 2:12–2:25 | **Demo · Comité (13 s)** | «Pero la última palabra es humana. Comité: ¿acepta o rechaza? Su razón ya está escrita.» | «Comité: ¿aceptas o rechazas?», con la cuenta regresiva de 20 s. | Junto al Comité. |
 | 2:25–2:40 | **Demo · Acta (15 s)** | «Todas las pantallas cambiaron en el mismo segundo, y quedó un acta con la razón. Cinco personas, cinco agentes, una decisión que nadie podía tomar solo.» Si se probó esa mañana: «Comité, toque "Recibir resumen por WhatsApp"». | «Listo: Hospital Rural recibe el recurso», con la razón del Comité. La galaxia se pone verde. | Acerca el celular del Comité al micrófono si llega la nota de voz. |
-| 2:40–3:00 | **Giro y cierre (20 s)** | «Esa cama fue solo el primer átomo. El mismo motor ya corre para dos constructoras y una grúa, y para dos distribuidoras y un camión. Por eso nos llamamos Sculptor: la galaxia que vemos desde Chile, donde del choque de fuerzas nacen estrellas nuevas. Ustedes cinco acaban de crear el primer mundo. Somos Sculptor.» | Se queda la galaxia verde del acta. | — |
+| 2:40–3:00 | **Giro y cierre (20 s)** | «Esa cama fue solo el primer átomo. El mismo motor ya corre para dos constructoras y una grúa, y para dos distribuidoras y un camión. Por eso nos llamamos Sculptor: la galaxia que vemos desde Chile, donde del choque de fuerzas nacen estrellas nuevas. Ustedes cinco acaban de crear el primer mundo. Sculptor: donde el caos aprende a evolucionar.» | Se queda la galaxia verde del acta. | — |
 
 **Si el Comité rechaza:** «El Comité rechazó: la cama va a la Clínica, y su razón queda en el acta.» Se dice en el mismo tiempo; no se agrega nada.
 
-**Válvula de escape (del PDF):** si a los 2:40 todavía no hay acta, Nahum dice solo «Esa cama fue el primer átomo: el mismo motor sirve para una grúa o un camión. Somos Sculptor», y termina antes de los 3:00.
+**Válvula de escape (del PDF):** si a los 2:40 todavía no hay acta, Nahum dice solo «Esa cama fue el primer átomo: el mismo motor sirve para una grúa o un camión. Sculptor: donde el caos aprende a evolucionar», y termina antes de los 3:00.
 
 ### Notas del guion
 

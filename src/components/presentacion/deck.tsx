@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { EXPO, gsap, useGSAP } from "@/components/landing/gsap";
 import { GalaxyMark } from "@/components/sculptor/galaxy-mark";
 import { LiveDemo } from "./live-demo";
+import { runWarp } from "./warp";
 import { PAGES, SLIDES } from "./slides";
 
 const DEMO_INDEX = SLIDES.findIndex((s) => s.id === "demo");
@@ -29,6 +30,8 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
   const root = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
   const [notes, setNotes] = useState(false);
+  const warpCanvas = useRef<HTMLCanvasElement>(null);
+  const [warping, setWarping] = useState(false);
   // La demo en vivo se monta la primera vez que se llega a su lámina y no se desmonta.
   const [demoMounted, setDemoMounted] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -79,6 +82,25 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
     }, 250);
     return () => window.clearInterval(id);
   }, [running]);
+
+  // Salto a velocidad luz: rayos de estrellas y destello; detrás de la luz, la lámina siguiente.
+  const warp = useCallback(() => {
+    if (warping) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      go(index + 1);
+      return;
+    }
+    setWarping(true);
+    requestAnimationFrame(() => {
+      const canvas = warpCanvas.current;
+      if (!canvas) return;
+      gsap.set(canvas, { opacity: 1 });
+      runWarp(canvas, () => {
+        go(index + 1);
+        gsap.to(canvas, { opacity: 0, duration: 0.7, ease: "power2.out", onComplete: () => setWarping(false) });
+      });
+    });
+  }, [go, index, warping]);
 
   const toggleTimer = useCallback(() => {
     setRunning((on) => {
@@ -196,13 +218,15 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
           {slide.id === "cierre" && <Cierre />}
           {slide.id === "equipo" && <Equipo />}
         </div>
-        {demoMounted && <LiveDemo active={slide.id === "demo"} />}
+        {demoMounted && <LiveDemo active={slide.id === "demo"} onWarp={warp} />}
       </main>
 
       <footer className="flex items-center justify-between px-8 pb-5 font-mono text-[11px] tracking-[0.16em] text-(--piedra)/70 uppercase">
         <span>Equipo 30 · Platanus Hack 26 · Track Multiplayer</span>
         <span>← → navegar · T reloj · N notas · F pantalla completa</span>
       </footer>
+
+      {warping && <canvas ref={warpCanvas} aria-hidden className="pointer-events-none fixed inset-0 z-[90] h-full w-full" />}
 
       {notes && (
         <aside className="absolute inset-x-6 bottom-14 z-20 rounded-2xl border border-(--basalto) bg-(--obsidiana)/95 p-6 backdrop-blur-md">
@@ -217,7 +241,6 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
   );
 }
 
-const H1 = "text-[clamp(3rem,7.4vw,8rem)] leading-[0.92] font-extrabold tracking-[-0.04em] text-(--marmol) [font-stretch:112%]";
 const H2 = "text-[clamp(2.4rem,5.4vw,5.6rem)] leading-[0.95] font-extrabold tracking-[-0.035em] text-(--marmol) [font-stretch:110%]";
 const KICK = "font-mono text-[clamp(0.8rem,1.1vw,1.1rem)] tracking-[0.2em] text-(--cincel) uppercase";
 
@@ -388,13 +411,13 @@ function Solucion({ onNext }: { onNext: () => void }) {
   );
 }
 
-// Velocidad del recorrido automático (px por segundo) y pausa en cada sección (ms).
-const SCROLL_SPEED = 380;
-const SECTION_PAUSE = 2400;
+// Velocidad del recorrido automático (px por segundo) y pausa al llegar al final (ms).
+const SCROLL_SPEED = 300;
+const END_PAUSE = 2000;
 
 /**
- * Una página del deploy dentro de un iframe que baja sola: va de sección en sección,
- * se detiene un momento en cada una y al llegar al final vuelve arriba. Como el
+ * Una página del deploy dentro de un iframe que baja sola, de corrido y a velocidad
+ * pareja; al llegar al final espera un momento y vuelve arriba. Como el
  * iframe es del mismo dominio, se mueve su propio scroll (así también corren sus
  * animaciones de scroll). Con el mouse encima se detiene; con movimiento reducido
  * no baja sola.
@@ -428,29 +451,23 @@ function Pane({ initial }: { initial: string }) {
 
         const max = doc.documentElement.scrollHeight - win.innerHeight;
         if (win.scrollY >= max - 4) {
-          await wait(SECTION_PAUSE);
+          await wait(END_PAUSE);
           win.scrollTo(0, 0);
-          await wait(1500);
+          await wait(1200);
           continue;
         }
-        const next = Array.from(doc.querySelectorAll("section"))
-          .map((el) => el.getBoundingClientRect().top + win.scrollY)
-          .filter((y) => y > win.scrollY + 40)
-          .sort((a, b) => a - b)[0];
-        const target = Math.min(next ?? max, max);
-
+        // Hasta el final de lo que hay ahora; si la página crece (secciones fijadas), sigue.
         await new Promise<void>((resolve) => {
           const proxy = { y: win.scrollY };
           tween.current = gsap.to(proxy, {
-            y: target,
-            duration: Math.max(1.2, (target - proxy.y) / SCROLL_SPEED),
-            ease: "power1.inOut",
+            y: max,
+            duration: Math.max(1, (max - proxy.y) / SCROLL_SPEED),
+            ease: "none",
             onUpdate: () => win.scrollTo(0, proxy.y),
             onComplete: resolve,
           });
           if (paused.current) tween.current.pause();
         });
-        await wait(SECTION_PAUSE);
       }
     };
     void run();
@@ -534,11 +551,11 @@ function Cierre() {
         <p data-in className={KICK}>
           NGC 253 · La galaxia del Escultor
         </p>
-        <h2 data-in className={`mt-6 ${H1}`}>
-          Del choque de fuerzas nacen <span className="font-serif font-normal text-(--eucalipto) italic [font-stretch:100%]">mundos nuevos.</span>
+        <h2 data-in className="mt-6 font-sans text-[clamp(4rem,10vw,10rem)] leading-[0.85] font-extrabold tracking-[-0.06em] text-(--marmol)">
+          sculptor<span className="text-(--cincel)"> |</span>
         </h2>
-        <p data-in className="mt-10 font-sans text-[clamp(2.4rem,4.6vw,4.8rem)] font-extrabold tracking-[-0.05em] text-(--cincel)">
-          Somos sculptor.
+        <p data-in className={`mt-8 ${H2}`}>
+          Donde el caos aprende <span className="font-serif font-normal text-(--eucalipto) italic [font-stretch:100%]">a evolucionar.</span>
         </p>
       </div>
       <div data-galaxy className="mx-auto w-full max-w-[680px]">
@@ -550,9 +567,9 @@ function Cierre() {
 
 function Equipo() {
   const team = [
-    ["Nahum Díaz", "Negocio y pitch"],
-    ["Ramón Molina", "Producto web"],
-    ["Sebastián Vargas", "Agente e infraestructura"],
+    ["Nahum Díaz", "AI Product Strategist · negocio y pitch"],
+    ["Ramón Molina", "Software Engineer · producto web"],
+    ["Sebastián Vargas", "AI Engineer · agentes e infraestructura"],
   ];
   return (
     <div className="grid items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">

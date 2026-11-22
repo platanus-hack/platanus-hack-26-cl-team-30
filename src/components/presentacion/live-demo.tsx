@@ -1,8 +1,10 @@
 "use client";
 
 // Lámina «En vivo»: a la izquierda la pantalla grande real de la sala (con su código y
-// su QR); a la derecha la galaxia (live-galaxy.tsx), sin textos, movida por los
-// eventos de esa misma sala.
+// su QR); a la derecha el planeta 3D del pitch (public/sculptor/orbital.html) sin
+// textos ni controles, movido solo por los eventos de esa misma sala: dos nodos por
+// persona conectada, convergencia en el debate y, con el acta, alejamiento hasta la
+// galaxia NGC 253. El iframe no recibe clics (la simulación agrega nodos con clics).
 //
 // Dónde vive la sala:
 // - Sin deploy remoto: en este mismo servidor. La presentación abre la sala con
@@ -20,19 +22,37 @@
 // sala nueva (ronda nueva). La lámina no se desmonta al cambiar de lámina: si la
 // pantalla grande se recargara, los celulares quedarían en una sala vieja.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { gsap } from "@/components/landing/gsap";
 import { GalaxyMark } from "@/components/sculptor/galaxy-mark";
 import type { ProjectedRoomState } from "@/lib/genome/schema";
-import { LiveGalaxy } from "./live-galaxy";
 
 /** base: origen del deploy remoto donde vive la sala, o null si vive en este servidor. */
+type OrbitalApi = {
+  setStage: (stage: number) => void;
+  connectNextNode: () => boolean;
+  app: { stage: number; connectedCount: number };
+};
+
 type Room = { roomId: string; hostToken: string | null; base: string | null };
 type Live = { people: number; phase: string | null; proposed: boolean; sealed: boolean };
 
 const SEATS = 5;
+const NODES_PER_PERSON = 2;
+const MAX_NODES = 10;
+
+// Todo lo que la simulación dibuja encima del planeta: títulos, contadores, QR,
+// controles, etiquetas 3D y la ventana de configuración.
+const HIDE_UI = ".hud,#labelsLayer,.reticle,.modal-bg{display:none!important}";
 const EMPTY: Live = { people: 0, phase: null, proposed: false, sealed: false };
 
-export function LiveDemo({ active }: { active: boolean }) {
+export function LiveDemo({ active, onWarp }: { active: boolean; onWarp: () => void }) {
+  const planet = useRef<HTMLElement>(null);
+  const orbital = useRef<HTMLIFrameElement>(null);
+  const api = useRef<OrbitalApi | null>(null);
+  const zoomed = useRef(false);
+  const [orbitalKey, setOrbitalKey] = useState(0);
+  const [ready, setReady] = useState(0);
   const [room, setRoom] = useState<Room | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [live, setLive] = useState<Live>(EMPTY);
@@ -66,9 +86,11 @@ export function LiveDemo({ active }: { active: boolean }) {
           // Sin almacenamiento la pantalla grande no tendrá controles; P y S siguen funcionando.
         }
       }
+      zoomed.current = false;
       setLive(EMPTY);
       setPaused(false);
       setRoom({ roomId: data.roomId, hostToken, base });
+      setOrbitalKey((k) => k + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo abrir la sala");
     }
@@ -100,7 +122,63 @@ export function LiveDemo({ active }: { active: boolean }) {
     return () => source.close();
   }, [room]);
 
-  // 3. Controles del narrador desde el teclado de la presentación.
+  // 3. Conectar con el planeta y esconder toda su interfaz.
+  useEffect(() => {
+    api.current = null;
+    let tries = 0;
+    let timer = 0;
+    const poll = () => {
+      const win = orbital.current?.contentWindow as (Window & { __ORBITAL__?: OrbitalApi }) | null | undefined;
+      const doc = orbital.current?.contentDocument;
+      if (win?.__ORBITAL__ && doc) {
+        const style = doc.createElement("style");
+        style.textContent = HIDE_UI;
+        doc.head.appendChild(style);
+        api.current = win.__ORBITAL__;
+        api.current.setStage(0);
+        setReady((r) => r + 1);
+      } else if (tries++ < 150) {
+        timer = window.setTimeout(poll, 150);
+      }
+    };
+    poll();
+    return () => window.clearTimeout(timer);
+  }, [orbitalKey]);
+
+  // 4. Traducir la sala al planeta.
+  useEffect(() => {
+    const galaxy = api.current;
+    if (!galaxy) return;
+    const timers: number[] = [];
+
+    // Ronda nueva en la misma sala: volvió a cero después de un acta. El planeta empieza de nuevo.
+    if (zoomed.current && !live.sealed && live.people === 0) {
+      zoomed.current = false;
+      timers.push(window.setTimeout(() => setOrbitalKey((k) => k + 1), 0));
+      return () => timers.forEach((t) => window.clearTimeout(t));
+    }
+
+    // Cada persona enciende dos nodos, de a uno para que se vean llegar.
+    const target = Math.min(MAX_NODES, live.people * NODES_PER_PERSON);
+    const from = galaxy.app.connectedCount;
+    for (let i = from; i < target; i++) timers.push(window.setTimeout(() => galaxy.connectNextNode(), (i - from) * 350));
+
+    // El debate y la propuesta: la red converge. Sin negociación (versiones anteriores),
+    // converge cuando el motor propone la asignación.
+    if (((live.phase && live.phase !== "positions") || live.proposed) && galaxy.app.stage < 4) galaxy.setStage(4);
+
+    // Acta sellada: red completa y alejamiento hasta la galaxia NGC 253.
+    if (live.sealed && !zoomed.current) {
+      zoomed.current = true;
+      galaxy.setStage(5);
+      timers.push(window.setTimeout(() => galaxy.setStage(6), 4000));
+      timers.push(window.setTimeout(() => galaxy.setStage(7), 8000));
+      timers.push(window.setTimeout(() => galaxy.setStage(8), 12000));
+    }
+    return () => timers.forEach((t) => window.clearTimeout(t));
+  }, [live, ready]);
+
+  // 5. Controles del narrador desde el teclado de la presentación.
   const control = useCallback(
     async (action: "pause" | "resume" | "advance") => {
       if (!room?.hostToken) {
@@ -180,9 +258,29 @@ export function LiveDemo({ active }: { active: boolean }) {
           </div>
         )}
       </figure>
-      <figure className="relative min-h-0 overflow-hidden rounded-[24px] border border-(--basalto) bg-[#050706]">
-        <LiveGalaxy people={live.people} phase={live.phase} proposed={live.proposed} sealed={live.sealed} />
-        <GalaxyMark aria-hidden title="" className="pointer-events-none absolute top-5 left-5 h-7 w-auto" />
+      <figure
+        ref={planet}
+        className="relative min-h-0 cursor-pointer overflow-hidden rounded-[24px] border border-(--basalto) bg-[#050706]"
+        onClick={(e) => {
+          // Clic en el planeta: se acerca a la cámara mientras arranca el salto a velocidad luz.
+          e.stopPropagation();
+          const el = planet.current;
+          if (el && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            gsap.fromTo(el, { scale: 1, filter: "brightness(1) blur(0px)" }, { scale: 2.4, filter: "brightness(2.4) blur(5px)", duration: 1.3, ease: "power2.in", zIndex: 30 });
+            gsap.set(el, { clearProps: "transform,filter,zIndex", delay: 2.2 });
+          }
+          onWarp();
+        }}
+      >
+        <iframe
+          key={orbitalKey}
+          ref={orbital}
+          src="/sculptor/orbital.html"
+          title="Planeta: dos nodos por cada persona que entra a la sala"
+          tabIndex={-1}
+          className="pointer-events-none absolute inset-0 h-full w-full"
+        />
+        <GalaxyMark aria-hidden title="" className="pointer-events-none absolute top-5 left-5 h-8 w-auto" />
         {notice && (
           <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-(--obsidiana)/90 px-4 py-2 font-mono text-xs tracking-[0.14em] text-(--marmol) uppercase">
             {notice}

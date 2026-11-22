@@ -54,8 +54,8 @@ export const SLIDES: Slide[] = [
   {
     id: "cierre",
     time: "2:52–3:00",
-    say: "Por eso nos llamamos Sculptor: la galaxia que vemos desde Chile, donde del choque de fuerzas nacen estrellas nuevas. Ustedes cinco acaban de crear el primer mundo. Somos Sculptor.",
-    do: "Válvula de escape: si a los 2:40 no hay acta, decir solo «Esa cama fue el primer átomo: el mismo motor sirve para una grúa o un camión. Somos Sculptor».",
+    say: "Por eso nos llamamos Sculptor: la galaxia que vemos desde Chile, donde del choque de fuerzas nacen estrellas nuevas. Ustedes cinco acaban de crear el primer mundo. Sculptor: donde el caos aprende a evolucionar.",
+    do: "Válvula de escape: si a los 2:40 no hay acta, decir solo «Esa cama fue el primer átomo: el mismo motor sirve para una grúa o un camión. Sculptor: donde el caos aprende a evolucionar». Desde la lámina en vivo, un clic en el planeta hace el salto a velocidad luz hacia la lámina siguiente.",
   },
   {
     id: "equipo",
