@@ -417,15 +417,14 @@ const END_PAUSE = 2000;
 
 /**
  * Una página del deploy dentro de un iframe que baja sola, de corrido y a velocidad
- * pareja; al llegar al final espera un momento y vuelve arriba. Como el
+ * pareja; al llegar al final espera un momento y vuelve arriba. No se detiene con el
+ * mouse encima: en la presentación el cursor puede quedar sobre la pantalla. Como el
  * iframe es del mismo dominio, se mueve su propio scroll (así también corren sus
- * animaciones de scroll). Con el mouse encima se detiene; con movimiento reducido
- * no baja sola.
+ * animaciones de scroll). Con movimiento reducido no baja sola.
  */
 function Pane({ initial }: { initial: string }) {
   const [href, setHref] = useState(initial);
   const frame = useRef<HTMLIFrameElement>(null);
-  const paused = useRef(false);
   const tween = useRef<gsap.core.Tween | null>(null);
 
   useEffect(() => {
@@ -447,12 +446,11 @@ function Pane({ initial }: { initial: string }) {
         const win = frame.current?.contentWindow;
         const doc = frame.current?.contentDocument;
         if (!win || !doc) return;
-        while (paused.current && !cancelled) await wait(300);
 
         const max = doc.documentElement.scrollHeight - win.innerHeight;
         if (win.scrollY >= max - 4) {
           await wait(END_PAUSE);
-          win.scrollTo(0, 0);
+          win.scrollTo({ top: 0, behavior: "instant" });
           await wait(1200);
           continue;
         }
@@ -463,10 +461,10 @@ function Pane({ initial }: { initial: string }) {
             y: max,
             duration: Math.max(1, (max - proxy.y) / SCROLL_SPEED),
             ease: "none",
-            onUpdate: () => win.scrollTo(0, proxy.y),
+            // instant: el sitio tiene scroll-behavior: smooth, que cortaría cada paso.
+            onUpdate: () => win.scrollTo({ top: proxy.y, behavior: "instant" }),
             onComplete: resolve,
           });
-          if (paused.current) tween.current.pause();
         });
       }
     };
@@ -482,14 +480,6 @@ function Pane({ initial }: { initial: string }) {
   return (
     <div
       className="flex min-h-0 flex-col overflow-hidden rounded-[24px] border border-(--basalto) bg-(--grafito)"
-      onMouseEnter={() => {
-        paused.current = true;
-        tween.current?.pause();
-      }}
-      onMouseLeave={() => {
-        paused.current = false;
-        tween.current?.resume();
-      }}
     >
       <div className="flex items-center justify-between gap-3 border-b border-(--basalto) px-4 py-2.5">
         <span className="flex gap-1.5" aria-hidden>
