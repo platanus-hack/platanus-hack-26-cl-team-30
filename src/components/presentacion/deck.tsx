@@ -11,7 +11,10 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EXPO, gsap, useGSAP } from "@/components/landing/gsap";
 import { GalaxyMark } from "@/components/sculptor/galaxy-mark";
+import { LiveDemo } from "./live-demo";
 import { PAGES, SLIDES } from "./slides";
+
+const DEMO_INDEX = SLIDES.findIndex((s) => s.id === "demo");
 
 const LIMIT_MS = 3 * 60 * 1000;
 const WARN_MS = 2 * 60 * 1000 + 40 * 1000;
@@ -26,6 +29,8 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
   const root = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
   const [notes, setNotes] = useState(false);
+  // La demo en vivo se monta la primera vez que se llega a su lámina y no se desmonta.
+  const [demoMounted, setDemoMounted] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
   const startedAt = useRef<number | null>(null);
@@ -34,7 +39,9 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
   const hashRead = useRef(false);
 
   const go = useCallback((next: number) => {
-    setIndex(Math.max(0, Math.min(SLIDES.length - 1, next)));
+    const target = Math.max(0, Math.min(SLIDES.length - 1, next));
+    setIndex(target);
+    if (target === DEMO_INDEX) setDemoMounted(true);
   }, []);
 
   // La lámina actual queda en la URL. Va en un efecto: el router de Next escucha
@@ -51,7 +58,10 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
     const sync = () => {
       const n = Number(window.location.hash.slice(1));
       hashRead.current = true;
-      if (n >= 1 && n <= SLIDES.length) setIndex(n - 1);
+      if (n >= 1 && n <= SLIDES.length) {
+        setIndex(n - 1);
+        if (n - 1 === DEMO_INDEX) setDemoMounted(true);
+      }
     };
     const frame = window.requestAnimationFrame(sync);
     window.addEventListener("hashchange", sync);
@@ -180,12 +190,12 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
         <div key={slide.id} data-slide={index} className="w-full">
           {slide.id === "hola" && <Hola />}
           {slide.id === "problema" && <Problema autonomous={autonomous} steps={steps} accuracy={accuracy} />}
-          {slide.id === "solucion" && <Solucion />}
-          {slide.id === "demo" && <Demo />}
+          {slide.id === "solucion" && <Solucion onNext={() => go(index + 1)} />}
           {slide.id === "desarrollo" && <Desarrollo />}
           {slide.id === "cierre" && <Cierre />}
           {slide.id === "equipo" && <Equipo />}
         </div>
+        {demoMounted && <LiveDemo active={slide.id === "demo"} />}
       </main>
 
       <footer className="flex items-center justify-between px-8 pb-5 font-mono text-[11px] tracking-[0.16em] text-(--piedra)/70 uppercase">
@@ -266,7 +276,7 @@ function Problema({ autonomous, steps, accuracy }: { autonomous: number; steps: 
   );
 }
 
-function Solucion() {
+function Solucion({ onNext }: { onNext: () => void }) {
   const items = [
     ["01", "Cada persona, su agente", "que la asesora en privado."],
     ["02", "Los agentes negocian", "a la vista, sin cruzar datos."],
@@ -289,45 +299,14 @@ function Solucion() {
           </li>
         ))}
       </ol>
-      <a
+      <button
         data-in
-        href="/stage/demo-cross"
-        target="_blank"
-        rel="noreferrer"
+        type="button"
+        onClick={onNext}
         className="mt-12 inline-flex items-center gap-4 rounded-full bg-(--cincel) px-9 py-5 text-[clamp(1.2rem,1.8vw,1.8rem)] font-extrabold text-(--obsidiana) transition-transform duration-300 ease-out hover:-translate-y-1"
       >
-        Ahora ustedes: saquen el celular <span aria-hidden>↗</span>
-      </a>
-    </div>
-  );
-}
-
-function Demo() {
-  const phases = ["Unirse", "Posturas", "Debate", "Propuesta", "Comité", "Acta"];
-  return (
-    <div>
-      <p data-in className={KICK}>
-        En vivo · pantalla grande
-      </p>
-      <h2 data-in className={`mt-6 ${H1}`}>
-        5 personas.
-        <br />
-        5 agentes.
-        <br />
-        <span className="text-(--cincel)">1 decisión.</span>
-      </h2>
-      <ol className="mt-12 flex flex-wrap gap-3">
-        {phases.map((p, i) => (
-          <li
-            key={p}
-            data-in
-            className="flex items-center gap-3 rounded-full border border-(--basalto) bg-(--grafito)/70 px-6 py-3 text-[clamp(1.1rem,1.5vw,1.5rem)] text-(--marmol)"
-          >
-            <span className="font-mono text-sm text-(--cincel)">{i + 1}</span>
-            {p}
-          </li>
-        ))}
-      </ol>
+        Ahora ustedes: saquen el celular <span aria-hidden>→</span>
+      </button>
     </div>
   );
 }

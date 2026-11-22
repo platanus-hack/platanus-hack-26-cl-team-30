@@ -57,6 +57,7 @@ El PDF describe piezas que solo existen en los prototipos de diseño (`docs/dise
 ### Antes de empezar a hablar (no cuenta en los 3:00)
 
 - La lámina 1 de la presentación ya está en pantalla completa (`/presentacion`, tecla `F`; notas del orador con `N` y reloj de 3:00 con `T`). El deck anterior sigue en `/pitch/index.html` como respaldo.
+- La lámina 4 (en vivo) trae la pantalla grande real a la izquierda y la galaxia a la derecha. Pasar una vez por la lámina 4 antes de empezar: ahí se abre la sala y su QR, y queda abierta aunque se vuelva a la lámina 1. No recargar la página después: la pantalla grande abriría otra sala.
 - En otra pestaña del **mismo computador** ya está abierta `/stage/demo-cross`, con su código y su QR. Pausa y Siguiente solo funcionan en el navegador que creó la sala.
 - Sebastián tiene a 5 personas elegidas en primera fila, con el celular desbloqueado. Les dice antes: «Escaneen de a uno cuando yo los apunte».
 
