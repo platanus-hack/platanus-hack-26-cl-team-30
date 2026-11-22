@@ -185,11 +185,18 @@ function GalaxyField() {
       pointer.ty = (e.clientY / window.innerHeight) * 2 - 1;
     };
 
+    // El alto recorrible se guarda y se recalcula solo cuando cambia el tamaño de la
+    // página: leer scrollHeight en cada cuadro obligaba al navegador a recalcular el
+    // diseño 60 veces por segundo mientras GSAP anima (la mayor parte del bloqueo de la portada).
     let scroll = 0;
-    const readScroll = () => {
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      return max > 0 ? Math.min(window.scrollY / max, 1) : 0;
+    let max = 0;
+    const measure = () => {
+      max = document.documentElement.scrollHeight - window.innerHeight;
     };
+    measure();
+    const sizes = new ResizeObserver(measure);
+    sizes.observe(document.body);
+    const readScroll = () => (max > 0 ? Math.min(window.scrollY / max, 1) : 0);
 
     const draw = (t: number) => {
       pointer.x += (pointer.tx - pointer.x) * 0.04;
@@ -215,6 +222,7 @@ function GalaxyField() {
     };
     const onResize = () => {
       resize();
+      measure();
       if (still) draw(0);
     };
 
@@ -229,6 +237,7 @@ function GalaxyField() {
 
     return () => {
       cancelAnimationFrame(raf);
+      sizes.disconnect();
       window.removeEventListener("resize", onResize);
       window.removeEventListener("pointermove", onPointer);
       document.removeEventListener("visibilitychange", onVisibility);

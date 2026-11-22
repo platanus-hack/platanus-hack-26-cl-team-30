@@ -47,7 +47,7 @@ export const commandStyles = `
   background: var(--gd-bg);
   color: var(--gd-ink);
   color-scheme: light;
-  font-family: "Manrope Variable", Manrope, system-ui, sans-serif;
+  font-family: var(--font-manrope), "Manrope Variable", Manrope, system-ui, sans-serif;
   font-size: 13px;
   font-weight: 550;
   font-variant-numeric: tabular-nums;

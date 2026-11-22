@@ -10,6 +10,7 @@
 // adaptadas con CSS y GSAP.
 
 import Link from "next/link";
+import { HoverPrefetchLink } from "@/components/ui/hover-prefetch-link";
 import { MonitorPlay } from "lucide-react";
 import { Logo, SCULPTOR_HOME } from "@/components/landing/mark";
 import { GuideAssistant } from "@/components/ui/guide-assistant";
@@ -28,10 +29,10 @@ import { UsesTrack } from "./uses-track";
 
 function DemoButton({ room, large = false }: { room: string; large?: boolean }) {
   return (
-    <Link href={`/stage/${room}`} className={`btn btn-primary ${large ? "btn-lg" : ""}`}>
+    <HoverPrefetchLink href={`/stage/${room}`} className={`btn btn-primary ${large ? "btn-lg" : ""}`}>
       <MonitorPlay className="size-5" aria-hidden />
       Probar la demo
-    </Link>
+    </HoverPrefetchLink>
   );
 }
 
@@ -61,9 +62,9 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
     <>
       <header className="border-b border-border">
         <div className="wrap flex min-h-16 flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
-          <Link href={SCULPTOR_HOME} aria-label="Ir a la landing de Sculptor">
+          <HoverPrefetchLink href={SCULPTOR_HOME} aria-label="Ir a la landing de Sculptor">
             <Logo />
-          </Link>
+          </HoverPrefetchLink>
           <div className="order-last w-full sm:order-none sm:w-auto">
             <CaseLinks current={slug} />
           </div>

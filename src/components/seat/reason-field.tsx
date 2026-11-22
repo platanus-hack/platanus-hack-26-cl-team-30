@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { REASON_MAX_LENGTH } from "@/lib/store/actions";
+import { REASON_MAX_LENGTH } from "@/lib/store/limits";
 
 /** Razón sugerida: un toque en el chip escribe el texto, que después se puede editar. */
 export type ReasonChip = { label: string; text: string };
