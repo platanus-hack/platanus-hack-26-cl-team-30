@@ -35,7 +35,7 @@ Cada celda es el número de tema de este documento. Ejemplo: la pregunta 4 del j
 
 **Respaldo:** `src/lib/store/rooms.ts` → `proposalTick` (presenta los casos sin mirar posturas). `src/lib/engine/negotiation.ts` → `positionOptions` (comentario: «no cambia el puntaje») y `proposalLine`. `src/lib/engine/deterministic.ts` → `resolveAllocation`. Con las semillas, el ganador está fijado de antemano (0,52 contra 0,53, desempata la necesidad sin cubrir; `src/lib/genome/seeds.ts`).
 
-**Cómo decirlo:** no defender que «negocian» en el sentido de que llegan a un acuerdo. Si el bot cita `src/integrations/guide-status.ts` («la regla calculó una propuesta con el resultado del debate»), admitir que ese texto está mal.
+**Cómo decirlo:** no defender que «negocian» en el sentido de que llegan a un acuerdo. El texto de la guía que decía «la regla calculó una propuesta con el resultado del debate» ya se corrigió (`src/integrations/guide-status.ts`): ahora dice que la propuesta sale de la regla visible y el debate no la cambia.
 
 ### 2. ¿Cuántas frases de la demo escribió Claude? ⚠️ · IA-2, T-4, E-5
 
@@ -245,4 +245,4 @@ Solo se tocaron documentos; el código (`src/`) y `CLAUDE.md` quedan iguales.
 - `docs/PENDIENTES.md`: i4 resuelto (142 de 142), «Nexo» resuelto y una sección nueva con lo que encontró este ensayo.
 - `project-description.md`, en un commit aparte: describía la demo vieja de 3 personas y decía «toda decisión la dispara una persona» y «el modelo nunca decide quién puede ver qué».
 
-**Corregido después, el 22 de noviembre:** la portada (`src/components/sculptor/content.ts`) ya no dice «Ningún agente cambia el estado» ni «en el mismo segundo», y la cifra del recorrido pasó de «97/97» a «142/142» (`docs/MEDICIONES.md`); «500 conexiones» sigue, con «en un notebook» al lado. `chrome.tsx` dice «Ver un caso» en vez de «Ejemplo real». El texto de la guía (`src/integrations/guide-status.ts` y `GUIDE_PROMPT`) y `CLAUDE.md` («permisos… sin modelo») se corrigen en la rama `guia-al-dia`.
+**Corregido después, el 22 de noviembre:** la portada (`src/components/sculptor/content.ts`) ya no dice «Ningún agente cambia el estado» ni «en el mismo segundo», y la cifra del recorrido pasó de «97/97» a «142/142» (`docs/MEDICIONES.md`); «500 conexiones» sigue, con «en un notebook» al lado. `chrome.tsx` dice «Ver un caso» en vez de «Ejemplo real». El texto de la guía (`guide-status.ts` y `GUIDE_PROMPT`) y la frase de `CLAUDE.md` sobre permisos también se corrigieron.
