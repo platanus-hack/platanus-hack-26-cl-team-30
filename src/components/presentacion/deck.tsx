@@ -25,7 +25,7 @@ const clock = (ms: number) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 };
 
-export function Deck({ autonomous, steps, accuracy }: { autonomous: number; steps: number; accuracy: number }) {
+export function Deck({ autonomous, steps, accuracy, remote }: { autonomous: number; steps: number; accuracy: number; remote: string | null }) {
   const root = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
   const [notes, setNotes] = useState(false);
@@ -195,7 +195,7 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
           {slide.id === "cierre" && <Cierre />}
           {slide.id === "equipo" && <Equipo />}
         </div>
-        {demoMounted && <LiveDemo active={slide.id === "demo"} />}
+        {demoMounted && <LiveDemo active={slide.id === "demo"} remote={remote} />}
       </main>
 
       <footer className="flex items-center justify-between px-8 pb-5 font-mono text-[11px] tracking-[0.16em] text-(--piedra)/70 uppercase">
