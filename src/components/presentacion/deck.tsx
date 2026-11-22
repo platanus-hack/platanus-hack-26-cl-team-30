@@ -2,7 +2,7 @@
 
 // Presentación web de 3:00 (ver slides.ts). Una lámina a la vez, en modo oscuro y
 // con letra grande, como pidió la charla del evento.
-//   → / Av Pág / clic: siguiente   ← / Re Pág: anterior   1–8: ir a una lámina
+//   → / Av Pág / clic: siguiente   ← / Re Pág: anterior   1–9: ir a una lámina
 //   T: iniciar o pausar el reloj de 3:00   R: reiniciar el reloj
 //   N: notas del orador   F: pantalla completa
 // La lámina actual queda en la URL (#3) para volver al mismo lugar si se recarga.
@@ -11,6 +11,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EXPO, gsap, useGSAP } from "@/components/landing/gsap";
 import { GalaxyMark } from "@/components/sculptor/galaxy-mark";
+import { Gracias } from "./gracias";
 import { LiveDemo } from "./live-demo";
 import { runWarp } from "./warp";
 import { PAGES, SLIDES } from "./slides";
@@ -217,6 +218,7 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
           {slide.id === "desarrollo" && <Desarrollo />}
           {slide.id === "cierre" && <Cierre />}
           {slide.id === "equipo" && <Equipo />}
+          {slide.id === "gracias" && <Gracias />}
         </div>
         {demoMounted && <LiveDemo active={slide.id === "demo"} onWarp={warp} />}
       </main>

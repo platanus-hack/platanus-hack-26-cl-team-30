@@ -13,9 +13,10 @@ La presentación del domingo es una página de la app: **`/presentacion`**. Sigu
 | 5 | En vivo | 1:02–2:45 | La pantalla grande real con su QR y, al lado, el planeta 3D sin textos (solo el logo): dos nodos por persona que entra, convergencia en el debate y, con el acta, alejamiento hasta la galaxia. Un clic en el planeta hace un salto a velocidad luz hacia la lámina siguiente |
 | 6 | Desarrollo | 2:45–2:52 | La landing `/` y el caso de logística `/casos/logistica` lado a lado, bajando solas de corrido |
 | 7 | Cierre | 2:52–3:00 | «SCULPTOR \| Donde el caos aprende a evolucionar» |
-| 8 | Equipo | Preguntas | Foto, nombres y roles (AI Product Strategist, Software Engineer, AI Engineer) mientras responden |
+| 8 | Equipo | Preguntas | Foto, nombres y roles (AI Product Strategist, Software Engineer, AI Engineer) sobre un collage de fotos del equipo en movimiento |
+| 9 | Gracias | Al terminar | «gracias» armado con píxeles que salen de una galaxia; el mouse los empuja y vuelven a su lugar |
 
-Teclas: `→` o clic avanza, `←` retrocede, `1`–`8` salta, `T` inicia o pausa el reloj de 3:00 (se pone lima a los 2:40 y rojo a los 3:00), `R` lo reinicia, `N` muestra las notas del orador con lo que dice Nahum y lo que hacen Ramón y Sebastián, `F` pantalla completa.
+Teclas: `→` o clic avanza, `←` retrocede, `1`–`9` salta, `T` inicia o pausa el reloj de 3:00 (se pone lima a los 2:40 y rojo a los 3:00), `R` lo reinicia, `N` muestra las notas del orador con lo que dice Nahum y lo que hacen Ramón y Sebastián, `F` pantalla completa.
 
 Todo va en modo oscuro: la charla avisó que el modo claro se quema en el proyector. Las páginas dentro de «Desarrollo» siguen el modo del computador; si el proyector está en modo claro, la portada `/` se ve clara.
 

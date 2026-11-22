@@ -63,6 +63,12 @@ export const SLIDES: Slide[] = [
     say: "Preguntas del jurado. Técnicas: Sebastián. Producto: Nahum. Pantalla y flujo: Ramón. Primero la respuesta, después el detalle; si algo no está medido, se dice «no lo medimos».",
     do: "Respuestas corregidas en docs/DEMO_DIA.md, sección (c).",
   },
+  {
+    id: "gracias",
+    time: "Después de las preguntas",
+    say: "Gracias.",
+    do: "Se deja en pantalla al terminar. La palabra se arma con píxeles que salen de una galaxia; el mouse los empuja y vuelven a su lugar.",
+  },
 ];
 
 /** Páginas que se pueden mostrar lado a lado en «Desarrollo». Todas son del mismo deploy. */
