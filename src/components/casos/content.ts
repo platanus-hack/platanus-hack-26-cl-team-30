@@ -23,7 +23,6 @@ export const CASES = {
     ],
     arbiterLabel: "Comité",
     disclaimer: "Demostración simulada. No es una herramienta clínica.",
-    ruleLabels: ["Gravedad", "Urgencia", "Riesgo de esperar"],
   },
   construccion: {
     scenario: "construccion",
@@ -32,7 +31,6 @@ export const CASES = {
     kicker: "Caso de uso · Construcción",
     title: ["Una grúa torre.", "Dos obras."],
     lede: "El jueves la necesitan las dos. Ninguna muestra sus costos.",
-    ruleLabels: ["Riesgo si se detiene", "Urgencia", "Costo de esperar"],
     icon: Construction,
     steps: [
       { title: "Cada obra presenta su caso", detail: "Sin mostrar costos ni multas." },
@@ -49,7 +47,6 @@ export const CASES = {
     kicker: "Caso de uso · Logística",
     title: ["Un camión refrigerado.", "Dos distribuidoras."],
     lede: "Ninguna puede mostrarle a la otra cuánto paga.",
-    ruleLabels: ["Lo que se pierde", "Urgencia", "Riesgo de esperar"],
     icon: Truck,
     steps: [
       { title: "Cada distribuidora presenta su carga", detail: "Sin mostrar fletes ni presupuestos." },

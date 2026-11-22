@@ -19,7 +19,6 @@ import type { CaseView } from "./data";
 import { ActaFeed } from "./acta-feed";
 import { KineticHero } from "./kinetic-hero";
 import { PhoneTrio } from "./phone-trio";
-import { RuleLab } from "./rule-lab";
 import { SeenBento } from "./seen-bento";
 import { StageScroll } from "./stage-scroll";
 import { StepsScroll } from "./steps-scroll";
@@ -117,19 +116,6 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
                   tone: ["#6faf9b", "#e0a891", "#b9aaf0"][index] ?? "#6faf9b",
                 }))}
               />
-            </div>
-          </div>
-        </section>
-
-        {/* 4. Angosta: la regla, la única sección con puntajes (cuentan al aparecer). */}
-        <section className="cs-section bg-brand-soft/60" aria-labelledby="regla-titulo">
-          <div className="wrap">
-            <h2 id="regla-titulo" className="cs-h2 max-w-[14ch]">
-              Decide una fórmula, no una opinión.
-            </h2>
-            <p className="cs-lede mt-6 max-w-[34rem] text-muted-foreground">Mueve los pesos y mira cómo cambia el orden.</p>
-            <div className="mt-14">
-              <RuleLab scarcity={view.scarcity} labels={study.ruleLabels} orgLabels={view.orgLabels} />
             </div>
           </div>
         </section>

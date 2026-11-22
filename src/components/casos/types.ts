@@ -25,8 +25,6 @@ export type CaseStudy = {
   arbiterLabel: string;
   /** Aviso del pie: uno solo, pequeño. */
   disclaimer: string;
-  /** Nombre de los tres términos de la regla en este rubro: suma, suma y resta. */
-  ruleLabels: [string, string, string];
 };
 
 export type CaseStep = { title: string; detail: string };
