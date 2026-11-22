@@ -174,7 +174,7 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
   return (
     <div ref={root} className="relative z-10 flex h-svh w-full flex-col overflow-hidden">
       {/* Barra superior: marca, progreso y reloj. */}
-      <header className="flex items-center justify-between px-8 pt-6 font-mono text-xs tracking-[0.18em] text-(--piedra) uppercase">
+      <header className="relative z-20 flex items-center justify-between px-8 pt-6 font-mono text-xs tracking-[0.18em] text-(--piedra) uppercase">
         <span className="flex items-center gap-3">
           <GalaxyMark aria-hidden title="" className="h-5 w-auto" />
           <span className="font-sans text-base font-extrabold tracking-[-0.04em] text-(--marmol) normal-case">sculptor</span>
@@ -221,7 +221,7 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
         {demoMounted && <LiveDemo active={slide.id === "demo"} onWarp={warp} />}
       </main>
 
-      <footer className="flex items-center justify-between px-8 pb-5 font-mono text-[11px] tracking-[0.16em] text-(--piedra)/70 uppercase">
+      <footer className="relative z-20 flex items-center justify-between px-8 pb-5 font-mono text-[11px] tracking-[0.16em] text-(--piedra)/70 uppercase">
         <span>Equipo 30 · Platanus Hack 26 · Track Multiplayer</span>
         <span>← → navegar · T reloj · N notas · F pantalla completa</span>
       </footer>
@@ -555,6 +555,70 @@ function Cierre() {
   );
 }
 
+// Fotos del equipo durante la hackathon para el collage de fondo de la lámina final:
+// public/equipo, las de frente al cartel, fotos de la cámara y cuadros de sus videos.
+const COLLAGE = [
+  "/equipo/equipo-0.webp",
+  "/sculptor/equipo/equipo-vertical-1.jpg",
+  "/equipo/equipo-4.webp",
+  "/equipo/equipo-7.webp",
+  "/equipo/equipo-2.webp",
+  "/sculptor/equipo/equipo-vertical-2.jpg",
+  "/equipo/equipo-3.webp",
+  "/equipo/equipo-6.webp",
+  "/equipo/equipo-1.webp",
+  "/equipo/equipo-5.webp",
+  "/sculptor/equipo/equipo-horizontal.jpg",
+  // Cuadros de los videos de la cámara del equipo (tarjeta SD, 21 de noviembre).
+  "/presentacion/sd/sd-0.webp",
+  "/presentacion/sd/sd-1.webp",
+  "/presentacion/sd/sd-2.webp",
+  "/presentacion/sd/sd-3.webp",
+  "/presentacion/sd/sd-4.webp",
+  "/presentacion/sd/sd-5.webp",
+  "/presentacion/sd/sd-6.webp",
+  "/presentacion/sd/sd-7.webp",
+  "/presentacion/sd/sd-8.webp",
+  "/presentacion/sd/sd-9.webp",
+  "/presentacion/sd/sd-10.webp",
+  "/presentacion/sd/sd-11.webp",
+  // Fotos de la cámara del equipo (tarjeta SD).
+  "/presentacion/sd/foto-0.webp",
+  "/presentacion/sd/foto-1.webp",
+  "/presentacion/sd/foto-2.webp",
+  "/presentacion/sd/foto-3.webp",
+  "/presentacion/sd/foto-4.webp",
+];
+const COLUMNS = 5;
+
+/**
+ * Collage de fondo en movimiento: columnas de fotos que suben y bajan lento, en
+ * sentidos alternos. Cada columna repite sus fotos dos veces para que el bucle no
+ * se note. Va oscurecido detrás de los nombres.
+ */
+function Collage() {
+  const columns = Array.from({ length: COLUMNS }, (_, c) =>
+    Array.from({ length: 6 }, (_, i) => COLLAGE[(c * 5 + i * 3) % COLLAGE.length]),
+  );
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+      <div className="absolute inset-[-6%] flex rotate-[-6deg] gap-4 opacity-70">
+        {columns.map((photos, c) => (
+          <div key={c} className={`collage-col flex flex-1 flex-col gap-4 ${c % 2 ? "down" : ""}`} style={{ animationDuration: `${70 + c * 9}s` }}>
+            {[...photos, ...photos].map((src, i) => (
+              <div key={i} className="relative aspect-[4/5] w-full shrink-0 overflow-hidden rounded-2xl">
+                <Image src={src} alt="" fill sizes="20vw" className="object-cover saturate-[0.85]" />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_68%_50%,rgba(12,14,13,0.72),rgba(12,14,13,0.45)_75%)]" />
+      <div className="absolute inset-0 bg-gradient-to-r from-(--obsidiana)/30 via-transparent to-(--obsidiana)/70" />
+    </div>
+  );
+}
+
 function Equipo() {
   const team = [
     ["Nahum Díaz", "AI Product Strategist · negocio y pitch"],
@@ -562,8 +626,10 @@ function Equipo() {
     ["Sebastián Vargas", "AI Engineer · agentes e infraestructura"],
   ];
   return (
-    <div className="grid items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">
-      <div data-in className="overflow-hidden rounded-[28px] border border-(--basalto)">
+    <>
+    <Collage />
+    <div className="relative z-10 grid items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">
+      <div data-in className="overflow-hidden rounded-[28px] border border-(--basalto) shadow-[0_40px_120px_-30px_rgba(0,0,0,0.9)]">
         <Image
           src="/sculptor/equipo/equipo-horizontal.jpg"
           alt="El equipo 30 frente al cartel de Platanus Hack 26."
@@ -589,5 +655,6 @@ function Equipo() {
         </ul>
       </div>
     </div>
+    </>
   );
 }
