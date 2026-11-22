@@ -53,7 +53,7 @@ La negociación entre agentes de la demo sigue el mismo camino: `SET_POSITION` e
 | `src/lib/engine/autopilot.ts` | El ensayo automático: el guion de la demo como datos, con las mismas funciones del motor |
 | `src/lib/store/rate-limit.ts`, `src/lib/store/host.ts` | Límite de peticiones por cliente y controles de anfitrión |
 | `src/integrations/committee-channel.ts` | Cómo el Comité decide por WhatsApp o por voz con las mismas acciones que la web |
-| `src/app/sculptor/page.tsx` y `src/components/sculptor/` | La landing del protocolo (`/sculptor`). Sus cifras de confiabilidad y del ejemplo las calcula el motor en `data.ts`; los textos viven en `content.ts` |
+| `src/app/page.tsx` y `src/components/sculptor/` | La landing de Sculptor, página principal (`/`). Sus cifras de confiabilidad y del ejemplo las calcula el motor en `data.ts`; los textos viven en `content.ts` |
 | `docs/README.md` | Mapa de toda la documentación: sistema, demo y pitch, investigación y marca |
 | `docs/RESULTADOS.md` y `docs/PROCESO.md` | El estado final con sus pruebas, y el camino que nos trajo hasta aquí |
 | `docs/DECISIONES.md` | Por qué se eligió cada cosa y qué se descartó |

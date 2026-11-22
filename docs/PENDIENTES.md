@@ -58,7 +58,7 @@ Revisión de la entrega. Los borradores del pitch que no coincidían con el cód
 | # | Pendiente | Qué hay que hacer |
 | --- | --- | --- |
 | y1 | **«Nexo» como nombre de la implementación en salud.** Sculptor es el sistema; la clínica sería su primera implementación («Nexo»). Hoy la interfaz dice Sculptor en todas partes y «Nexo» solo queda en identificadores internos. | Decidir si se usa «Nexo» en el pitch o en la página del caso hospitalario (`/casos/hospitales`). |
-| y2 | **Hay dos landings.** `/` es la portada original (ya con la marca Sculptor, ejemplos, formulario y entrevista) y `/sculptor` es la landing nueva del protocolo (intro animada, pⁿ, mercado, simulación orbital, equipo). | Decidir cuál es la principal antes de presentar y enlazar la otra. |
+| y2 | **Resuelto: una sola dirección.** `/` es la landing de Sculptor, la portada con el ejemplo pasó a `/hospitales`, `/demo` abre la demo en vivo y `/sculptor` redirige a `/`. | Nada. |
 | y3 | **Ensayar con la presentación web** (`/presentacion`) y el guion de `docs/DEMO_DIA.md`, que ya están alineados con el código. | Al menos 3 ensayos cronometrados con la tecla T (reloj de 3:00). |
 | y4 | **La simulación orbital depende de internet.** Carga Three.js desde jsDelivr y un video desde CloudFront. En la landing y en el pitch, sin red queda en negro. | Si la red de la sede falla, abrir la app sin esa sección o descargar Three.js al repo. |
 | y5 | **Fusionar la rama `docs` a `main`.** Trae la ronda 20, la landing, la presentación, la marca, la investigación y el proceso. | Revisar el diff, correr `npm test`, `npm run build` y `scripts/e2e.mjs`, y fusionar. |

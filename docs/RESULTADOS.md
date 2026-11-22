@@ -14,7 +14,7 @@ Estado de Sculptor al cierre del sábado 21 de noviembre de 2026. Cada afirmaci�
 | **Permisos de verdad:** el dato reservado se filtra en el servidor; un intento ajeno da 403 y queda en la bitácora | Pruebas de seguridad | `tests/security.test.ts` |
 | **Acta exportable** en Markdown y JSON, con las decisiones automáticas aparte | Ruta del acta | `src/app/api/rooms/[roomId]/acta/` |
 | **Telemetría honesta:** dice qué proveedor de modelo corrió y si fue local o nube | Lectura de la telemetría en la pantalla grande | `src/lib/llm.ts` |
-| **Landing del protocolo** con intro animada, pⁿ calculado por el motor y la simulación orbital del pitch | Build y navegador | `/sculptor`, `src/components/sculptor/` |
+| **Landing de Sculptor** (página principal) con intro animada, pⁿ calculado por el motor y la simulación orbital del pitch | Build y navegador | `/`, `src/components/sculptor/` |
 
 ## Cifras medidas
 
