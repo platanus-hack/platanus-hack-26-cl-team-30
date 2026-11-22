@@ -6,7 +6,7 @@ La presentación del domingo es una página de la app: **`/presentacion`**. Sigu
 | --- | --- | --- | --- |
 | 1 | Hola | 0:00–0:07 | Nombre, una línea y el equipo |
 | 2 | Problema | 0:07–0:27 | 1 cama UCI, 2 hospitales; pⁿ de agentes solos (modelo ilustrativo, calculado por el motor) |
-| 3 | Solución | 0:27–0:42 | «La IA conversa. El código gobierna.» y el botón que abre la pantalla grande |
+| 3 | Solución | 0:27–0:42 | «Los agentes conversan. El código gobierna.» y el botón que abre la pantalla grande |
 | 4 | En vivo | 0:42–2:40 | Las 6 fases de la demo; la demo corre en `/stage/demo-cross` |
 | 5 | Desarrollo | 2:40–2:50 | Dos páginas del mismo deploy lado a lado (por defecto la portada `/` y `/sculptor`; cada panel tiene un selector) y el stack |
 | 6 | Cierre | 2:50–3:00 | NGC 253, «Somos Sculptor» |

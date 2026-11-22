@@ -273,7 +273,7 @@ function Solucion() {
         La solución
       </p>
       <h2 data-in className={`mt-6 ${H2}`}>
-        La IA conversa. <span className="font-serif font-normal text-(--eucalipto) italic [font-stretch:100%]">El código gobierna.</span>
+        Los agentes conversan. <span className="font-serif font-normal text-(--eucalipto) italic [font-stretch:100%]">El código gobierna.</span>
       </h2>
       <ol className="mt-14 grid gap-5 md:grid-cols-3">
         {items.map(([n, a, b]) => (

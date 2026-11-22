@@ -7,7 +7,7 @@ export const HERO = {
   title: "Un agente solo es ruido.",
   accent: "Deliberar juntos es poder.",
   body: "Sculptor es un esqueleto organizacional multijugador: personas y agentes emparejados por rol deciden en tiempo real sobre lo que cuesta. Cada quien ve solo lo que su rol permite, y nada se sella sin una persona.",
-  motto: ["La IA conversa y propone.", "El código gobierna.", "La persona decide y sella."],
+  motto: ["Los agentes conversan y proponen.", "El código gobierna.", "La persona decide y sella."],
 } as const;
 
 export const ORIGIN = {
@@ -23,7 +23,7 @@ export const ORIGIN = {
 
 export const PRINCIPLES = [
   {
-    title: "La IA conversa. El código gobierna.",
+    title: "Los agentes conversan. El código gobierna.",
     body: "El modelo solo produce contenido: un genoma JSON o una propuesta corta. Roles, permisos, umbrales y asignaciones son código determinista, validado con Zod antes de usarse.",
   },
   {

@@ -36,7 +36,7 @@ export const SLIDES: Slide[] = [
   {
     id: "demo",
     time: "0:42–2:40",
-    say: "Unirse: «Escaneen de a uno. La primera es Urgencias de la Clínica; la segunda, su Administración; después Turno y Administración del Hospital Rural. La quinta es el Comité». Posturas: «Su agente les escribió un consejo privado. Elijan su postura: un toque». Debate: «Ahora negocian los agentes. Ningún costo sale de su lado: el servidor ni siquiera se lo envía al otro». Propuesta: «La IA conversa, el código gobierna. Casi empate, 0,52 contra 0,53: desempata la necesidad sin cubrir». Comité: «La última palabra es humana: ¿acepta o rechaza? Su razón ya está escrita». Acta: «Todas las pantallas cambiaron en el mismo segundo, y quedó un acta con la razón».",
+    say: "Unirse: «Escaneen de a uno. La primera es Urgencias de la Clínica; la segunda, su Administración; después Turno y Administración del Hospital Rural. La quinta es el Comité». Posturas: «Su agente les escribió un consejo privado. Elijan su postura: un toque». Debate: «Ahora negocian los agentes. Ningún costo sale de su lado: el servidor ni siquiera se lo envía al otro». Propuesta: «Los agentes conversan, el código gobierna. Casi empate, 0,52 contra 0,53: desempata la necesidad sin cubrir». Comité: «La última palabra es humana: ¿acepta o rechaza? Su razón ya está escrita». Acta: «Todas las pantallas cambiaron en el mismo segundo, y quedó un acta con la razón».",
     do: "La demo corre en la pestaña de /stage/demo-cross. Espacio pausa el debate y → lo adelanta. Plan B: si a los 15 s falta alguien, Sebastián entra con datos móviles; si alguien no actúa en 20 s, juega el piloto (queda marcado como automático).",
   },
   {
