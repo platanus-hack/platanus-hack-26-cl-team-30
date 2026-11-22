@@ -24,7 +24,7 @@ Actualizado el 21 de noviembre de 2026.
 | i2 | **`TRUST_PROXY=1` en Render sin verificar.** El límite de peticiones toma el último salto de `X-Forwarded-For`. Si en Render ese salto no es la IP del cliente, todos comparten un mismo límite (protege igual, más grueso). | Sebastián | Revisar en los registros de Render qué llega en `X-Forwarded-For`. Si el primer salto es el del cliente, avisar al agente de motor para ajustar `clientKey`. |
 | i3 | **`NEXO_ADMIN_KEY` sigue sin definirse en Render.** Sin ella, en producción las salas fijas no entregan sus controles ni su QR del Comité, y la pantalla grande ofrece crear una sala propia. | Sebastián | Definirla si se quiere presentar desde `demo-cross`; si no, presentar desde una sala nueva. |
 | i4 | **El e2e nuevo no se ha corrido contra el deploy.** Además, el paso "sala nueva desde una frase" gasta una llamada a Claude por corrida. | Orquestador | Tras desplegar, `node scripts/e2e.mjs https://team-30-platanus-hack.onrender.com`. |
-| i5 | **Canales del Comité sin probar contra Kapso ni ElevenLabs.** Solo hay pruebas unitarias. La llamada necesita un número de Twilio vinculado en ElevenLabs. | Sebastián | Configurar las variables en Render, registrar el webhook en Kapso con su secreto y hacer una prueba real de cada canal antes de mencionarlos en vivo. |
+| i5 | **Canales del Comité: probados en vivo, con dos huecos.** WhatsApp de punta a punta (caso, botón Aprobar, razón y acta «vía WhatsApp») y la nota de voz del caso se probaron contra Kapso y ElevenLabs reales el 21 de noviembre (ver «Canales del Comité contra los servicios reales» en `docs/MEDICIONES.md`). Faltan: la plantilla `sculptor_comite_caso`, que sigue en revisión en Meta, y la llamada telefónica, que necesita un número de Twilio. | Sebastián | Revisar el estado de la plantilla en Kapso → Templates antes de presentar; si no está aprobada, usar el botón «Recibir resumen por WhatsApp» (abre la ventana de 24 h). No ofrecer la llamada telefónica en vivo. |
 | i6 | **Resuelto:** el README ya dice que las salas no usan base de datos y que Supabase solo atiende el formulario de acceso y las entrevistas de la portada. | Sebastián | Nada. |
 | k | **Resuelto:** `.playwright-mcp/` está en `.gitignore`. | Orquestador | Nada. |
 | s | **Lo que leen los jueces es lo publicado.** Lo de las rondas anteriores ya está en git; lo de la ronda 15 (acta en audio al sellar desde la web, decisiones automáticas marcadas, preguntas nuevas) todavía no. | Orquestador | Commit y push antes de presentar, y confirmar en GitHub que se ve la versión nueva. |
@@ -66,7 +66,7 @@ Revisión de la entrega. Los borradores del pitch que no coincidían con el cód
 ## Agregado por el orquestador (21 de noviembre, mañana)
 
 - **Validación del evento.** Los cuatro requisitos que marcaba (nombre, descripción en español, URL del deploy y `project-description.md`) ya están completos en el repo oficial. El resultado solo se ve con la sesión iniciada en `hack.platan.us`: hay que revisarlo y confirmar que pasó.
-- **Latencia del SSE en Render gratis.** En una de cuatro corridas del e2e contra el deploy hubo mensajes que tardaron hasta 3 segundos en llegar; las otras tres pasaron 97 de 97. Subir el servicio a un plan pagado antes de presentar reduce ese riesgo.
+- **Latencia del SSE en Render gratis.** En una de cuatro corridas del e2e contra el deploy hubo mensajes que tardaron hasta 3 segundos en llegar; las otras tres pasaron 97 de 97. Con la versión actual pasó 142 de 142 (22 de noviembre). Subir el servicio a un plan pagado antes de presentar reduce ese riesgo.
 - **Reinicio de salas:** resuelto. `DELETE /api/rooms/:id` exige el token de anfitrión que recibe quien crea la sala (o `NEXO_ADMIN_KEY`), salvo «Nueva ronda» en una sala de demo con el acta cerrada, que no lo pide (ronda 11).
 - **Fórmula de prioridad.** `computeTriageScore` resta el riesgo por demora, como dice el plan. Decidir si se invierte el signo: cambia el resultado de la demo.
 - **UX Pilot.** El servidor MCP quedó agregado, pero pide autenticación: correr `/mcp` en una sesión nueva de Claude Code y autorizarlo.
@@ -74,7 +74,7 @@ Revisión de la entrega. Los borradores del pitch que no coincidían con el cód
 ## Agregado en la ronda 8 (celular y sorteo de silla, 21 de noviembre, tarde)
 
 - **QR único y el Comité:** resuelto. En las salas de demo el Comité entra por el QR único sin clave, como tercera persona (rondas 11 y 12). En las salas normales, sin `?key` el Comité no entra al sorteo.
-- **WhatsApp contra el número real sin registrar.** El último commit de WhatsApp habla de «plantilla aprobada (número de producción)», pero `docs/MEDICIONES.md` no tiene ninguna prueba contra Kapso real y PREGUNTAS 11 y 28 dicen que los canales se probaron solo con pruebas unitarias. Confirmar con el equipo y anotar qué se probó y cuándo.
+- **WhatsApp contra el número real:** resuelto. La prueba en vivo del 21 de noviembre está en `docs/MEDICIONES.md`.
 - **Resuelto:** `scripts/e2e.mjs` recorre el sorteo de silla, la sala de demo con 3 personas sin clave y el plan B.
 - **Silla del celular sin probar en teléfonos reales:** se probó con Playwright en 390 × 844 (claro y oscuro). Falta un ensayo con iPhone y Android para revisar el área segura y el teclado sobre la razón del Comité.
 - **Secretos y Sala se desplazan un poco** (hasta unos 160 px en 844 px de alto): tienen más filas que un turno. Los turnos no se desplazan.
@@ -88,7 +88,7 @@ Revisión de la entrega. Los borradores del pitch que no coincidían con el cód
 
 ## Agregado en la ronda 10 (nombre Sculptor)
 
-- **Asistente de voz ya creado en ElevenLabs:** el nombre, el prompt y el saludo nuevos («asistente del Comité de Sculptor») están en `src/integrations/elevenlabs.ts`, pero solo se usan al crear el agente. Si Render tiene `ELEVENLABS_AGENT_ID`, ese agente sigue diciendo «Nexo» hasta actualizarlo en el panel de ElevenLabs (o borrar la variable para que se cree uno nuevo).
+- **Asistente de voz ya creado en ElevenLabs:** resuelto. Se actualizó por la API a «Sculptor · Asistente del Comité», con `eleven_v3_conversational` y la voz chilena «Joaquín» (verificado con `GET`).
 - **Plantilla de WhatsApp:** el nombre sugerido ahora es `sculptor_comite_caso`. Hay que crearla y aprobarla en Meta; mientras tanto, `KAPSO_TEMPLATE_NAME` debe seguir con el nombre de la plantilla ya aprobada. El encabezado del mensaje interactivo ya dice «Sculptor · Decisión del Comité».
 - **Fuera del reparto de la ronda 10:** `project-description.md` todavía dice «Nexo» (líneas 1 y 13). `public/pitch/index.html` ya está al día.
 
@@ -98,7 +98,7 @@ Revisión de la entrega. Los borradores del pitch que no coincidían con el cód
 
 ## Agregado en la ronda 14 (notas de voz por WhatsApp)
 
-- **Probar contra los servicios reales:** activar `NEXO_VOICE_NOTES=1` en Render con el número de producción y confirmar que (a) ElevenLabs entrega el Opus en OGG y WhatsApp lo muestra como nota de voz, y (b) el audio del caso llega al tocar un botón y el del acta al escribir la razón.
+- **Notas de voz contra los servicios reales:** la del caso llegó en la prueba del 21 de noviembre (con `NEXO_VOICE_NOTES=1`). Falta confirmar en vivo el acta en audio y la voz «Fer» después del cambio.
 - **Resuelto (ronda 15): el acta en audio también llega si el Comité sella desde la web,** siempre que a esa sala se le haya enviado el caso por WhatsApp y la conversación esté abierta (`sendActaAfterWebSeal`, llamada desde la ruta de acciones). Falta el caso del plan B: si el piloto sella solo en una sala de demo, no se envía audio.
 
 ## Agregado en la ronda 18 (veto en un paso, resumen por WhatsApp, espera con flujo)

@@ -29,7 +29,8 @@ Desde entonces el servidor agregó un tope de 200 conexiones por sala (`MAX_CONN
 
 | Fecha | Resultado | Nota |
 | --- | --- | --- |
-| 21 de noviembre | 97 de 97 | Con la versión desplegada en ese momento |
+| 22 de noviembre, 01:57 | **142 de 142** | Con la versión actual (ronda 20, negociación entre agentes, rutas nuevas). El mismo día, la prueba de novatos (`scripts/novato-demo.mjs`, 5 navegadores a ritmo real) pasó contra el deploy en 98 s, sin fugas |
+| 21 de noviembre | 97 de 97 | Con la versión desplegada en ese momento (antes de la ronda 20) |
 | 21 de noviembre, mañana (informado por el orquestador) | 3 de 4 corridas con 97 de 97 | En la cuarta, algunos mensajes SSE tardaron hasta 3 segundos en llegar desde Render gratis |
 | 21 de noviembre, más tarde | 93 de 97 | El script ya exigía que la pantalla general reciba solo campos `public`, regla que estaba en el código local pero no en el deploy. No es un error del motor: hay que repetirlo después de desplegar |
 
@@ -120,6 +121,23 @@ No está medido cuánto tarda Claude en escribir cada frase ni cuántas veces ca
 | 16 | 507 | 507 pasan |
 
 Borradores anteriores del pitch citaban 216 y 80 pruebas; la cifra vigente es esta. Antes de la ronda 20 eran 415 en 11 archivos.
+
+## Canales del Comité contra los servicios reales (Kapso y ElevenLabs)
+
+Además de las pruebas automáticas (que reemplazan a Kapso y ElevenLabs por dobles para correr sin claves ni costo), los canales se probaron en vivo contra los servicios reales, con las variables configuradas en Render. Horas de Chile.
+
+| Cuándo | Qué se probó | Resultado |
+|---|---|---|
+| 21 de noviembre, ~18:25 | Número de WhatsApp de producción en Kapso (+1 208 485 0157), conectado al deploy con un webhook firmado (HMAC) hacia `/api/integrations/kapso/webhook` | La API de Kapso lo lista como `production` y `CONNECTED`; el webhook queda activo |
+| 21 de noviembre, ~18:27 | Mensaje de texto enviado por la API de Kapso desde ese número al WhatsApp de un integrante | Meta lo aceptó (devolvió un `wamid`) y el mensaje llegó al teléfono |
+| 21 de noviembre, tarde | `GET /api/integrations/status` en el deploy | `whatsapp.configured: true`, `voice.configured: true`, `voice.canCall: false` (no hay número de Twilio) |
+| 21 de noviembre, 19:33–19:35 | **Comité por WhatsApp de punta a punta, en el deploy.** Sala cross_org nueva; los dos hospitales presentan su caso; el anfitrión llama a `POST /api/rooms/:id/committee` con `channels: ["whatsapp"]`; el Comité (un integrante, en su teléfono) toca **Aprobar** y escribe la razón | El servidor respondió «Caso enviado por WhatsApp». El acta quedó con `APPROVE (asignación, caso B1). Razón: mayor necesidad sin cubrir (vía WhatsApp)` y `ALLOCATION_SEALED` con desempate por equidad. **103 s** desde que se abrió el caso hasta el sello |
+| 21 de noviembre, 19:33–19:35 | **Nota de voz del caso** (`NEXO_VOICE_NOTES=1`): ElevenLabs convierte el resumen del Comité a voz y Kapso lo envía | La nota de voz llegó al WhatsApp del Comité. Con el modelo anterior (`eleven_multilingual_v2`) sonaba robótica: se cambió a `eleven_v3` con etiquetas de actuación (respiración, pausas), voz chilena y trato de usted |
+| 21 de noviembre, noche | Texto a voz de ElevenLabs por la API, con `eleven_v3` y varias voces chilenas | Audios generados sin error; el equipo eligió la voz «Fer» para las notas de voz |
+| 21 de noviembre, noche | Asistente de voz del Comité en ElevenLabs, actualizado por la API (`PATCH /convai/agents/:id`) | Verificado con `GET`: «Sculptor · Asistente del Comité», `eleven_v3_conversational`, voz chilena «Joaquín», herramientas `consultar_caso` y `registrar_decision`. «Fer» no se puede usar en agentes: ElevenLabs lo rechaza porque esa voz tiene moderación en vivo |
+| 21 de noviembre, ~18:25 | Plantilla de WhatsApp `sculptor_comite_caso` (Utility, español, botones Aprobar y Vetar) para escribirle a cualquier número | Enviada a Meta por la API de Kapso; al 22 de noviembre, 02:00, sigue **en revisión** (`PENDING`). Sin plantilla aprobada, WhatsApp solo deja escribir a quien escribió en las últimas 24 h: por eso existe el botón «Recibir resumen por WhatsApp» |
+
+**No probado en vivo:** el botón «Recibir resumen por WhatsApp» (wa.me con el código de la sala) y el acta en nota de voz después de ese botón; las notas de voz con la voz «Fer» después del cambio; la conversación con el asistente de voz desde el navegador; la llamada telefónica (necesita un número de Twilio vinculado en ElevenLabs, que no tenemos).
 
 ## Lo que no está medido
 

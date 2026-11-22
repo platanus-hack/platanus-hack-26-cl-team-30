@@ -348,7 +348,7 @@ Formato de cada entrada:
 - **Ventana de 24 h:** fuera de una conversación abierta, WhatsApp solo permite plantillas aprobadas. El audio se envía solo si el Comité escribió o tocó un botón en las últimas 24 h; si no, se omite sin error. Con un número de producción y plantilla, el audio del caso llega cuando el Comité toca un botón.
 - **Formato:** se pide Opus a ElevenLabs (`opus_48000_64`). Si llega en contenedor OGG va como nota de voz; si no, se pide MP3 y va como audio normal. La referencia de la API no dice el contenedor del Opus, por eso se revisan los primeros bytes en vez de suponerlo.
 - **Descartado:** servir el audio desde nuestro servidor con un enlace temporal. Se prefirió subirlo al endpoint de medios de WhatsApp (vía Kapso): no hay que exponer una ruta pública con archivos ni limpiar nada después.
-- **Riesgo:** sin probar contra los servicios reales (ElevenLabs y Kapso) desde este equipo; solo con dobles. Un fallo de cualquiera de los dos se registra y el canal de WhatsApp sigue funcionando sin audio.
+- **Riesgo:** las pruebas automáticas usan dobles; en vivo, la nota de voz del caso llegó por WhatsApp el 21 de noviembre (`docs/MEDICIONES.md`), y falta confirmar el acta en audio. Un fallo de cualquiera de los dos se registra y el canal de WhatsApp sigue funcionando sin audio.
 
 ## Las decisiones del piloto automático se marcan y van aparte en el acta
 

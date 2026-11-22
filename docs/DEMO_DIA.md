@@ -108,7 +108,7 @@ Juntan las 12 técnicas de la versión anterior con las 16 del PDF de Nahum. Don
 ### Nivel 1 · Las obvias
 
 **1. ¿Qué es real y qué es simulado?**
-Son reales los permisos en el servidor, el tiempo real entre celulares, la regla, la asignación, el acta y los agentes con Claude. Son simulados los pacientes, los costos, los puntajes y las organizaciones. Los asientos vacíos los juega un bot marcado «automático», con `automatic: true` y en una sección aparte del acta. WhatsApp y voz están implementados, pero solo probados sin llamar a los servicios.
+Son reales los permisos en el servidor, el tiempo real entre celulares, la regla, la asignación, el acta y los agentes con Claude. Son simulados los pacientes, los costos, los puntajes y las organizaciones. Los asientos vacíos los juega un bot marcado «automático», con `automatic: true` y en una sección aparte del acta. WhatsApp se probó en vivo contra Kapso: el Comité aprobó desde su teléfono y el acta quedó «vía WhatsApp»; también llegó la nota de voz de ElevenLabs. La llamada telefónica no está probada (falta un número de Twilio).
 → `docs/ARQUITECTURA.md` («Qué es real y qué es simulado»), `src/lib/engine/autopilot.ts`
 *Corrige al PDF:* no hubo 403 en el celular ni deslizamiento en esta demo.
 

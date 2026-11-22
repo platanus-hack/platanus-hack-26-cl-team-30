@@ -24,7 +24,7 @@ Todas salen de `MEDICIONES.md`, con su contexto.
 | --- | --- |
 | **507 de 507 pruebas** | `npm test` sin modelo, 16 archivos |
 | **500 conexiones en vivo, p95 de 51,5 ms** | En un notebook, sin red de por medio y sin pasar por Next |
-| **97 de 97 pasos** del recorrido completo | Contra el deploy en Render, con la versión del 21 de noviembre (antes de la ronda 20) |
+| **142 de 142 pasos** del recorrido completo | Contra el deploy en Render, con la versión actual (22 de noviembre, 01:57). La prueba de novatos con 5 navegadores también pasó contra el deploy, a ritmo real, sin fugas |
 | **60 cuadros por segundo** en la pantalla grande con la galaxia | Apple M4 con GPU |
 | **De 184 a 66 palabras** en la pantalla del Comité | Silla del celular, antes y después de la ronda 8 |
 | **1 toque por persona** y unos 15 s desde la última postura hasta el turno del Comité | Demo de la ronda 20, con 2,5 s entre mensajes |
@@ -41,6 +41,6 @@ Todas salen de `MEDICIONES.md`, con su contexto.
 - La latencia de Claude por frase en el deploy.
 - La carga en el deploy de Render.
 - Un ensayo con teléfonos reales en la red de la sede.
-- Los canales del Comité (WhatsApp y voz) contra los servicios reales: solo se probaron con dobles.
+- Los canales del Comité contra los servicios reales: WhatsApp de punta a punta y la nota de voz del caso se probaron en vivo (`docs/MEDICIONES.md`); la llamada telefónica no (falta un número de Twilio) y la plantilla sigue en revisión en Meta.
 
 Detalle y responsables en `PENDIENTES.md`.
