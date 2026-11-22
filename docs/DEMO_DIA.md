@@ -1,6 +1,6 @@
 # Día de la demo · domingo 22 de noviembre
 
-Plan para mañana: 3:00 exactos de demo y luego 2:00 de preguntas, solo de los jueces. Esta versión une dos guiones:
+Plan para mañana: 3:00 exactos de demo y luego 2:00 de preguntas, solo de los jueces. Según la charla oficial («Cómo hacer un buen demo»): corte duro a los **3:01**, después 1:30 en que los 4 jueces evalúan, y **la demo se graba y se publica** durante la semana. El hacking se detiene a las **9:00**; presentaciones generales de 9:30 a 11:30 y finales de 12:30 a 15:30. Esta versión une dos guiones:
 
 - la demo en vivo de 5 personas de `docs/GUION_DEMO.md`, que es lo que corre en la app;
 - el guion de Nahum («SCULPTOR — Guion de Práctica en Vivo», PDF de 3:00), del que se toman la apertura «choque de fuerzas», el giro «la cama fue solo el primer átomo», la frase «la IA conversa, el código gobierna», el cierre con la galaxia NGC 253 y la válvula de escape.
@@ -81,6 +81,9 @@ El PDF describe piezas que solo existen en los prototipos de diseño (`docs/dise
 **Válvula de escape (del PDF):** si a los 2:40 todavía no hay acta, Nahum dice solo «Esa cama fue el primer átomo: el mismo motor sirve para una grúa o un camión. Sculptor: donde el caos aprende a evolucionar», y termina antes de los 3:00.
 
 ### Notas del guion
+
+- **Tiempos de la charla frente a este guion.** La charla sugiere problema ~20 s, solución, impacto y ambición ~20–30 s, y demo ~125–140 s. Aquí: problema 20 s, solución 15 s, demo 118 s (0:42–2:40) y giro y cierre 20 s, que es donde va la ambición («el mismo motor ya corre para una grúa y un camión»). Si en los ensayos sobra tiempo, se le da a la demo.
+- **Títulos con mensaje, no «Problema» o «Solución».** Las láminas cumplen: el título grande dice «Una organización es un choque de fuerzas» y «Los agentes conversan. El código gobierna.»; «El problema» y «La solución» son solo la etiqueta chica de arriba.
 
 - **De dónde sale el problema.** De la narrativa de este documento (frases 1 y 2), de «Por qué no puede decidir una sola organización» en `docs/ARQUITECTURA.md` y de pⁿ (`docs/DECISIONES.md`, «p^n como modelo ilustrativo»). No se usa ninguna estadística externa: el repo no tiene una con fuente. Se sacó «lo arreglan por teléfono» porque es un relato que nadie validó con personas que asignan camas.
 - **La cifra p^n de la lámina 2** (43,4 % → 96,1 %) es un modelo ilustrativo y no un dato del mundo (`docs/DECISIONES.md`, «p^n como modelo ilustrativo»). Si se deja en la lámina, Nahum dice «es un modelo ilustrativo». Si no, se saca.

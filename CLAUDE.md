@@ -1,6 +1,6 @@
 # team-30 · Platanus Hack 26 Santiago
 
-Repo oficial del equipo 30 en Platanus Hack 26: Santiago ft. Buk. Track: **Multiplayer**. El hacking termina el domingo 22 de noviembre a las 09:30 y las presentaciones son de 11:00 a 14:00.
+Repo oficial del equipo 30 en Platanus Hack 26: Santiago ft. Buk. Track: **Multiplayer**. El hacking termina el domingo 22 de noviembre a las 09:00. Presentaciones generales de 09:30 a 11:30; finales y evaluación de 12:30 a 15:30 (charla oficial «Cómo hacer un buen demo»).
 
 ## Equipo
 

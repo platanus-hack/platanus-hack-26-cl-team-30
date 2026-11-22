@@ -12,7 +12,7 @@ Lista corta de lo que falta, sacada de las tablas de abajo. Lo que no se alcance
 | --- | --- | --- | --- |
 | z1 | Fusionar la rama `docs` a `main` (trae `origin/main`, `guia-al-dia`, el guion del día alineado con la presentación y la portada corregida) y confirmar en GitHub que se ve la versión nueva | Ramón | y5, s |
 | z2 | Decidir qué pasa con las ramas que tienen un commit sin fusionar: `portada-hero` («el puente» en vez del Venn), `orbita-galaxia` y `orbita-relevo` (bancos de prueba de `/orbita`). Si no van, no se fusionan; no cambian nada de lo que se presenta | Sebastián | — |
-| z3 | Confirmar la hora de cierre del repo: `CLAUDE.md` dice que el hacking termina a las 09:30 y `docs/DEMO_DIA.md` que los repos se cierran a las 9:00. Trabajar con la más temprana | Equipo | — |
+| z3 | **Resuelto:** según la charla oficial, el hacking se detiene a las **09:00**. Presentaciones generales de 09:30 a 11:30; finales de 12:30 a 15:30. `CLAUDE.md` ya lo dice | Equipo | — |
 | z4 | Correr `node scripts/e2e.mjs https://team-30-platanus-hack.onrender.com --llm` y anotar en `docs/MEDICIONES.md` cuántas frases de la negociación fueron respaldo | Sebastián | q, ensayo del bot |
 | z5 | Subir Render a un plan pagado o, como mínimo, abrir el deploy 10 minutos antes para despertarlo | Sebastián | c |
 | z6 | Grabar el video de respaldo en el ensayo 2 (hoy no existe) | Ramón | `docs/DEMO_DIA.md` (d) |
