@@ -37,6 +37,7 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
   const [demoMounted, setDemoMounted] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   const startedAt = useRef<number | null>(null);
   const base = useRef(0);
 
@@ -103,6 +104,17 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
     });
   }, [go, index, warping]);
 
+  // Pantalla completa con el botón de la barra o la tecla F.
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void document.documentElement.requestFullscreen?.();
+  }, []);
+  useEffect(() => {
+    const sync = () => setFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+
   const toggleTimer = useCallback(() => {
     setRunning((on) => {
       if (on) {
@@ -135,14 +147,11 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
       else if (k === "n") setNotes((v) => !v);
       else if (k === "t") toggleTimer();
       else if (k === "r") resetTimer();
-      else if (k === "f") {
-        if (document.fullscreenElement) void document.exitFullscreen();
-        else void document.documentElement.requestFullscreen?.();
-      }
+      else if (k === "f") toggleFullscreen();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [go, index, toggleTimer, resetTimer]);
+  }, [go, index, toggleTimer, resetTimer, toggleFullscreen]);
 
   // Entrada de cada lámina: los elementos marcados suben en cascada.
   useGSAP(
@@ -191,6 +200,15 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
             />
           ))}
         </span>
+        <span className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="rounded-full border border-(--basalto) px-4 py-1.5 text-(--marmol) transition-colors hover:border-(--cincel) hover:text-(--cincel)"
+            aria-label={fullscreen ? "Salir de pantalla completa (tecla F)" : "Pantalla completa (tecla F)"}
+          >
+            {fullscreen ? "⤡ Salir" : "⤢ Pantalla completa"}
+          </button>
         <button
           type="button"
           onClick={toggleTimer}
@@ -201,6 +219,7 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
         >
           {running ? "●" : "❚❚"} {clock(elapsed)} / 3:00
         </button>
+        </span>
       </header>
 
       {/* Lámina actual. Un clic en el fondo avanza. */}

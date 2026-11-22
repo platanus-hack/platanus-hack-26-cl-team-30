@@ -15,7 +15,7 @@ La presentación del domingo es una página de la app: **`/presentacion`**. Sigu
 | 7 | Equipo | Preguntas | Foto, nombres y roles (AI Product Strategist, Software Engineer, AI Engineer) sobre un collage de fotos del equipo en movimiento |
 | 8 | Gracias | Al terminar | «gracias» armado con píxeles que salen de una galaxia; 4 s después de armado, los mismos píxeles vuelan a formar el isotipo de Sculptor. El mouse los empuja y vuelven a su lugar |
 
-Teclas: `→` o clic avanza, `←` retrocede, `1`–`8` salta, `T` inicia o pausa el reloj de 3:00 (se pone lima a los 2:40 y rojo a los 3:00), `R` lo reinicia, `N` muestra las notas del orador con lo que dice Nahum y lo que hacen Ramón y Sebastián, `F` pantalla completa.
+Teclas: `→` o clic avanza, `←` retrocede, `1`–`8` salta, `T` inicia o pausa el reloj de 3:00 (se pone lima a los 2:40 y rojo a los 3:00), `R` lo reinicia, `N` muestra las notas del orador con lo que dice Nahum y lo que hacen Ramón y Sebastián, `F` o el botón «Pantalla completa» de la barra de arriba ponen pantalla completa.
 
 Todo va en modo oscuro: la charla avisó que el modo claro se quema en el proyector. Las páginas dentro de «Desarrollo» siguen el modo del computador; si el proyector está en modo claro, la portada `/` se ve clara.
 
