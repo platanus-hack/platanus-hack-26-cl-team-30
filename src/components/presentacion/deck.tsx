@@ -488,16 +488,16 @@ function Cierre() {
 // public/equipo, las de frente al cartel, fotos de la cámara y cuadros de sus videos.
 const COLLAGE = [
   "/equipo/equipo-0.webp",
-  "/sculptor/equipo/equipo-vertical-1.jpg",
+  "/sculptor/equipo/equipo-vertical-1.webp",
   "/equipo/equipo-4.webp",
   "/equipo/equipo-7.webp",
   "/equipo/equipo-2.webp",
-  "/sculptor/equipo/equipo-vertical-2.jpg",
+  "/sculptor/equipo/equipo-vertical-2.webp",
   "/equipo/equipo-3.webp",
   "/equipo/equipo-6.webp",
   "/equipo/equipo-1.webp",
   "/equipo/equipo-5.webp",
-  "/sculptor/equipo/equipo-horizontal.jpg",
+  "/sculptor/equipo/equipo-horizontal.webp",
   // Cuadros de los videos de la cámara del equipo (tarjeta SD, 21 de noviembre).
   "/presentacion/sd/sd-0.webp",
   "/presentacion/sd/sd-1.webp",
@@ -533,6 +533,20 @@ const COLLAGE = [
   "/presentacion/sd/foto-18.webp",
   "/presentacion/sd/foto-19.webp",
   "/presentacion/sd/foto-20.webp",
+  // 13 más de la tarjeta SD (22 de noviembre): sin gestos ofensivos, movidas ni oscuras.
+  "/presentacion/sd/foto-21.webp",
+  "/presentacion/sd/foto-22.webp",
+  "/presentacion/sd/foto-23.webp",
+  "/presentacion/sd/foto-24.webp",
+  "/presentacion/sd/foto-25.webp",
+  "/presentacion/sd/foto-26.webp",
+  "/presentacion/sd/foto-27.webp",
+  "/presentacion/sd/foto-28.webp",
+  "/presentacion/sd/foto-29.webp",
+  "/presentacion/sd/foto-30.webp",
+  "/presentacion/sd/foto-31.webp",
+  "/presentacion/sd/foto-32.webp",
+  "/presentacion/sd/foto-33.webp",
 ];
 const COLUMNS = 5;
 
