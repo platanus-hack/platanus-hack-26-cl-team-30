@@ -22,6 +22,15 @@
 // bot y decide el plan B. Revisa que el contador diga «2/5» antes y
 // «2/5 · 3 automáticos» después, y captura ambos momentos.
 //
+// Con --grabar <carpeta> la misma corrida queda en video (recordVideo de
+// Playwright): la pantalla grande a 1920x1080 y cada celular a 390x844, todos en
+// modo oscuro, un .webm por pantalla más grabacion.json (cuándo empezó cada video,
+// qué silla tiene cada celular y cuándo empezó cada fase). Cada persona toca la
+// postura que le recomienda su agente (no la primera). Antes de cada toque se
+// dibuja un círculo en el celular para que el toque se vea, y al final la cámara
+// se queda --final segundos en el acta. scripts/video-respaldo.mjs une esos
+// videos en un solo MP4 (el video de respaldo de la demo, docs/DEMO_DIA.md).
+//
 // Registra, por persona y por fase: el título que ve (el texto más grande de la
 // pantalla), cuántas palabras tiene la pantalla, si hay que desplazarse, los
 // botones a la vista, los toques que necesitó y cuánto duró cada fase. Guarda una
@@ -42,6 +51,7 @@
 // Uso:
 //   node scripts/novato-demo.mjs <url> <carpeta> [--rapido] [--iniciar] [--comite aceptar|rechazar]
 //        [--atasco 60] [--limite 900] [--pausa-entrada 1500] [--lectura 2000] [--headed]
+//        [--grabar <carpeta>] [--final 8]
 //
 //   --rapido         aprieta «Siguiente» del narrador en cuanto se puede.
 //   --iniciar        entran 2 personas y el narrador toca «Iniciar» (bots en los 3 asientos libres).
@@ -52,6 +62,8 @@
 //   --lectura        ms que una persona mira su botón antes de tocarlo (2000). Nadie toca
 //                    antes de que se capture la pantalla de esa fase.
 //   --headed         muestra los navegadores.
+//   --grabar         carpeta donde dejar un video por pantalla y grabacion.json.
+//   --final          segundos que la grabación se queda en el acta antes de cortar (8).
 //
 // Playwright no es dependencia del repo: se busca `playwright` instalado, luego
 // PLAYWRIGHT_PATH (carpeta del paquete) y luego la caché de npx
@@ -60,7 +72,7 @@
 //
 // Sale con 0 si la demo se jugó entera sin fugas ni atascos, 1 si falló y 2 si no pudo empezar.
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -79,9 +91,48 @@ const LIMIT_MS = Number(flags.limite ?? 900) * 1000;
 const JOIN_GAP_MS = Number(flags["pausa-entrada"] ?? 1500);
 const READ_MS = Number(flags.lectura ?? 2000);
 const HEADED = Boolean(flags.headed);
+/** Carpeta de la grabación (--grabar): vacía si no se graba. */
+const GRABAR = typeof flags.grabar === "string" ? resolve(flags.grabar) : "";
+const FINAL_MS = Number(flags.final ?? 8) * 1000;
+/** Tamaños de la grabación: la pantalla grande del proyector y un celular. */
+const STAGE_SIZE = GRABAR ? { width: 1920, height: 1080 } : { width: 1440, height: 900 };
+const PHONE_SIZE = { width: 390, height: 844 };
+/**
+ * Baliza de sincronía, solo al grabar: un cuadrado de 8 px en la esquina inferior
+ * derecha cuyo gris dice el segundo del reloj (8 niveles, de 80 a 255, según
+ * segundo % 8). Con eso scripts/video-respaldo.mjs calcula en qué instante empezó
+ * de verdad cada video (Playwright empieza a grabar en el primer pintado, no al
+ * crear el contexto). En el video final no se ve: en la pantalla grande queda
+ * fuera del recorte y en los celulares, bajo la esquina redondeada. Se agrega 1,5 s
+ * después de cargar la página para no tocar la hidratación de React.
+ */
+const SYNC_BEACON = `(() => {
+  const start = () => {
+    const box = document.createElement("div");
+    box.setAttribute("aria-hidden", "true");
+    box.style.cssText = "position:fixed;right:0;bottom:0;width:8px;height:8px;z-index:2147483647;pointer-events:none";
+    const paint = () => {
+      const level = Math.floor(Date.now() / 1000) % 8;
+      const gray = 80 + level * 25;
+      box.style.background = "rgb(" + gray + "," + gray + "," + gray + ")";
+      if (!box.isConnected) document.documentElement.appendChild(box);
+    };
+    // Repinta justo después de cada cambio de segundo (no cada pocos ms: son 6 páginas grabando a la vez).
+    const tick = () => {
+      paint();
+      setTimeout(tick, 1000 - (Date.now() % 1000) + 5);
+    };
+    tick();
+  };
+  if (document.readyState === "complete") setTimeout(start, 1500);
+  else addEventListener("load", () => setTimeout(start, 1500));
+})();`;
 
-if (!baseUrl || !outDir || (flags.comite && !["aceptar", "rechazar"].includes(flags.comite))) {
-  console.error("Uso: node scripts/novato-demo.mjs <url> <carpeta> [--rapido] [--iniciar] [--comite aceptar|rechazar] [--atasco 60] [--limite 900] [--pausa-entrada 1500] [--lectura 2000] [--headed]");
+/** Opciones de contexto que solo se agregan al grabar: modo oscuro y video del tamaño de la pantalla. */
+const recording = (size) => (GRABAR ? { colorScheme: "dark", recordVideo: { dir: join(GRABAR, "crudo"), size } } : {});
+
+if (!baseUrl || !outDir || flags.grabar === true || (flags.comite && !["aceptar", "rechazar"].includes(flags.comite))) {
+  console.error("Uso: node scripts/novato-demo.mjs <url> <carpeta> [--rapido] [--iniciar] [--comite aceptar|rechazar] [--atasco 60] [--limite 900] [--pausa-entrada 1500] [--lectura 2000] [--headed] [--grabar <carpeta>] [--final 8]");
   process.exit(2);
 }
 
@@ -102,6 +153,8 @@ const SEL = {
   narrator: '.nx-narrator[aria-label="Controles del narrador"]',
   /** [R20] Grupo de botones de postura en el celular. */
   positionGroup: '[role="group"][aria-label="Tu postura"]',
+  /** Postura que recomienda el agente: el botón lleva la etiqueta «Recomendado». */
+  recommended: '[role="group"][aria-label="Tu postura"] button:has-text("Recomendado")',
   /** Botones del Comité (demo-view.tsx), por su texto. */
   approve: /^\s*Aceptar\s*$/,
   reject: /^\s*Rechazar\s*$/,
@@ -413,6 +466,7 @@ async function tapButton(device, matcher, why) {
     const button = locator.nth(i);
     if (!(await button.isVisible().catch(() => false)) || !(await button.isEnabled().catch(() => false))) continue;
     const text = (await button.innerText().catch(() => "")).trim().replace(/\s+/g, " ");
+    if (GRABAR) await showTap(device, button);
     if (device.viewer === "stage") await button.click({ timeout: 3000 });
     else await button.tap({ timeout: 3000 });
     device.taps += 1;
@@ -420,6 +474,82 @@ async function tapButton(device, matcher, why) {
     return text;
   }
   return null;
+}
+
+/**
+ * Solo al grabar: dibuja un círculo donde se va a tocar, para que el toque se vea
+ * en el video. Es un adorno de la grabación (aria-hidden, sin texto, no recibe
+ * toques) y se borra solo; la persona sigue tocando el botón de verdad.
+ */
+async function showTap(device, button) {
+  const box = await button.boundingBox().catch(() => null);
+  if (!box) return;
+  await device.page
+    .evaluate(({ x, y }) => {
+      const dot = document.createElement("div");
+      dot.setAttribute("aria-hidden", "true");
+      Object.assign(dot.style, {
+        position: "fixed", left: `${x - 30}px`, top: `${y - 30}px`, width: "60px", height: "60px", borderRadius: "50%",
+        background: "rgba(255,255,255,0.4)", border: "3px solid rgba(255,255,255,0.95)", boxShadow: "0 0 0 2px rgba(0,0,0,0.35)",
+        pointerEvents: "none", zIndex: "2147483647",
+      });
+      document.body.appendChild(dot);
+      const remove = () => dot.remove();
+      dot.animate([{ transform: "scale(0.3)", opacity: 0 }, { transform: "scale(1)", opacity: 1, offset: 0.3 }, { transform: "scale(1)", opacity: 1, offset: 0.6 }, { transform: "scale(1.6)", opacity: 0 }], { duration: 1000, easing: "ease-out" }).finished.then(remove, remove);
+    }, { x: box.x + box.width / 2, y: box.y + box.height / 2 })
+    .then(() => (device.tapsShown ??= []).push(Date.now() - t0))
+    .catch(() => {});
+  await sleep(350);
+}
+
+/**
+ * Solo al grabar: el video de Playwright empieza en el primer pintado de la página,
+ * no al crear el contexto. Para saber en qué instante empieza, se pinta primero una
+ * página de espera y se anota la hora después de ese pintado. Sin --grabar, la hora actual.
+ */
+async function startVideo(page, message) {
+  if (!GRABAR) return Date.now();
+  await page.setContent(
+    `<body style="margin:0;height:100vh;display:grid;place-items:center;background:#1c1c1a;color:#b4b4ac;font:16px -apple-system,Helvetica,sans-serif">${message}<script>${SYNC_BEACON}</script></body>`,
+  );
+  await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+  return Date.now();
+}
+
+/**
+ * Deja la grabación lista: cierra cada contexto (así Playwright termina su video),
+ * le pone nombre a cada archivo y escribe grabacion.json con lo que hace falta
+ * para unirlos en un solo video sin que queden desfasados.
+ */
+async function saveRecording() {
+  if (!GRABAR) return;
+  const videos = [];
+  for (const device of devices) {
+    const video = device.page.video();
+    device.videoEnd = Date.now();
+    await device.page.context().close().catch(() => {});
+    if (!video) continue;
+    const file = join(GRABAR, `${device.id}.webm`);
+    try {
+      renameSync(await video.path(), file);
+    } catch (error) {
+      notes.push(`No pude guardar el video de ${device.label}: ${error.message}`);
+      continue;
+    }
+    videos.push({ id: device.id, label: device.label, seat: device.seatLabel ?? null, orgId: device.seat?.orgId ?? null, roleId: device.seat?.roleId ?? null, file: `${device.id}.webm`, size: device.viewer === "stage" ? STAGE_SIZE : PHONE_SIZE, startMs: device.videoStart - t0, endMs: device.videoEnd - t0, tapCirclesMs: device.tapsShown ?? [] });
+  }
+  rmSync(join(GRABAR, "crudo"), { recursive: true, force: true });
+  const meta = {
+    url: baseUrl,
+    recordedAt: new Date(t0).toISOString(),
+    t0,
+    ok: failures.length === 0 && currentPhase() === "done",
+    videos,
+    phases: phaseMarks.map((entry) => ({ phase: entry.phase, name: PHASE_NAMES[entry.phase], atMs: entry.at - t0 })),
+    timeline: timeline.map((entry) => ({ atMs: entry.at - t0, event: entry.event })),
+  };
+  writeFileSync(join(GRABAR, "grabacion.json"), JSON.stringify(meta, null, 2));
+  log(`Grabación: ${videos.length} videos y grabacion.json en ${GRABAR}`);
 }
 
 /**
@@ -460,6 +590,7 @@ async function snapshotPhase(phase, index) {
 
 async function main() {
   mkdirSync(outDir, { recursive: true });
+  if (GRABAR) mkdirSync(GRABAR, { recursive: true });
   const reserved = loadReservedValues();
 
   let chromiumInfo;
@@ -481,9 +612,11 @@ async function main() {
   const abort = new AbortController();
   try {
     // 1. Pantalla grande: abre una sala nueva.
-    const stageContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "es-CL" });
+    const stageContext = await browser.newContext({ viewport: STAGE_SIZE, locale: "es-CL", ...recording(STAGE_SIZE) });
+    if (GRABAR) await stageContext.addInitScript(SYNC_BEACON);
     const stagePage = await stageContext.newPage();
     const stage = makeDevice({ id: "pantalla", label: "Pantalla grande", page: stagePage, viewer: "stage" });
+    stage.videoStart = await startVideo(stagePage, "Abriendo la sala…");
     devices.push(stage);
     const consoleErrors = [];
     stagePage.on("pageerror", (error) => consoleErrors.push(`pantalla: ${error.message}`));
@@ -586,17 +719,21 @@ async function main() {
     const people = [];
     for (let i = 0; i < PEOPLE; i++) {
       const context = await browser.newContext({
-        viewport: { width: 390, height: 844 },
+        viewport: PHONE_SIZE,
         deviceScaleFactor: 2,
         isMobile: true,
         hasTouch: true,
         locale: "es-CL",
         userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+        ...recording(PHONE_SIZE),
       });
+      if (GRABAR) await context.addInitScript(SYNC_BEACON);
       const page = await context.newPage();
+      const videoStart = await startVideo(page, "Escaneando el QR…");
       page.on("pageerror", (error) => consoleErrors.push(`persona ${i + 1}: ${error.message}`));
       const device = makeDevice({ id: `persona-${i + 1}`, label: `Persona ${i + 1}`, page, viewer: null });
       device.roomId = roomId;
+      device.videoStart = videoStart;
       devices.push(device);
       people.push(device);
       const scanAt = Date.now();
@@ -675,7 +812,9 @@ async function main() {
         if (failures.length) return;
         const phase = observed?.negotiation?.phase;
         if (phase === "positions" && !positioned && device !== committee) {
-          const tapped = await tapWhenRead(device, `${SEL.positionGroup} button`, "su postura");
+          // Al grabar, cada persona sigue a su agente: toca la postura «Recomendado» (si no hay, la primera).
+          const recommended = GRABAR && (await device.page.locator(SEL.recommended).count().catch(() => 0)) > 0;
+          const tapped = await tapWhenRead(device, recommended ? SEL.recommended : `${SEL.positionGroup} button`, recommended ? "su postura, la que recomienda su agente" : "su postura");
           if (tapped) positioned = true;
         }
         if (device === committee && !decided && (await device.page.getByRole("button", { name: SEL.approve }).count()) > 0) {
@@ -705,6 +844,8 @@ async function main() {
 
     await Promise.race([Promise.all([...people.map(playPerson), narrate(), watcher]), failurePromise()]);
     if (failures.length) throw new DemoFailure(failures[0]);
+    // Al grabar, la cámara se queda un rato en el acta antes de cortar.
+    if (GRABAR) await sleep(FINAL_MS);
 
     // 4. Resultado.
     const negotiation = observed?.negotiation;
@@ -730,6 +871,7 @@ async function main() {
     abort.abort();
     // Si algo falló, una captura de cada pantalla para ver dónde quedó cada quien.
     if (failures.length) await Promise.all(devices.map((device) => capture(device, `falla-${device.id}`)));
+    await saveRecording().catch((error) => notes.push(`No pude guardar la grabación: ${error.message}`));
     await browser.close().catch(() => {});
   }
 }

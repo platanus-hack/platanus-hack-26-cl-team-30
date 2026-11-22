@@ -323,6 +323,13 @@ export function useRoom(roomId: string, { spectator = false }: Options = {}) {
     let attempts = 0;
     let stopped = false;
     let latest: ProjectedRoomState | null = null;
+    // Vigilante: el servidor manda la sala al menos cada 15 s. Una conexión que
+    // queda abierta pero muda (pasó en un celular durante una grabación) no
+    // dispara onerror, así que si no llega nada en 40 s, o si el teléfono vuelve
+    // a primer plano tras 20 s sin datos, se cierra y se reabre.
+    let lastMessageAt = Date.now();
+    const STALE_MS = 40_000;
+    const STALE_ON_RETURN_MS = 20_000;
 
     const publish = (next: ConnectionStatus) => setFeed({ url, room: latest, status: next, failures: attempts });
 
@@ -350,6 +357,7 @@ export function useRoom(roomId: string, { spectator = false }: Options = {}) {
         publish("connected");
       };
       source.onmessage = (event) => {
+        lastMessageAt = Date.now();
         try {
           latest = JSON.parse(event.data) as ProjectedRoomState;
         } catch {
@@ -372,10 +380,28 @@ export function useRoom(roomId: string, { spectator = false }: Options = {}) {
       };
     };
 
+    const reopen = () => {
+      if (stopped) return;
+      clearTimeout(retryTimer);
+      source?.close();
+      publish("reconnecting");
+      lastMessageAt = Date.now();
+      open();
+    };
+    const watchdog = setInterval(() => {
+      if (Date.now() - lastMessageAt > STALE_MS) reopen();
+    }, 5_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && Date.now() - lastMessageAt > STALE_ON_RETURN_MS) reopen();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     open();
     return () => {
       stopped = true;
       clearTimeout(retryTimer);
+      clearInterval(watchdog);
+      document.removeEventListener("visibilitychange", onVisible);
       source?.close();
     };
   }, [url]);
