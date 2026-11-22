@@ -25,7 +25,10 @@ Sale con 0 si pasó, 1 si falló y 2 si no pudo empezar.
 ```
 node scripts/novato-demo.mjs <url> <carpeta> [--rapido] [--iniciar] [--comite aceptar|rechazar]
      [--atasco 60] [--limite 900] [--pausa-entrada 1500] [--lectura 2000] [--headed]
+     [--grabar <carpeta>] [--final 8]
 ```
+
+Con `--grabar <carpeta>` la misma corrida queda en video: la pantalla grande a 1920x1080 y cada celular a 390x844, en modo oscuro, un `.webm` por pantalla más `grabacion.json`. Ahí está cuándo empezó cada video, qué silla tiene cada celular y cuándo empezó cada fase. Al grabar, cada persona toca la postura «Recomendado» por su agente en vez de la primera, un círculo blanco marca cada toque y cada página lleva una baliza de sincronía de 8 px en la esquina inferior derecha (su gris dice el segundo del reloj; ver `SYNC_BEACON`). `scripts/video-respaldo.mjs` une esos videos en el video de respaldo de la demo (`docs/DEMO_DIA.md`, «Video de respaldo»).
 
 Con `--iniciar` entran solo 2 personas y el narrador toca «Iniciar» en la pantalla grande: los 3 asientos libres los toma un bot y el Comité lo decide el plan B. La prueba revisa que el contador diga «2/5 personas» antes y «2/5 personas · 3 automáticos» después, y guarda `iniciar-1-antes.png` e `iniciar-2-despues.png`. El 22 de noviembre de 2026, contra un build local de la rama `demo-iniciar`, pasaron `--iniciar` (acta a los 83,3 s, 1 toque del narrador y 1 por persona) y `--rapido` (acta a los 52 s), sin fugas ni atascos.
 
