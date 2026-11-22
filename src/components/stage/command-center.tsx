@@ -42,7 +42,7 @@ import { EventToasts } from "@/components/nexo/event-toasts";
 import { useIntegrations } from "@/components/nexo/integrations";
 import { isLocalUrl, publicBaseUrl, roleJoinUrl } from "@/components/nexo/public-url";
 import { QrCode } from "@/components/nexo/qr-code";
-import { Mark } from "@/components/landing/mark";
+import { Mark, SCULPTOR_HOME } from "@/components/landing/mark";
 import { AUDIT_LABEL, auditDetail, formatScore, formatTime, orgLabel, roleLabel } from "@/components/organs/format";
 import { hostRequest, type ConnectionStatus, type HostCredentials } from "@/lib/client/use-room";
 import type { AuditEvent, ProjectedRoomState } from "@/lib/genome/schema";
@@ -151,13 +151,13 @@ export function CommandCenter({ room, status, host, acta, onOpenOwnRoom }: Props
       <style>{commandStyles}</style>
       <div className="gd-surround">
         <header className="gd-top">
-          <div className="gd-brand">
-            {/* La marca oficial: la galaxia en píxeles y «sculptor» en minúsculas. */}
+          {/* La marca oficial lleva a la landing de Sculptor. En pestaña nueva: así no se sale de la demo en vivo. */}
+          <a className="gd-brand" href={SCULPTOR_HOME} target="_blank" rel="noopener" aria-label="Abrir la landing de Sculptor en otra pestaña">
             <Mark size={34} />
             <div>
               <strong className="gd-wordmark">sculptor</strong>
             </div>
-          </div>
+          </a>
           <span aria-hidden="true" />
           <div className="gd-top-actions">
             <span className="gd-icon-button" role="status" title={status === "connected" ? "En vivo" : status === "reconnecting" ? "Reconectando" : "Conectando"} aria-label={status === "connected" ? "En vivo" : status === "reconnecting" ? "Reconectando" : "Conectando"} style={{ color: status === "connected" ? "var(--gd-calm)" : "var(--gd-sign)" }}>

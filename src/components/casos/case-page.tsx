@@ -10,7 +10,7 @@
 
 import Link from "next/link";
 import { MonitorPlay } from "lucide-react";
-import { Logo } from "@/components/landing/mark";
+import { Logo, SCULPTOR_HOME } from "@/components/landing/mark";
 import { GuideAssistant } from "@/components/ui/guide-assistant";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import "./casos.css";
@@ -60,7 +60,7 @@ export function CasePage({ slug, view }: { slug: CaseSlug; view: CaseView }) {
     <>
       <header className="border-b border-border">
         <div className="wrap flex min-h-16 flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
-          <Link href="/" aria-label="Sculptor: inicio">
+          <Link href={SCULPTOR_HOME} aria-label="Ir a la landing de Sculptor">
             <Logo />
           </Link>
           <div className="order-last w-full sm:order-none sm:w-auto">

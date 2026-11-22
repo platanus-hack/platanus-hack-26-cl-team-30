@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRef } from "react";
 import { MonitorPlay } from "lucide-react";
 import { MOTION_OK, gsap, useGSAP } from "./gsap";
-import { Logo } from "./mark";
+import { Logo, SCULPTOR_HOME } from "./mark";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const LINKS = [
@@ -30,7 +30,7 @@ export function Nav() {
     <header className="fixed inset-x-0 top-0 z-50 h-(--nav-h) border-b border-border bg-background/95 backdrop-blur">
       <span ref={bar} aria-hidden className="absolute inset-x-0 -bottom-px h-0.5 origin-left scale-x-0 bg-brand" />
       <div className="wrap flex h-full items-center gap-8">
-        <a href="#top" aria-label="Volver al inicio">
+        <a href={SCULPTOR_HOME} aria-label="Ir a la landing de Sculptor">
           <Logo />
         </a>
         <nav aria-label="Secciones" className="small hidden gap-6 font-medium text-muted-foreground lg:flex">

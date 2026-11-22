@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Mark } from "@/components/landing/mark";
+import { Mark, SCULPTOR_HOME } from "@/components/landing/mark";
 import { Disclaimer } from "./disclaimer";
 
 /** Barra superior de la sala: marca, de qué sala se trata y lo que cada pantalla quiera mostrar a la derecha. */
@@ -10,7 +10,7 @@ export function RoomHeader({ subtitle, children }: { subtitle: ReactNode; childr
       <Disclaimer />
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-2" aria-label="Ir a la portada de Sculptor">
+          <Link href={SCULPTOR_HOME} className="flex items-center gap-2" aria-label="Ir a la landing de Sculptor">
             <Mark size={28} />
             <span className="text-lg font-semibold tracking-tight">Sculptor</span>
           </Link>

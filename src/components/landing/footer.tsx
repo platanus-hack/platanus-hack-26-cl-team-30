@@ -1,11 +1,13 @@
 import { TEAM } from "./content";
-import { Logo } from "./mark";
+import { Logo, SCULPTOR_HOME } from "./mark";
 
 export function Footer() {
   return (
     <footer className="border-t border-border py-12">
       <div className="wrap grid gap-10 md:grid-cols-[auto_1fr_1fr] md:gap-16">
-        <Logo size={36} />
+        <a href={SCULPTOR_HOME} aria-label="Ir a la landing de Sculptor" className="self-start">
+          <Logo size={36} />
+        </a>
         <div>
           <p className="font-semibold">El equipo</p>
           <ul className="mt-2 space-y-1 text-muted-foreground">

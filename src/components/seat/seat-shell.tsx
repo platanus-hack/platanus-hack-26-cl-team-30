@@ -5,7 +5,7 @@ import { CircleCheck, Clock3, Hourglass, Lock, LoaderCircle, TriangleAlert, User
 import "@fontsource-variable/manrope";
 import type { ConnectionStatus } from "@/lib/client/use-room";
 import type { AccentColor, StakesView } from "@/lib/genome/schema";
-import { Mark } from "@/components/landing/mark";
+import { Mark, SCULPTOR_HOME } from "@/components/landing/mark";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { formatClock } from "@/components/organs/format";
 import "./seat.css";
@@ -49,7 +49,9 @@ export function SeatShell({ who, stakes, status, tab, onTab, turnPending = false
     <div className="seat" data-accent={who.accent}>
       <header className="st-top">
         {/* Logo oficial, sin animación, como en los demás encabezados de la app. */}
-        <Mark size={26} title="Sculptor" />
+        <a href={SCULPTOR_HOME} target="_blank" rel="noopener" aria-label="Abrir la landing de Sculptor en otra pestaña" style={{ display: "inline-flex" }}>
+          <Mark size={26} title="Sculptor" />
+        </a>
         <div className="st-who">
           <span className="st-dot" aria-hidden />
           <div style={{ minWidth: 0 }}>
