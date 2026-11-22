@@ -2,6 +2,13 @@
 
 Mapa de esta carpeta. Si vienes a entender el sistema, empieza por `RECORRIDO.md`; si vienes a evaluar una cifra, por `MEDICIONES.md`.
 
+## Empezar aquí
+
+| Archivo | Qué trae |
+| --- | --- |
+| [`RESULTADOS.md`](RESULTADOS.md) | Estado final: qué funciona, cifras medidas, qué es simulado y qué no está verificado |
+| [`PROCESO.md`](PROCESO.md) | Cómo llegamos: ideas evaluadas, evaluación crítica, línea de tiempo, cambios del producto y forma de trabajo |
+
 ## Sistema (lo que existe en el código)
 
 | Archivo | Qué trae |
@@ -28,8 +35,8 @@ Mapa de esta carpeta. Si vienes a entender el sistema, empieza por `RECORRIDO.md
 | Carpeta | Qué trae |
 | --- | --- |
 | [`dossier/`](dossier/) | Dossier completo del producto en PDF, con su fe de erratas contra el código |
-| [`investigacion/`](investigacion/) | Cómo se llegó a la idea: el plan del Esqueleto Metamórfico, las ideas que se evaluaron y descartaron, y el material del evento |
-| [`diseno/sculptor/`](diseno/sculptor/) | Manual y hoja de marca de Sculptor, bocetos de la galaxia |
+| [`investigacion/`](investigacion/) | Cómo se llegó a la idea: el plan del Esqueleto Metamórfico, la evaluación crítica de la idea, las ideas que se evaluaron y descartaron, y el material del evento |
+| [`diseno/sculptor/`](diseno/sculptor/) | Marca: logo oficial de la galaxia, conceptos v0 y v2, propuesta del cubo con su manual, bocetos |
 | [`diseno/nahum/`](diseno/nahum/) | Prototipos del pitch de Nahum: deck interactivo, simulación orbital 3D, prototipo móvil y su guion (en `v2/`, la versión más nueva del deck y la simulación) |
 | [`diseno/21st/`](diseno/21st/) | Componentes de 21st.dev elegidos para las páginas de caso |
 

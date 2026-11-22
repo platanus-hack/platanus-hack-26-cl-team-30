@@ -9,6 +9,12 @@ Cómo se llegó a Sculptor. Son documentos de trabajo escritos durante la hackat
 | [`plan-esqueleto-metamorfico.pdf`](plan-esqueleto-metamorfico.pdf) | El plan explicado del «Esqueleto Organizacional Metamórfico»: varias organizaciones deciden juntas sobre un recurso escaso sin revelarse sus datos. Es la idea de la que nace Sculptor |
 | [`plan-definitivo-esqueleto-metamorfico.md`](plan-definitivo-esqueleto-metamorfico.md) | La versión de trabajo completa del mismo plan: contrato de datos, motor, API, interfaz, demo, pitch, preguntas del jurado y la regla de corte (suelo de 1 clínica, ambición inter-organización) |
 
+## Evaluación crítica
+
+| Archivo | Qué trae |
+| --- | --- |
+| [`evaluacion-critica-de-la-idea.md`](evaluacion-critica-de-la-idea.md) | La idea evaluada por un modelo de IA en el rol de jurado técnico, antes de construir: encaje en el track, puntaje por pilar, riesgos y plan de recorte. Qué hicimos con cada hallazgo: `docs/PROCESO.md`, sección 4 |
+
 ## Ideas evaluadas y descartadas
 
 Antes de elegir Sculptor, el equipo escribió un brief para otras ideas del track Multiplayer.

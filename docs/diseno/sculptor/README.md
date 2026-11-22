@@ -1,6 +1,14 @@
-# Marca Sculptor (propuesta)
+# Marca Sculptor
 
-Propuesta de identidad para el producto con el nombre Sculptor. Todavía no se aplica en la app: la interfaz sigue usando la paleta de `docs/DISENO.md`.
+**Logo oficial: la galaxia NGC 253 en píxeles** (`project-logo.png`, `public/sculptor/logo.png`, `public/brand/galaxia/`). Es el concepto C de `conceptos-v2.png`, «NGC 253 en 1 bit»: la galaxia Sculptor real, de canto, hecha con píxeles; el núcleo lima es la decisión.
+
+Cómo se llegó:
+
+1. **v0, tres nombres** ([`proceso/conceptos-v0-nombres.png`](proceso/conceptos-v0-nombres.png)): Cupo, Velo y Quórum, cada uno con un signo que cuenta el producto.
+2. **v2, cinco caminos para Sculptor** ([`conceptos-v2.png`](conceptos-v2.png)): piedra polimórfica, el corte, NGC 253 en 1 bit, frontera y el golpe.
+3. **Primero el cubo** (piedra polimórfica, la propuesta que documenta el resto de este archivo y el manual) y después **la galaxia**, que quedó como logo oficial.
+
+Lo que sigue es la propuesta del cubo, que se conserva como parte del proceso. La paleta (obsidiana, mármol, eucalipto, pátina y cincel lima) sí se usa en la landing `/sculptor`.
 
 Manual completo (15 páginas): [`manual-de-marca-sculptor.pdf`](manual-de-marca-sculptor.pdf).
 
