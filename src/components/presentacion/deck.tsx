@@ -31,13 +31,17 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
   const startedAt = useRef<number | null>(null);
   const base = useRef(0);
 
+  const hashRead = useRef(false);
+
   const go = useCallback((next: number) => {
     setIndex(Math.max(0, Math.min(SLIDES.length - 1, next)));
   }, []);
 
   // La lámina actual queda en la URL. Va en un efecto: el router de Next escucha
   // history.replaceState y no puede actualizarse en medio de otro render.
+  // No se escribe hasta haber leído el #n con el que se abrió la página.
   useEffect(() => {
+    if (!hashRead.current) return;
     const hash = `#${index + 1}`;
     if (window.location.hash !== hash) window.history.replaceState(window.history.state, "", hash);
   }, [index]);
@@ -46,6 +50,7 @@ export function Deck({ autonomous, steps, accuracy }: { autonomous: number; step
   useEffect(() => {
     const sync = () => {
       const n = Number(window.location.hash.slice(1));
+      hashRead.current = true;
       if (n >= 1 && n <= SLIDES.length) setIndex(n - 1);
     };
     const frame = window.requestAnimationFrame(sync);
@@ -327,10 +332,92 @@ function Demo() {
   );
 }
 
+// Velocidad del recorrido automático (px por segundo) y pausa en cada sección (ms).
+const SCROLL_SPEED = 380;
+const SECTION_PAUSE = 2400;
+
+/**
+ * Una página del deploy dentro de un iframe que baja sola: va de sección en sección,
+ * se detiene un momento en cada una y al llegar al final vuelve arriba. Como el
+ * iframe es del mismo dominio, se mueve su propio scroll (así también corren sus
+ * animaciones de scroll). Con el mouse encima se detiene; con movimiento reducido
+ * no baja sola.
+ */
 function Pane({ initial }: { initial: string }) {
   const [href, setHref] = useState(initial);
+  const frame = useRef<HTMLIFrameElement>(null);
+  const paused = useRef(false);
+  const tween = useRef<gsap.core.Tween | null>(null);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let cancelled = false;
+    let timer = 0;
+    const wait = (ms: number) => new Promise<void>((resolve) => (timer = window.setTimeout(resolve, ms)));
+
+    const run = async () => {
+      // Esperar a que la página tenga secciones y termine su intro, si la tiene.
+      for (let i = 0; i < 150 && !cancelled; i++) {
+        const doc = frame.current?.contentDocument;
+        if (doc?.body && !doc.querySelector("[data-intro]") && doc.querySelector("section")) break;
+        await wait(200);
+      }
+      await wait(1200);
+
+      while (!cancelled) {
+        const win = frame.current?.contentWindow;
+        const doc = frame.current?.contentDocument;
+        if (!win || !doc) return;
+        while (paused.current && !cancelled) await wait(300);
+
+        const max = doc.documentElement.scrollHeight - win.innerHeight;
+        if (win.scrollY >= max - 4) {
+          await wait(SECTION_PAUSE);
+          win.scrollTo(0, 0);
+          await wait(1500);
+          continue;
+        }
+        const next = Array.from(doc.querySelectorAll("section"))
+          .map((el) => el.getBoundingClientRect().top + win.scrollY)
+          .filter((y) => y > win.scrollY + 40)
+          .sort((a, b) => a - b)[0];
+        const target = Math.min(next ?? max, max);
+
+        await new Promise<void>((resolve) => {
+          const proxy = { y: win.scrollY };
+          tween.current = gsap.to(proxy, {
+            y: target,
+            duration: Math.max(1.2, (target - proxy.y) / SCROLL_SPEED),
+            ease: "power1.inOut",
+            onUpdate: () => win.scrollTo(0, proxy.y),
+            onComplete: resolve,
+          });
+          if (paused.current) tween.current.pause();
+        });
+        await wait(SECTION_PAUSE);
+      }
+    };
+    void run();
+
+    return () => {
+      cancelled = true;
+      tween.current?.kill();
+      window.clearTimeout(timer);
+    };
+  }, [href]);
+
   return (
-    <div className="flex min-h-0 flex-col overflow-hidden rounded-[24px] border border-(--basalto) bg-(--grafito)">
+    <div
+      className="flex min-h-0 flex-col overflow-hidden rounded-[24px] border border-(--basalto) bg-(--grafito)"
+      onMouseEnter={() => {
+        paused.current = true;
+        tween.current?.pause();
+      }}
+      onMouseLeave={() => {
+        paused.current = false;
+        tween.current?.resume();
+      }}
+    >
       <div className="flex items-center justify-between gap-3 border-b border-(--basalto) px-4 py-2.5">
         <span className="flex gap-1.5" aria-hidden>
           <span className="size-2.5 rounded-full bg-(--basalto)" />
@@ -350,7 +437,7 @@ function Pane({ initial }: { initial: string }) {
           ))}
         </select>
       </div>
-      <iframe key={href} src={href} title={href} className="h-full min-h-[46vh] w-full bg-(--obsidiana)" />
+      <iframe ref={frame} key={href} src={href} title={href} className="h-full min-h-[46vh] w-full bg-(--obsidiana)" />
     </div>
   );
 }
