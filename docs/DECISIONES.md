@@ -428,3 +428,13 @@ Al pasar la gravedad a la escala de 1 a 50, el campo reservado `triage_criticali
 
 - **Elegido:** valores reservados proporcionales a los originales (18/40 → **23/50**, 22/40 → **28/50**), que no salen de ningún número público, y una prueba (`tests/negotiation.test.ts`) que abre el SSE real de la pantalla, del Comité y de cada rol ajeno hasta la fase de propuesta. Falla si llega el valor, y también si `round(clinicalSeverityScore × 50)` o `round(score × 50)` lo igualan. La pantalla grande muestra el puntaje compuesto de la regla y la etiqueta pública del caso, nunca una «Gravedad N/50».
 - **Descartado:** dejar de enviar `clinicalSeverityScore` y el desglose `ranking[].terms`. Son la parte pública de la regla: sin ellos el Comité no puede ver por qué ganó un caso.
+
+## Animaciones de la landing de Sculptor con GSAP, sin librerías nuevas
+
+- **Decisión:** la landing de Sculptor (`/sculptor`) usa solo GSAP, que ya estaba en el repo: timeline para la intro, ScrollTrigger para el scroll y SplitText para los títulos. El logo se dibuja como un SVG con una celda por píxel (`galaxy-data.ts`, muestreado una vez desde el PNG) para poder mover cada píxel.
+- **Alternativas descartadas:** Motion (framer-motion), Lenis para el scroll suave, Lottie o Rive para la intro y una escena de Three.js o Spline. Todas son gratuitas, pero suman una dependencia o un archivo exportado que hay que mantener aparte del código.
+- **Por qué:** GSAP es gratuito con todos sus plugins desde 2025 y la portada ya lo usa con la misma regla (`src/components/landing/gsap.ts`): con movimiento reducido no corre nada y la página queda completa. Un SVG por celdas pesa menos que un video o un Lottie y comparte el dibujo entre la intro, el hero y la barra.
+- **Costo:** la intro dura unos 6 segundos. Un clic o una tecla la acelera; con movimiento reducido o sin JavaScript no aparece.
+- **Fondo de partículas:** WebGL2 escrito a mano (`atmosphere.tsx`, unas 5.000 estrellas en un solo `drawArrays`) en vez de Three.js. Para puntos con brillo aditivo bastan dos shaders cortos y no se suma una dependencia de ~150 KB. Sin WebGL2 no hay fondo y la página sigue igual.
+- **Simulación orbital:** se incrustó el HTML del pitch en un iframe del mismo dominio en vez de portarlo a React. Portarlo eran horas; el iframe deja que el scroll recorra sus etapas por `window.__ORBITAL__` sin tocar el archivo. Costo: depende de Three.js en jsDelivr y de un video en CloudFront.
+

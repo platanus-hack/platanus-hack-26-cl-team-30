@@ -109,6 +109,18 @@ Recorrido con 5 celulares (Playwright, 390 × 844, claro y oscuro) contra `next 
 
 No está medido cuánto tarda Claude en escribir cada frase ni cuántas veces cae al respaldo en el deploy.
 
+## Pruebas automáticas
+
+- **Qué:** `npm test` (Vitest, sin modelo).
+- **Dónde:** en un notebook (macOS), en la rama de la landing de Sculptor.
+- **Cuándo:** 21 de noviembre de 2026, noche.
+
+| Archivos de prueba | Pruebas | Resultado |
+| --- | --- | --- |
+| 11 | 415 | 415 pasan |
+
+El dossier y el guion del pitch citan otras cifras (216 y 80 pruebas) de versiones anteriores; la vigente es esta.
+
 ## Lo que no está medido
 
 - Cuadros por segundo de la pantalla grande en un equipo distinto del notebook M4 (por ejemplo, el que se conecte al proyector).

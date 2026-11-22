@@ -1,0 +1,41 @@
+/* Detalles de la landing de Sculptor que no caben en clases de Tailwind. */
+
+/* Dato reservado: franjas diagonales que pasan, como en la silla del celular. */
+.redacted {
+  background-image: repeating-linear-gradient(-45deg, #2a2f2d 0 6px, #3a403d 6px 12px);
+  background-size: 34px 34px;
+  animation: redacted-slide 1.6s linear infinite;
+}
+
+@keyframes redacted-slide {
+  to {
+    background-position: 34px 0;
+  }
+}
+
+/* Texto con luz que barre de izquierda a derecha (lima sobre mármol). */
+.shine {
+  background: linear-gradient(100deg, #f3f0e8 0%, #f3f0e8 40%, #d7ff3d 50%, #f3f0e8 60%, #f3f0e8 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shine 5s ease-in-out infinite;
+}
+
+@keyframes shine {
+  0% {
+    background-position: 100% 0;
+  }
+  60%,
+  100% {
+    background-position: 0% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .redacted,
+  .shine {
+    animation: none;
+  }
+}

@@ -9,7 +9,7 @@ Actualizado el 21 de noviembre de 2026.
 | # | Pendiente | Qué hay que hacer |
 | --- | --- | --- |
 | a | **Resuelto: el producto se llama Sculptor** (ronda 10, antes «Nexo»). Se cambió todo lo visible. Siguen con el nombre viejo, a propósito, los identificadores internos: variables `NEXO_*`, encabezados `x-nexo-secret` y `x-nexo-session`, ids de botón `nexo:approve`/`nexo:veto`, claves de almacenamiento `nexo:*`, la carpeta `src/components/nexo/`, el repo y la URL del deploy. Cambiarlos rompería Render y los webhooks. | Equipo | Si la plantilla de WhatsApp ya aprobada se llama `nexo_comite_caso`, `KAPSO_TEMPLATE_NAME` debe seguir con ese nombre hasta que Meta apruebe `sculptor_comite_caso`. |
-| b | **El logo sigue siendo el de la plantilla** (`project-logo.png`). | Subir uno propio: PNG de 1000x1000, máximo 500 KB. |
+| b | **Resuelto:** `project-logo.png` es el logo oficial de Sculptor (galaxia NGC 253 en píxeles, PNG 1000x1000, 193 KB). | Nada. |
 | c | **Render está en plan gratis y se duerme** sin visitas. La primera carga tarda y, al dormirse, se pierden las salas, que viven en memoria. | Subir de plan antes de presentar (`plan` en `render.yaml` o desde el panel). |
 | d | **Dónde corre la demo en vivo.** El deploy usa Claude, así que ahí los datos sí salen a la nube. "Cero bytes a la nube" solo vale en modo local. | Decidir si la demo corre en el deploy, en local con el Spark, o ambas. En el pitch, decir "cero bytes" solo mientras se muestra el modo local. |
 | e | **La validación del evento solo se ve con sesión iniciada.** Ningún agente puede revisarla. | Después del push, entrar con tu cuenta y confirmar que el repo pasa la validación. |
@@ -50,6 +50,18 @@ Actualizado el 21 de noviembre de 2026.
 | q | **El recorrido completo con modelo no se ha corrido.** `scripts/e2e.mjs` pasó contra el deploy sin `--llm`. El agente y la mutación con Claude sí se ejercitaron con `scripts/stress-llm.mjs`. | Correr `node scripts/e2e.mjs https://team-30-platanus-hack.onrender.com --llm` una vez antes de presentar (gasta algunas llamadas a Claude). |
 | w | **Una corrida de `npm test` falló una vez:** la contraprueba de `tests/http.test.ts` tardó 415 segundos con la máquina cargada por otros procesos. No se reprodujo aislada ni en la corrida completa siguiente (222 de 222 en 25 segundos). | Si vuelve a pasar, revisar si el recorrido queda esperando un mensaje que nunca llega. |
 | r | **Ensayos con personas.** Las pruebas son automáticas. No hay registro de un ensayo con varios teléfonos reales en la red de la sede. | Hacer al menos dos ensayos cronometrados con teléfonos escaneando el QR, en la red donde se presentará. |
+
+## Para subir todo a `main` (21 de noviembre, noche)
+
+Revisión del dossier contra el código y de la entrega. Detalle de las diferencias en `docs/dossier/README.md`.
+
+| # | Pendiente | Qué hay que hacer |
+| --- | --- | --- |
+| y1 | **Conviven dos nombres.** La landing `/sculptor`, el logo y el dossier dicen Sculptor; `platanus-hack-project.jsonc`, `project-description.md`, `README.md`, `CLAUDE.md`, `src/app/layout.tsx` y la interfaz de la sala dicen Nexo. | Decidir (ver la fila a). Si queda Sculptor, cambiar primero el nombre y el resumen del `jsonc` y de `project-description.md`, que son lo que lee la votación. |
+| y2 | **La portada `/` sigue siendo la de Nexo.** La landing nueva vive en `/sculptor`. | Decidir si `/sculptor` pasa a ser `/` antes de presentar, o si se enlazan las dos. |
+| y3 | **El guion y el deck dicen cosas que el código no hace:** deslizar arriba o abajo, «80 tests» (`docs/diseno/nahum/guion_pitch_3m30_platanus.md`, `pitch_platanus_interactivo.html`), «el desempate le da la cama al rural», «0 bytes a la nube» con el deploy. | Ajustar el guion con `docs/dossier/README.md` y `docs/PREGUNTAS.md` antes de ensayar. |
+| y4 | **La simulación orbital depende de internet.** Carga Three.js desde jsDelivr y un video desde CloudFront. En la landing y en el pitch, sin red queda en negro. | Si la red de la sede falla, abrir la app sin esa sección o descargar Three.js al repo. |
+| y5 | **Commit de lo nuevo.** Landing (`src/app/sculptor/`, `src/components/sculptor/`, `public/sculptor/`), marca (`public/brand/`, `docs/diseno/sculptor/`), dossier (`docs/dossier/`) y los cambios de `docs/`. | Commit en la rama, revisar el diff y recién ahí fusionar a `main`. |
 
 ## Agregado por el orquestador (21 de noviembre, mañana)
 

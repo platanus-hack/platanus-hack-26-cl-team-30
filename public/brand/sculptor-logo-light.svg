@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 208" role="img" aria-label="Sculptor">
+  <g transform="translate(104 104)"><polygon points="0.00,-96.30 80.20,-50.00 42.44,-28.20 -42.44,-28.20 -80.20,-50.00" fill="#CFE3DB"/>
+  <polygon points="-83.40,-44.46 -45.64,-22.66 -3.20,50.86 -3.20,94.46 -83.40,48.15" fill="#6FAF9B"/>
+  <polygon points="45.64,-22.66 83.40,-44.46 83.40,48.15 3.20,94.46 3.20,50.86" fill="#1F3A33"/>
+  <polygon points="-37.76,-21.80 37.76,-21.80 0.00,43.60" fill="#D7FF3D"/></g>
+  <text x="236" y="140" font-family="Manrope, 'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="118" letter-spacing="-6.5" fill="#0C0E0D">Sculptor</text>
+</svg>
