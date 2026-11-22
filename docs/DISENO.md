@@ -177,6 +177,8 @@ Cada persona ve solo su rol y su turno. La silla vive en `src/components/seat/` 
 - Los datos reservados son barras de franjas diagonales. Pedir uno ajeno muestra «Este dato nunca llegó a tu celular».
 - Arriba, el pulso ECG late en rojo mientras se espera y queda verde y plano al sellar.
 
+En la demo con negociación (`negotiation-view.tsx` y `demo-view.tsx`) el celular es la voz de «Tu agente», con el mismo diseño de las páginas de caso: «Eres la Clínica / Urgencias», la línea de pasos y la tarjeta «Tu agente». En las posturas, la tarjeta se presenta en una línea (antes trabajaba solo, ahora se conecta con los demás), hace la pregunta concreta del rol en grande («¿Cuánto autorizas sin pedir firma?»), dice «Te recomiendo X, porque…» y debajo van las respuestas como botones grandes: la recomendada en tinta con la marca «Recomendado» y, debajo de cada una, lo que significa (en Administración, la cifra propia). Nunca la palabra «límite» suelta. En el debate, el mensaje propio se rotula «Tu agente, por ti en la pantalla grande». El Comité ve «¿Aceptas o rechazas?» y, debajo, el resumen y la recomendación de su agente, con la razón precargada que corresponde.
+
 Reglas de texto (feedback del mentor: «bombardean con texto todo»): título de máximo 6 palabras, a lo más una frase de apoyo de 12 palabras, números grandes en vez de párrafos, explicaciones detrás de «¿Por qué?», un solo aviso de demostración simulada por pantalla (pequeño, al pie) y cero jerga.
 
 ## Dónde está cada cosa

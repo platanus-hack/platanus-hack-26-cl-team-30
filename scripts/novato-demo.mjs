@@ -340,6 +340,20 @@ async function look(device, forbidden) {
     throw error;
   }
   device.screen = screen;
+  // Un celular que ya recibió su silla puede mostrar sus propios datos antes de que
+  // el bucle de entrada lo anote: se lee su silla aquí para no darlos por fuga.
+  if (!device.seat && device.viewer !== "stage" && device.roomId) {
+    device.seat = await device.page
+      .evaluate((key) => {
+        try {
+          const parsed = JSON.parse(sessionStorage.getItem(key) ?? "null");
+          return parsed?.orgId && parsed?.roleId ? { orgId: parsed.orgId, roleId: parsed.roleId } : null;
+        } catch {
+          return null;
+        }
+      }, `nexo:${device.roomId}:session`)
+      .catch(() => null);
+  }
   const normalized = normalize(screen.text);
   if (normalized !== device.lastNormalized) {
     device.lastNormalized = normalized;
@@ -568,6 +582,7 @@ async function main() {
       const page = await context.newPage();
       page.on("pageerror", (error) => consoleErrors.push(`persona ${i + 1}: ${error.message}`));
       const device = makeDevice({ id: `persona-${i + 1}`, label: `Persona ${i + 1}`, page, viewer: null });
+      device.roomId = roomId;
       devices.push(device);
       people.push(device);
       const scanAt = Date.now();

@@ -9,7 +9,7 @@
 // (src/agents/negotiation-agent.ts).
 
 import type { NegotiationMessage, NegotiationState, ProjectedNegotiation, RoomState, Viewer } from "../genome/schema";
-import { canViewCoverageCost, canViewField, demoSeats, findGenome, resolveRoomAllocation, type ActorRef, type DemoSeat, type EngineResult } from "./deterministic";
+import { canViewCoverageCost, canViewField, computeTriageScore, demoSeats, findGenome, resolveRoomAllocation, type ActorRef, type DemoSeat, type EngineResult } from "./deterministic";
 
 /** Pausa por defecto entre mensajes del debate. */
 export const NEGOTIATION_DEFAULT_STEP_MS = 7000;
@@ -48,7 +48,39 @@ export function agentLabelOf(entry: DemoSeat): string {
   return role ? `Agente de ${role} · ${org}` : `Agente de ${entry.label}`;
 }
 
-export type PositionOption = { id: string; label: string };
+/**
+ * Una postura. label es la versión pública (se publica en la sala y la lee el
+ * modelo): nunca lleva cifras. answer y value son solo para el celular de su rol:
+ * la respuesta en palabras simples y, si corresponde, la cifra que significa.
+ */
+export type PositionOption = { id: string; label: string; answer?: string; value?: string };
+
+/**
+ * Lo que la persona decide en concreto, la postura que le recomienda su agente y
+ * por qué. La recomendación la calcula el código, solo con datos que ese rol ya
+ * ve (los puntajes públicos de los casos, o su propio costo y presupuesto): el
+ * modelo, si responde, solo la redacta.
+ */
+export type PositionPrompt = { question: string; recommendedId: string; recommended: string; because: string };
+
+/** «la cama» → «Pedirla»; «el camión» → «Pedirlo». */
+function askVerb(resource: string): string {
+  return resource.startsWith("el ") ? "Pedirlo" : "Pedirla";
+}
+
+const clp = (value: number) => `$${Math.round(value).toLocaleString("es-CL")}`;
+
+/** Costo propio, presupuesto propio y porcentaje sin firma de un asiento de administración, si su rol los ve. */
+function adminFigures(state: RoomState, seat: ActorRef): { cost: number | null; budget: number | null; pct: number | null } {
+  const genome = findGenome(state, seat.orgId);
+  const candidate = state.scarcity?.candidates.find((item) => item.orgId === seat.orgId);
+  const cost = candidate && canViewCoverageCost(state, candidate, seat) ? candidate.coverageCost : null;
+  // El presupuesto es el campo en pesos con nombre de tope o presupuesto que este rol puede ver.
+  const budgetField = genome?.fields.find((field) => /cap|budget/.test(field.key) && field.unit === "CLP" && typeof field.value === "number" && canViewField(state, field, seat));
+  const budget = budgetField ? (budgetField.value as number) : null;
+  const pct = genome && genome.authorityRule.unit === "%" ? genome.authorityRule.approverLimit : null;
+  return { cost, budget, pct };
+}
 
 /**
  * Posturas que puede elegir cada rol, con un toque. La postura orienta lo que
@@ -57,18 +89,74 @@ export type PositionOption = { id: string; label: string };
 export function positionOptions(state: RoomState, seat: ActorRef): PositionOption[] {
   const entry = demoSeats(state).find((item) => same(item.seat, seat));
   if (!entry || entry.action === "decide") return [];
+  const resource = resourceWord(state);
   if (entry.action === "submit") {
+    const verb = askVerb(resource);
     return [
-      { id: "now", label: `Pedir ${resourceWord(state)} ahora` },
-      { id: "flex", label: "Pedir, pero aceptar otra salida" },
-      { id: "yield", label: "Ceder si el otro caso pesa más" },
+      { id: "now", label: `Pedir ${resource} ahora`, answer: "Ahora, sin ceder", value: "Tu agente insiste hasta el final" },
+      { id: "flex", label: "Pedir, pero aceptar otra salida", answer: `${verb}, pero aceptar otra salida`, value: "Tu agente pide sin trabar la decisión" },
+      { id: "yield", label: "Ceder si el otro caso pesa más", answer: "Ceder si el otro está peor", value: "Tu agente cede si el otro caso suma más" },
     ];
   }
+  const { cost, pct } = adminFigures(state, seat);
   return [
-    { id: "back", label: "Respaldar el pedido" },
-    { id: "cap", label: "Respaldar con tope de costo" },
-    { id: "hold", label: "No comprometer presupuesto" },
+    { id: "back", label: "Autorizar todo el costo", answer: "Todo el costo", ...(cost !== null ? { value: `${clp(cost)} sin pedir firma` } : {}) },
+    {
+      id: "cap",
+      label: "Autorizar solo una parte sin firma",
+      answer: pct !== null ? `Hasta el ${pct} %` : "Solo una parte",
+      ...(cost !== null && pct !== null ? { value: `${clp((cost * pct) / 100)}; sobre eso, firma el Comité` } : { value: "Sobre eso, firma el Comité" }),
+    },
+    { id: "hold", label: "Nada sin la firma del Comité", answer: "Nada sin firma", value: "$0 hasta que firme el Comité" },
   ];
+}
+
+/**
+ * La pregunta concreta de cada rol y la postura que le recomienda su agente.
+ * Quien presenta el caso: compara los puntajes públicos de la regla (y, si casi
+ * empatan, el desempate de equidad cuando usa datos públicos). Administración:
+ * compara su costo con su presupuesto, dos datos que solo ve ella. null para el Comité.
+ */
+export function positionPrompt(state: RoomState, seat: ActorRef): PositionPrompt | null {
+  const entry = demoSeats(state).find((item) => same(item.seat, seat));
+  if (!entry || entry.action === "decide") return null;
+  const resource = resourceWord(state);
+  const options = positionOptions(state, seat);
+  const pick = (id: string, because: string): PositionPrompt => {
+    const option = options.find((item) => item.id === id) ?? options[0];
+    return { question: "", recommendedId: option.id, recommended: option.answer ?? option.label, because };
+  };
+
+  if (entry.action === "submit") {
+    const question = `¿Cómo pides ${resource}?`;
+    const scarcity = state.scarcity;
+    const mine = scarcity?.candidates.find((item) => item.orgId === seat.orgId);
+    const others = scarcity?.candidates.filter((item) => item.orgId !== seat.orgId) ?? [];
+    if (!scarcity || !mine || others.length === 0) return { ...pick("now", `${resource} no puede esperar`), question };
+    const weights = scarcity.rule.weights;
+    const myScore = computeTriageScore(mine, weights);
+    const rival = others.reduce((best, item) => (computeTriageScore(item, weights) > computeTriageScore(best, weights) ? item : best));
+    const gap = myScore - computeTriageScore(rival, weights);
+    if (Math.abs(gap) < scarcity.rule.tieEpsilon) {
+      // El desempate por costo usa un dato reservado: ahí no se dice hacia dónde cae.
+      if (scarcity.rule.equityTieBreak === "coverage_gap") return { ...pick("flex", "los dos casos están casi empatados"), question };
+      return mine.unmetNeedScore > rival.unmetNeedScore
+        ? { ...pick("now", "casi empatan y el desempate favorece a tu paciente, que tiene menos cobertura"), question }
+        : { ...pick("flex", "casi empatan y el desempate favorece al otro paciente, que tiene menos cobertura"), question };
+    }
+    return gap > 0
+      ? { ...pick("now", "tu caso suma más en la regla de gravedad y urgencia"), question }
+      : { ...pick("yield", "el otro caso suma más en la regla, y así no trabas la decisión"), question };
+  }
+
+  const question = "¿Cuánto autorizas sin pedir firma?";
+  const { cost, budget } = adminFigures(state, seat);
+  if (cost !== null && budget !== null) {
+    return cost <= budget
+      ? { ...pick("back", `el costo cabe en tu presupuesto de ${clp(budget)} y así ${resource} no espera una firma`), question }
+      : { ...pick("cap", `el costo pasa tu presupuesto de ${clp(budget)}: lo que sobra lo firma el Comité`), question };
+  }
+  return { ...pick("cap", "así el gasto grande lo revisa el Comité"), question };
 }
 
 export function initialNegotiation(state: RoomState, stepMs: number): NegotiationState {
@@ -199,18 +287,15 @@ const score = (value: number) => value.toLocaleString("es-CL", { minimumFraction
 export function fallbackLine(state: RoomState, seat: ActorRef, kind: "advice" | "argument"): string {
   const entry = demoSeats(state).find((item) => same(item.seat, seat));
   const resource = resourceWord(state);
-  if (!entry || entry.action === "decide") return "Espera la propuesta de la regla. Después aceptas o rechazas, con tu razón.";
+  if (!entry || entry.action === "decide") return "Escucho a los dos lados por ti y al final te resumo para que decidas.";
   const org = entry.label.split(" · ")[0];
   const candidate = state.scarcity?.candidates.find((item) => item.orgId === seat.orgId);
   const caseLabel = candidate?.patientLabel ?? "nuestro caso";
   const optionId = state.negotiation?.positions.find((item) => same(item, seat))?.optionId ?? null;
 
   if (kind === "advice") {
-    if (entry.action === "submit") {
-      const facts = candidate ? ` Tu caso tiene gravedad ${score(candidate.clinicalSeverityScore)} y urgencia ${score(candidate.timeCriticality)}.` : "";
-      return `Te conviene pedir ${resource} ahora.${facts} La regla mira gravedad, urgencia y riesgo; el costo no entra.`;
-    }
-    return "Te conviene respaldar el pedido de tu equipo. Tu costo queda reservado: nadie más lo ve y no entra en el puntaje.";
+    const prompt = positionPrompt(state, seat);
+    return prompt ? `Te recomiendo «${prompt.recommended}», porque ${prompt.because}.` : `Te recomiendo pedir ${resource}.`;
   }
 
   if (entry.action === "submit") {
@@ -218,9 +303,9 @@ export function fallbackLine(state: RoomState, seat: ActorRef, kind: "advice" | 
     if (optionId === "yield") return `${org}: si el otro caso pesa más, cedemos. Pedimos que se mire la necesidad sin cubrir.`;
     return `${org}: pedimos ${resource} ahora. ${caseLabel} no puede esperar.`;
   }
-  if (optionId === "cap") return `Administración de ${org}: respaldamos el pedido con un tope de costo, que no mostramos a nadie.`;
-  if (optionId === "hold") return `Administración de ${org}: no comprometemos presupuesto sin la firma del Comité.`;
-  return `Administración de ${org}: respaldamos el pedido. Nuestros costos siguen reservados.`;
+  if (optionId === "cap") return `Administración de ${org}: autorizamos una parte sin firma; el resto lo firma el Comité.`;
+  if (optionId === "hold") return `Administración de ${org}: no autorizamos gasto sin la firma del Comité.`;
+  return `Administración de ${org}: autorizamos todo el costo. La cifra sigue reservada.`;
 }
 
 /** La propuesta, en una frase. La arma el código con el resultado del motor: no pasa por el modelo. */
@@ -240,7 +325,10 @@ export function proposalLine(state: RoomState): string {
 }
 
 /** Lo que el agente necesita saber de su asiento para escribir. */
-export function seatBrief(state: RoomState, seat: ActorRef): { seatLabel: string; agentLabel: string; position: string | null; options: string[]; resource: string; role: "presenta" | "administra" | "decide" } | null {
+export function seatBrief(
+  state: RoomState,
+  seat: ActorRef,
+): { seatLabel: string; agentLabel: string; position: string | null; options: string[]; resource: string; role: "presenta" | "administra" | "decide"; recommended: { option: string; because: string } | null } | null {
   const entry = demoSeats(state).find((item) => same(item.seat, seat));
   if (!entry) return null;
   return {
@@ -250,6 +338,10 @@ export function seatBrief(state: RoomState, seat: ActorRef): { seatLabel: string
     options: positionOptions(state, seat).map((item) => item.label),
     resource: resourceWord(state),
     role: entry.action === "submit" ? "presenta" : entry.action === "position" ? "administra" : "decide",
+    recommended: (() => {
+      const prompt = positionPrompt(state, seat);
+      return prompt ? { option: prompt.recommended, because: prompt.because } : null;
+    })(),
   };
 }
 
@@ -283,7 +375,11 @@ export function projectNegotiation(state: RoomState, viewer: Viewer): ProjectedN
   };
   if (me && mine && mine.action !== "decide") {
     projected.myPosition = positionLabel(state, me);
-    if (negotiation.phase === "positions") projected.myOptions = positionOptions(state, me);
+    if (negotiation.phase === "positions") {
+      projected.myOptions = positionOptions(state, me);
+      const prompt = positionPrompt(state, me);
+      if (prompt) projected.myPrompt = { question: prompt.question, recommendedId: prompt.recommendedId };
+    }
   }
   return projected;
 }
