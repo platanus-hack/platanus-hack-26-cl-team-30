@@ -340,7 +340,9 @@ export const ProjectedNegotiationSchema = z.object({
   positions: z.array(z.object({ orgId: z.string(), roleId: z.string(), seatLabel: z.string(), position: z.string().nullable(), automatic: z.boolean() })),
   messages: z.array(NegotiationMessageSchema),
   /** Solo para el rol que mira, en la fase positions: sus opciones de postura. */
-  myOptions: z.array(z.object({ id: z.string(), label: z.string() })).optional(),
+  myOptions: z.array(z.object({ id: z.string(), label: z.string(), answer: z.string().optional(), value: z.string().optional() })).optional(),
+  /** Solo para el rol que mira, en la fase positions: qué decide en concreto y qué postura le recomienda su agente (calculada por el código). */
+  myPrompt: z.object({ question: z.string(), recommendedId: z.string() }).optional(),
   /** Solo para el rol que mira: la postura que eligió (texto), o null. */
   myPosition: z.string().nullable().optional(),
 });

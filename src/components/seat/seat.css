@@ -1520,3 +1520,61 @@
   background: var(--st-primary);
   box-shadow: none;
 }
+
+/* «Tu agente» se presenta, pregunta en concreto y marca la opción que recomienda. */
+.st-agent-intro {
+  font-size: 15.5px;
+  font-weight: 650;
+  line-height: 1.35;
+  color: var(--st-soft);
+}
+.st-agent-question {
+  font-size: 24px;
+  font-weight: 850;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.st-agent-options .st-option {
+  flex-direction: column;
+  gap: 2px;
+  min-block-size: 64px;
+  padding-block: 8px;
+}
+.st-option-main {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 8px;
+}
+.st-option-value {
+  font-size: 14px;
+  font-weight: 650;
+  opacity: 0.78;
+}
+.st-option-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+.st-option-tag svg {
+  inline-size: 12px;
+  block-size: 12px;
+}
+.st-demo-agent {
+  display: grid;
+  gap: 6px;
+  margin-block-start: 12px;
+  padding-block-start: 12px;
+  border-block-start: 1px solid var(--st-line);
+}
+.st-demo-agent .st-demo-line {
+  margin-block-start: 0;
+  font-size: 17px;
+}

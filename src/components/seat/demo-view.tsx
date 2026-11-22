@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { CircleCheck, CircleX, FileDown, LoaderCircle, MessageCircle, RefreshCw, Send, Star } from "lucide-react";
+import { Bot, CircleCheck, CircleX, FileDown, LoaderCircle, MessageCircle, RefreshCw, Send, Star } from "lucide-react";
 import { formatScore, type RoleViewer } from "@/components/organs/format";
 import { requestCommitteeSummary, type Act, type ActResult, type RoomSession } from "@/lib/client/use-room";
 import type { ProjectedRoomState } from "@/lib/genome/schema";
+import { committeeBrief } from "./agent-text";
 import { demoStep } from "./screen";
 import { SeatActions, SeatMain } from "./seat-shell";
 
@@ -17,7 +18,8 @@ import { SeatActions, SeatMain } from "./seat-shell";
 export function DemoSeatView({ room, me, act, acta, session }: { room: ProjectedRoomState; me: RoleViewer; act: Act; acta: { md: string }; session?: RoomSession | null }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [reasonIndex, setReasonIndex] = useState(0);
+  // null: la razón que sugiere el agente del Comité. Un toque pasa a la siguiente.
+  const [reasonPick, setReasonPick] = useState<number | null>(null);
 
   const seats = demoSeatList(room);
   const mine = seats.find((seat) => seat.orgId === me.orgId && seat.roleId === me.roleId);
@@ -29,6 +31,9 @@ export function DemoSeatView({ room, me, act, acta, session }: { room: Projected
   const sealed = room.allocation?.status === "SEALED";
   const winner = room.allocation?.ranking.find((entry) => entry.caseId === room.allocation?.winnerCaseId);
   const winnerSeat = seats.find((seat) => seat.orgId === winner?.orgId);
+  // Con negociación, el agente del Comité le resume el caso y le recomienda (texto del código, sin modelo).
+  const brief = room.negotiation ? committeeBrief(room, seats, words.resource) : null;
+  const reasonIndex = reasonPick ?? brief?.reasonIndex ?? 0;
   const reason = DEMO_REASONS[reasonIndex % DEMO_REASONS.length];
 
   async function run(id: string, action: () => Promise<ActResult>) {
@@ -62,8 +67,18 @@ export function DemoSeatView({ room, me, act, acta, session }: { room: Projected
         ) : myTurn && turn.action === "decide" ? (
           <section className="st-card st-demo-state">
             <p className="st-demo-ask">¿Aceptas o rechazas?</p>
-            <p className="st-demo-line">La regla propone {winnerSeat ? withArticle(orgOfLabel(winnerSeat.label)) : (winner?.patientLabel ?? "un caso")}.</p>
-            <button type="button" className="st-demo-reason" onClick={() => setReasonIndex((index) => index + 1)} aria-label={`Razón: ${reason}. Toca para cambiarla`}>
+            {brief ? (
+              <div className="st-demo-agent">
+                <p className="st-agent-title">
+                  <Bot aria-hidden /> Tu agente
+                </p>
+                <p className="st-demo-line">{brief.summary}</p>
+                <p className="st-agent-advice">{brief.advice}</p>
+              </div>
+            ) : (
+              <p className="st-demo-line">La regla propone {winnerSeat ? withArticle(orgOfLabel(winnerSeat.label)) : (winner?.patientLabel ?? "un caso")}.</p>
+            )}
+            <button type="button" className="st-demo-reason" onClick={() => setReasonPick((reasonIndex + 1) % DEMO_REASONS.length)} aria-label={`Razón: ${reason}. Toca para cambiarla`}>
               <span>Razón: {reason}</span>
               <RefreshCw aria-hidden />
             </button>

@@ -1123,7 +1123,7 @@ async function writeNegotiationText(roomId: string, record: RoomRecord, seat: en
     });
     const transcript = negotiation.publicTranscript(record.state).map((message) => ({ agentLabel: message.agentLabel, text: message.text }));
     const written = await Promise.race([
-      Promise.resolve().then(() => writeNegotiationLine({ view, kind, seatLabel: brief.seatLabel, resource: brief.resource, role: brief.role, position: brief.position, options: brief.options, transcript, signal: controller.signal })),
+      Promise.resolve().then(() => writeNegotiationLine({ view, kind, seatLabel: brief.seatLabel, resource: brief.resource, role: brief.role, position: brief.position, options: brief.options, recommended: brief.recommended, transcript, signal: controller.signal })),
       timeout,
     ]);
     if (!written || typeof written.text !== "string") {
