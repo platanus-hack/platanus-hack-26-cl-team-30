@@ -82,7 +82,6 @@ El PDF describe piezas que solo existen en los prototipos de diseño (`docs/dise
 
 ### Notas del guion
 
-- **Caso real (lámina 3, «¿Y tiene posibilidad?»).** Un audio de TopSol con su problema (no saben qué priorizar en el presupuesto anual) y otro después de recibir el acceso, a 1,5×. La captura y los audios se muestran como llegaron, con su hora real (madrugada del 22 de noviembre): no se edita la hora. Agrega unos 23 s; la demo pasa a 1:02–2:45.
 - **De dónde sale el problema.** De la narrativa de este documento (frases 1 y 2), de «Por qué no puede decidir una sola organización» en `docs/ARQUITECTURA.md` y de pⁿ (`docs/DECISIONES.md`, «p^n como modelo ilustrativo»). No se usa ninguna estadística externa: el repo no tiene una con fuente. Se sacó «lo arreglan por teléfono» porque es un relato que nadie validó con personas que asignan camas.
 - **La cifra p^n de la lámina 2** (43,4 % → 96,1 %) es un modelo ilustrativo y no un dato del mundo (`docs/DECISIONES.md`, «p^n como modelo ilustrativo»). Si se deja en la lámina, Nahum dice «es un modelo ilustrativo». Si no, se saca.
 - **Duración del debate: por verificar.** El repo mide unos 44 s desde la última postura hasta el turno del Comité, con la pausa por defecto de 7 s (`docs/MEDICIONES.md`, ronda 20). Si en el deploy dura más, Ramón aprieta → durante el debate. Se mide en el ensayo 1.
