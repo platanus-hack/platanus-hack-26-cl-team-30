@@ -36,7 +36,7 @@ export function guideRoomStatus(room: ProjectedRoomState): string {
       case "debate":
         return "Los agentes están negociando a la vista en la pantalla grande. Por ahora no hay que hacer nada: solo leer.";
       case "proposal":
-        return "La regla ya calculó una propuesta con el resultado del debate. Enseguida le toca al Comité.";
+        return "La regla visible ya calculó la propuesta con los casos presentados; el debate no la cambia. Enseguida le toca al Comité.";
       case "decision":
         return "Ahora le toca al Comité: que acepte o rechace la propuesta en su celular.";
     }
