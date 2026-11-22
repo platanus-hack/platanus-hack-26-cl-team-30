@@ -27,7 +27,7 @@ npm run dev                  # http://localhost:3000
 npm test                     # pruebas del motor, los permisos y la API, sin modelo
 ```
 
-`GET /api/health` dice si el modelo configurado responde. Las salas viven en la memoria del servidor, sin base de datos; Supabase solo guarda el formulario de acceso y entrega las entrevistas de la portada.
+`GET /api/health` dice si el modelo configurado responde. Las salas viven en la memoria del servidor, sin base de datos. Las rutas de Supabase (formulario de acceso y entrevistas) existen, pero la portada actual no las usa y las tablas no están creadas.
 
 Recorrido completo por HTTP y prueba de carga (esta última, solo contra un servidor local):
 

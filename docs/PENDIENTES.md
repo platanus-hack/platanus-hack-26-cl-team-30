@@ -23,7 +23,7 @@ Actualizado el 21 de noviembre de 2026.
 | h2 | **Las tablas de Supabase no existen todavía.** Sin ellas el formulario de acceso responde 503 y la entrevista no aparece (la página no se rompe). | Sebastián | Correr las tres migraciones de `supabase/migrations/` en el proyecto (en orden) y, para mostrar una entrevista, poner `published_at` a mano en una fila revisada. Las variables `NEXT_PUBLIC_SUPABASE_*` deben estar en Render antes del build, porque Next las incrusta al compilar. |
 | i2 | **`TRUST_PROXY=1` en Render sin verificar.** El límite de peticiones toma el último salto de `X-Forwarded-For`. Si en Render ese salto no es la IP del cliente, todos comparten un mismo límite (protege igual, más grueso). | Sebastián | Revisar en los registros de Render qué llega en `X-Forwarded-For`. Si el primer salto es el del cliente, avisar al agente de motor para ajustar `clientKey`. |
 | i3 | **`NEXO_ADMIN_KEY` sigue sin definirse en Render.** Sin ella, en producción las salas fijas no entregan sus controles ni su QR del Comité, y la pantalla grande ofrece crear una sala propia. | Sebastián | Definirla si se quiere presentar desde `demo-cross`; si no, presentar desde una sala nueva. |
-| i4 | **El e2e nuevo no se ha corrido contra el deploy.** Además, el paso "sala nueva desde una frase" gasta una llamada a Claude por corrida. | Orquestador | Tras desplegar, `node scripts/e2e.mjs https://team-30-platanus-hack.onrender.com`. |
+| i4 | **Resuelto el 22 de noviembre, 01:57: 142 de 142 contra el deploy (`docs/MEDICIONES.md`).** Pendiente original: el e2e nuevo no se había corrido contra el deploy. Además, el paso "sala nueva desde una frase" gasta una llamada a Claude por corrida. | Orquestador | Tras desplegar, `node scripts/e2e.mjs https://team-30-platanus-hack.onrender.com`. |
 | i5 | **Canales del Comité: probados en vivo, con dos huecos.** WhatsApp de punta a punta (caso, botón Aprobar, razón y acta «vía WhatsApp») y la nota de voz del caso se probaron contra Kapso y ElevenLabs reales el 21 de noviembre (ver «Canales del Comité contra los servicios reales» en `docs/MEDICIONES.md`). Faltan: la plantilla `sculptor_comite_caso`, que sigue en revisión en Meta, y la llamada telefónica, que necesita un número de Twilio. | Sebastián | Revisar el estado de la plantilla en Kapso → Templates antes de presentar; si no está aprobada, usar el botón «Recibir resumen por WhatsApp» (abre la ventana de 24 h). No ofrecer la llamada telefónica en vivo. |
 | i6 | **Resuelto:** el README ya dice que las salas no usan base de datos y que Supabase solo atiende el formulario de acceso y las entrevistas de la portada. | Sebastián | Nada. |
 | k | **Resuelto:** `.playwright-mcp/` está en `.gitignore`. | Orquestador | Nada. |
@@ -90,7 +90,7 @@ Revisión de la entrega. Los borradores del pitch que no coincidían con el cód
 
 - **Asistente de voz ya creado en ElevenLabs:** resuelto. Se actualizó por la API a «Sculptor · Asistente del Comité», con `eleven_v3_conversational` y la voz chilena «Joaquín» (verificado con `GET`).
 - **Plantilla de WhatsApp:** el nombre sugerido ahora es `sculptor_comite_caso`. Hay que crearla y aprobarla en Meta; mientras tanto, `KAPSO_TEMPLATE_NAME` debe seguir con el nombre de la plantilla ya aprobada. El encabezado del mensaje interactivo ya dice «Sculptor · Decisión del Comité».
-- **Fuera del reparto de la ronda 10:** `project-description.md` todavía dice «Nexo» (líneas 1 y 13). `public/pitch/index.html` ya está al día.
+- **Resuelto:** `project-description.md` ya dice «Sculptor». `public/pitch/index.html` ya está al día.
 
 ## Agregado en la ronda 11 (Comité sin clave en la demo)
 
@@ -120,3 +120,17 @@ Revisión de la entrega. Los borradores del pitch que no coincidían con el cód
 - **Los códigos de sala no se reutilizan mientras vive el proceso.** Un reinicio del servidor en Render olvida la lista; con 32^5 (más de 33 millones) códigos posibles, repetir uno es muy improbable, pero no está garantizado entre reinicios.
 - **Sin capturas de la negociación en el celular** si el servidor local no podía levantarse; ver el resumen de la ronda.
 
+## Agregado en el ensayo del bot de los jueces (22 de noviembre)
+
+Lo encontraron tres revisores sin contexto leyendo el código; las respuestas para el jurado están en `docs/PREGUNTAS_JUECES.md`. Nada de esto se cambió en el código.
+
+- **No hay medición de cuántas frases de la negociación escribe Claude en el deploy** ni de su latencia por frase. La pantalla no distingue respaldo de modelo (la marca `fallback` solo sale en el acta). Correr `node scripts/e2e.mjs <deploy> --llm` y anotar la línea «N de 4 con texto de respaldo».
+- **El temporizador de la negociación presenta los casos en nombre de las personas** (`proposalTick` en `src/lib/store/rooms.ts`) con `{ via: "negociación" }` y sin `automatic`.
+- **El filtro `containsReserved` no cubre secretos de texto** («Vacunas y sueros», «Alto», «4 toneladas»): solo valores con 3 o más dígitos. Opciones: no enviar al modelo los valores reservados para el argumento público, o filtrar también por texto.
+- **La identidad protege la silla, no a la persona:** un mismo cliente puede tomar sillas de las dos organizaciones.
+- **La compuerta no bloquea la asignación entre organizaciones** y el proponente puede sellar la regla solo, incluso en modo autónomo.
+- **Sin tope global para los turnos de agente y la negociación;** la cola del modelo es global y sin largo máximo.
+- **Canales del Comité para una sola sala a la vez:** número de WhatsApp global, razón aplicada a la sesión más reciente, `getOnlyVoiceSession` global, mismo secreto para la herramienta de la guía y la que sella.
+- **La telemetría informa la configuración, no lo observado,** y no cuenta lo que sale a ElevenLabs ni a Kapso.
+- **El prompt de la guía describe la demo de 3 personas** y `guide-status.ts` dice que la propuesta sale «con el resultado del debate», lo que no es cierto.
+- **Textos fuera de `docs/` que afirman más que el código** (no se tocaron en este ensayo): «Ningún agente cambia el estado» y «Ejemplo real» en la landing (`src/components/sculptor/content.ts`, `chrome.tsx`), «500 conexiones» y «97/97» en la landing, y en `CLAUDE.md` «permisos… sin modelo» (en la mutación los propone el modelo).
