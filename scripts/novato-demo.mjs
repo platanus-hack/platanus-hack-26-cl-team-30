@@ -229,6 +229,8 @@ function readScreenInPage() {
     const style = getComputedStyle(el);
     return style.visibility !== "hidden" && style.display !== "none" && Number(style.opacity) > 0.05;
   };
+  // Mientras la página carga (o si se abrió algo que no es una página) no hay body: se reintenta.
+  if (!document.body) return null;
   let best = null;
   let bestSize = 0;
   for (const el of document.body.querySelectorAll("*")) {
@@ -325,6 +327,13 @@ async function look(device, forbidden) {
   let screen;
   try {
     screen = await device.page.evaluate(readScreenInPage);
+    if (!screen) {
+      if (!device.noBodyNoted) {
+        device.noBodyNoted = true;
+        console.log(`  (aviso) ${device.label}: página sin contenido en ${device.page.url()}`);
+      }
+      return device.screen;
+    }
   } catch (error) {
     // La página navegó en medio de la lectura (por ejemplo, el redireccionamiento de la sala nueva).
     if (/navigat|context|destroyed/i.test(String(error.message))) return device.screen;
