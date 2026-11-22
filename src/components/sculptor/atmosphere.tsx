@@ -186,8 +186,8 @@ function GalaxyField() {
     };
 
     // El alto recorrible se guarda y se recalcula solo cuando cambia el tamaño de la
-    // página: leer scrollHeight en cada cuadro obligaba al navegador a recalcular el
-    // diseño 60 veces por segundo mientras GSAP anima (la mayor parte del bloqueo de la portada).
+    // página: leer scrollHeight en cada cuadro obliga al navegador a recalcular el
+    // diseño en cada cuadro mientras GSAP anima la intro.
     let scroll = 0;
     let max = 0;
     const measure = () => {
