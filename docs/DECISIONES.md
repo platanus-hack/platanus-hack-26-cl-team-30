@@ -438,3 +438,10 @@ Al pasar la gravedad a la escala de 1 a 50, el campo reservado `triage_criticali
 - **Fondo de partículas:** WebGL2 escrito a mano (`atmosphere.tsx`, unas 5.000 estrellas en un solo `drawArrays`) en vez de Three.js. Para puntos con brillo aditivo bastan dos shaders cortos y no se suma una dependencia de ~150 KB. Sin WebGL2 no hay fondo y la página sigue igual.
 - **Simulación orbital:** se incrustó el HTML del pitch en un iframe del mismo dominio en vez de portarlo a React. Portarlo eran horas; el iframe deja que el scroll recorra sus etapas por `window.__ORBITAL__` sin tocar el archivo. Costo: depende de Three.js en jsDelivr y de un video en CloudFront.
 
+## La presentación es una página de la app, no un archivo de diapositivas
+
+- **Decisión:** las láminas del domingo viven en `/presentacion` (`src/components/presentacion/`), con el guion de cada lámina en `slides.ts` y las notas del orador en la misma página.
+- **Por qué:** la lámina del problema muestra pⁿ calculado por el motor, y «Desarrollo» muestra dos páginas reales del mismo deploy lado a lado; un PPT tendría capturas y cifras escritas a mano que se desactualizan. Además sigue la marca y el modo oscuro de la landing, como pidió la charla del evento.
+- **Descartado:** seguir con el deck `public/pitch/index.html` como deck principal. Queda como respaldo; la nueva presentación agrega el saludo con nombre que pidió la charla, las notas del orador y el reloj de 3:00.
+- **Limpieza de documentos:** se sacaron del repo los borradores del pitch que describían piezas que la app no tiene (deslizar la tarjeta, «7 órganos», «80 tests», «0 bytes a la nube» con el deploy, 10 jugadores con copilotos): el dossier en PDF, el guion en PDF, el deck «Cupo», el guion de 3:30, el kit de UX y los decks interactivos de `docs/diseno/nahum/`. Lo vigente es `docs/DEMO_DIA.md`.
+

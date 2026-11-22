@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Archivo } from "next/font/google";
-import type { CSSProperties } from "react";
 import { Atmosphere } from "@/components/sculptor/atmosphere";
 import { Footer, Nav } from "@/components/sculptor/chrome";
 import { sculptorData } from "@/components/sculptor/data";
@@ -15,6 +14,7 @@ import { Origin } from "@/components/sculptor/origin";
 import { Principles } from "@/components/sculptor/principles";
 import { Reliability } from "@/components/sculptor/reliability";
 import { Team } from "@/components/sculptor/team";
+import { SCULPTOR_PALETTE } from "@/components/sculptor/theme";
 import "./sculptor.css";
 
 // Landing de Sculptor, el protocolo. Vive aparte de la portada de la demo mientras
@@ -36,25 +36,13 @@ export const metadata: Metadata = {
   icons: { icon: "/sculptor/logo.png" },
 };
 
-const PALETTE = {
-  "--obsidiana": "#0C0E0D",
-  "--grafito": "#181B1A",
-  "--basalto": "#2A2F2D",
-  "--piedra": "#A3A69D",
-  "--marmol": "#F3F0E8",
-  "--eucalipto": "#6FAF9B",
-  "--patina": "#2E5E51",
-  "--cincel": "#D7FF3D",
-  "--senal": "#F0524A",
-  fontFamily: "var(--font-archivo), var(--font-sans), sans-serif",
-} as CSSProperties;
 
 export default function SculptorPage() {
   const data = sculptorData();
   return (
     <div
       id="top"
-      style={PALETTE}
+      style={SCULPTOR_PALETTE}
       className={`${archivo.variable} min-h-svh bg-(--obsidiana) text-(--marmol) antialiased selection:bg-(--cincel) selection:text-(--obsidiana)`}
     >
       <SculptorShell>

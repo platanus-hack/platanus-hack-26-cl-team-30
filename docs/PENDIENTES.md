@@ -53,15 +53,15 @@ Actualizado el 21 de noviembre de 2026.
 
 ## Para subir todo a `main` (21 de noviembre, noche)
 
-Revisión del dossier contra el código y de la entrega. Detalle de las diferencias en `docs/dossier/README.md`.
+Revisión de la entrega. Los borradores del pitch que no coincidían con el código (dossier, guion PDF, deck «Cupo» y prototipos del deck) se sacaron del repo; lo vigente es `docs/DEMO_DIA.md`.
 
 | # | Pendiente | Qué hay que hacer |
 | --- | --- | --- |
 | y1 | **«Nexo» como nombre de la implementación en salud.** Sculptor es el sistema; la clínica sería su primera implementación («Nexo»). Hoy la interfaz dice Sculptor en todas partes y «Nexo» solo queda en identificadores internos. | Decidir si se usa «Nexo» en el pitch o en la página del caso hospitalario (`/casos/hospitales`). |
 | y2 | **Hay dos landings.** `/` es la portada original (ya con la marca Sculptor, ejemplos, formulario y entrevista) y `/sculptor` es la landing nueva del protocolo (intro animada, pⁿ, mercado, simulación orbital, equipo). | Decidir cuál es la principal antes de presentar y enlazar la otra. |
-| y3 | **El guion y el deck dicen cosas que el código no hace:** deslizar arriba o abajo, «80 tests» (`docs/diseno/nahum/guion_pitch_3m30_platanus.md`, `pitch_platanus_interactivo.html`), «el desempate le da la cama al rural», «0 bytes a la nube» con el deploy. | Ajustar el guion con `docs/dossier/README.md` y `docs/PREGUNTAS.md` antes de ensayar. |
+| y3 | **Ensayar con la presentación web** (`/presentacion`) y el guion de `docs/DEMO_DIA.md`, que ya están alineados con el código. | Al menos 3 ensayos cronometrados con la tecla T (reloj de 3:00). |
 | y4 | **La simulación orbital depende de internet.** Carga Three.js desde jsDelivr y un video desde CloudFront. En la landing y en el pitch, sin red queda en negro. | Si la red de la sede falla, abrir la app sin esa sección o descargar Three.js al repo. |
-| y5 | **Fusionar la rama `docs` a `main`.** Trae la ronda 20, la landing, la marca, el dossier, la investigación y el material del pitch. | Revisar el diff, correr `npm test`, `npm run build` y `scripts/e2e.mjs`, y fusionar. |
+| y5 | **Fusionar la rama `docs` a `main`.** Trae la ronda 20, la landing, la presentación, la marca, la investigación y el proceso. | Revisar el diff, correr `npm test`, `npm run build` y `scripts/e2e.mjs`, y fusionar. |
 
 ## Agregado por el orquestador (21 de noviembre, mañana)
 

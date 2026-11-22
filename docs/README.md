@@ -28,16 +28,15 @@ Mapa de esta carpeta. Si vienes a entender el sistema, empieza por `RECORRIDO.md
 | [`DEMO_DIA.md`](DEMO_DIA.md) | Plan del domingo 22: 3:00 de demo y 2:00 de preguntas |
 | [`GUION_DEMO.md`](GUION_DEMO.md) | Guion de la demo en vivo con 5 personas (ronda 20) |
 | [`QA_DEMO.md`](QA_DEMO.md) | Prueba de la demo jugada por 5 novatos en navegadores reales |
-| [`pitch/`](pitch/) | Guion en PDF del pitch de 3 minutos y el deck anterior (nombre «Cupo») |
+| [`pitch/`](pitch/) | La presentación web de 3:00 (`/presentacion`): qué lámina va con qué parte del guion |
 
 ## Producto, investigación y marca
 
 | Carpeta | Qué trae |
 | --- | --- |
-| [`dossier/`](dossier/) | Dossier completo del producto en PDF, con su fe de erratas contra el código |
 | [`investigacion/`](investigacion/) | Cómo se llegó a la idea: el plan del Esqueleto Metamórfico, la evaluación crítica de la idea, las ideas que se evaluaron y descartaron, y el material del evento |
 | [`diseno/sculptor/`](diseno/sculptor/) | Marca: logo oficial de la galaxia, conceptos v0 y v2, propuesta del cubo con su manual, bocetos |
 | [`diseno/nahum/`](diseno/nahum/) | Prototipos del pitch de Nahum: deck interactivo, simulación orbital 3D, prototipo móvil y su guion (en `v2/`, la versión más nueva del deck y la simulación) |
 | [`diseno/21st/`](diseno/21st/) | Componentes de 21st.dev elegidos para las páginas de caso |
 
-Los documentos de las carpetas `dossier/`, `investigacion/`, `pitch/` y `diseno/` son material de trabajo de la hackathon: muestran el proceso. Donde no coinciden con el código, vale el código y los documentos de la sección «Sistema».
+Los documentos de las carpetas `investigacion/` y `diseno/` son material de trabajo de la hackathon: muestran el proceso. Donde no coinciden con el código, vale el código y los documentos de la sección «Sistema».

@@ -56,6 +56,5 @@ La negociación entre agentes de la demo sigue el mismo camino: `SET_POSITION` e
 | `src/app/sculptor/page.tsx` y `src/components/sculptor/` | La landing del protocolo (`/sculptor`). Sus cifras de confiabilidad y del ejemplo las calcula el motor en `data.ts`; los textos viven en `content.ts` |
 | `docs/README.md` | Mapa de toda la documentación: sistema, demo y pitch, investigación y marca |
 | `docs/RESULTADOS.md` y `docs/PROCESO.md` | El estado final con sus pruebas, y el camino que nos trajo hasta aquí |
-| `docs/dossier/` | El dossier del producto en PDF y su fe de erratas contra el código (`docs/dossier/README.md`) |
 | `docs/DECISIONES.md` | Por qué se eligió cada cosa y qué se descartó |
 | `docs/PREGUNTAS.md` | Preguntas probables del jurado con respuestas cortas |

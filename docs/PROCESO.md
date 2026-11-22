@@ -36,12 +36,12 @@ Platanus Hack 26 Santiago ft. Buk, track Multiplayer. Del viernes 20 en la noche
 | 20:07 | **Logo oficial: la galaxia NGC 253 en píxeles**, reemplaza al cubo |
 | 20:37 | Modo claro y oscuro en toda la app; páginas de caso por rubro |
 | 22:58 | **Ronda 20: negociación entre agentes con 5 personas**, código de sala único |
-| 23:08 | Landing del protocolo (`/sculptor`), marca y dossier |
+| 23:08 | Landing del protocolo (`/sculptor`) y marca |
 | 23:13 | Guion fusionado de la demo (3:00) y preguntas del jurado con cifras reales |
 
 ## 3. Cómo cambió el producto
 
-**El nombre.** «Cupo» (primer deck, [`pitch/deck-cupo/`](pitch/deck-cupo/)), después «Nexo» y al final **Sculptor**, por la Galaxia del Escultor (NGC 253), visible desde el cielo austral de Chile. Los identificadores internos (`NEXO_*`, `src/components/nexo/`) conservan el nombre viejo a propósito: cambiarlos rompería Render y los webhooks.
+**El nombre.** «Cupo» (primer nombre de trabajo), después «Nexo» y al final **Sculptor**, por la Galaxia del Escultor (NGC 253), visible desde el cielo austral de Chile. Los identificadores internos (`NEXO_*`, `src/components/nexo/`) conservan el nombre viejo a propósito: cambiarlos rompería Render y los webhooks.
 
 **La marca** ([`diseno/sculptor/`](diseno/sculptor/)):
 - v0: tres nombres con su signo (Cupo, Velo y Quórum), en [`diseno/sculptor/proceso/conceptos-v0-nombres.png`](diseno/sculptor/proceso/conceptos-v0-nombres.png).
@@ -80,6 +80,6 @@ La evaluación también proponía Supabase con RLS para los permisos. Se descart
   - Nahum: negocio y pitch.
 - **Rondas.** El trabajo avanzó en rondas numeradas. Cada ronda terminaba con pruebas, documentación al día y, varias veces, un ensayo con un agente que leía el repo como lo harían los jueces.
 - **Agentes de IA como equipo.** Gran parte del código se escribió con agentes de programación. Por eso la documentación se mantuvo viva desde la hora 1: `RECORRIDO`, `ARQUITECTURA`, `DECISIONES`, `MEDICIONES` y `PENDIENTES`.
-- **Verdad antes que efecto.** Una cifra que no está en `MEDICIONES.md` no se dice. El dossier tiene su fe de erratas (`dossier/README.md`) y el guion del día marca lo que no se debe decir (`DEMO_DIA.md`).
+- **Verdad antes que efecto.** Una cifra que no está en `MEDICIONES.md` no se dice, y el guion del día marca lo que no se debe decir (`DEMO_DIA.md`). Los borradores del pitch que describían piezas que la app no tiene se sacaron del repo.
 
 El estado final está en [`RESULTADOS.md`](RESULTADOS.md).

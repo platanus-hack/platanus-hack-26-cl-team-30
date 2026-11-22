@@ -1,5 +1,5 @@
-// Textos de la landing de Sculptor en un solo lugar. Salen del dossier del equipo
-// (docs/dossier/) y de los principios del repo. Las cifras NO van aquí: las calcula
+// Textos de la landing de Sculptor en un solo lugar. Salen de los principios del
+// repo (CLAUDE.md) y del guion de la demo (docs/DEMO_DIA.md). Las cifras NO van aquí: las calcula
 // el motor en data.ts o vienen de docs/MEDICIONES.md.
 
 export const HERO = {
@@ -17,7 +17,7 @@ export const ORIGIN = {
   channels: ["WhatsApp", "Llamadas", "Excel", "Correos", "Reuniones"],
   name: {
     title: "¿Por qué Sculptor?",
-    body: "Por la Galaxia del Escultor, NGC 253, visible desde el cielo austral de Chile. Nació en el seminario AI-Driven Organizations de la PUC y pasó por los nombres de código «Cupo» y «Nexo» antes de llegar aquí.",
+    body: "Por la Galaxia del Escultor, NGC 253, visible desde el cielo austral de Chile. Antes se llamó «Cupo» y «Nexo».",
   },
 } as const;
 
@@ -36,7 +36,7 @@ export const PRINCIPLES = [
   },
   {
     title: "Soberano o en la nube, y lo dice.",
-    body: "El modelo puede correr en un NVIDIA DGX Spark local o con Claude en la nube. La telemetría muestra cuál está en uso; nunca un «0 bytes a la nube» fijo.",
+    body: "Una sola capa de modelos: hoy Claude en la nube; un modelo local en un NVIDIA DGX Spark es cambiar variables de entorno. La telemetría muestra cuál corrió y si fue local o nube.",
   },
 ] as const;
 
@@ -105,9 +105,9 @@ export const HACK = {
 } as const;
 
 export const TEAM = [
-  { name: "Ramón Molina", role: "Producto web", detail: "Pantallas y rutas de la API. En el pitch, piloto de consola.", handle: "rm004607" },
-  { name: "Sebastián Vargas", role: "Agente e infraestructura", detail: "Modelos, Spark, integraciones y deploy. En el pitch, red y QR.", handle: "iswebster1401" },
-  { name: "Nahum Díaz", role: "Negocio y pitch", detail: "Usuarios reales, finanzas y relato. En el pitch, la voz.", handle: "nadilopoff" },
+  { name: "Ramón Molina", role: "Producto web", detail: "Pantallas y rutas de la API. En la demo, opera la pantalla grande.", handle: "rm004607" },
+  { name: "Sebastián Vargas", role: "Agente e infraestructura", detail: "Modelos, Spark, integraciones y deploy. En la demo, guía al público.", handle: "iswebster1401" },
+  { name: "Nahum Díaz", role: "Negocio y pitch", detail: "Usuarios reales, finanzas y relato. En la demo, la voz.", handle: "nadilopoff" },
 ] as const;
 
 export const CLOSING = "Con Sculptor, el recurso deja de esperar.";

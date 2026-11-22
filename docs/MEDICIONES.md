@@ -119,7 +119,7 @@ No está medido cuánto tarda Claude en escribir cada frase ni cuántas veces ca
 | --- | --- | --- |
 | 16 | 507 | 507 pasan |
 
-El dossier y el guion del pitch citan otras cifras (216 y 80 pruebas) de versiones anteriores; la vigente es esta. Antes de la ronda 20 eran 415 en 11 archivos.
+Borradores anteriores del pitch citaban 216 y 80 pruebas; la cifra vigente es esta. Antes de la ronda 20 eran 415 en 11 archivos.
 
 ## Lo que no está medido
 
