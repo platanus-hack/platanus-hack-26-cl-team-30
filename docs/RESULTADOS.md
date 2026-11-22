@@ -22,7 +22,7 @@ Todas salen de `MEDICIONES.md`, con su contexto.
 
 | Cifra | Contexto |
 | --- | --- |
-| **516 de 516 pruebas** | `npm test` sin modelo, 17 archivos (22 de noviembre, sobre `origin/main`) |
+| **520 de 520 pruebas** | `npm test` sin modelo, 18 archivos (22 de noviembre, 08:35, sobre `origin/main`) |
 | **500 conexiones en vivo, p95 de 51,5 ms** | En un notebook, sin red de por medio y sin pasar por Next |
 | **142 de 142 pasos** del recorrido completo | Contra el deploy en Render, con la versión actual (22 de noviembre, 01:57). La prueba de novatos con 5 navegadores también pasó contra el deploy, a ritmo real, sin fugas |
 | **60 cuadros por segundo** en la pantalla grande con la galaxia | Apple M4 con GPU |

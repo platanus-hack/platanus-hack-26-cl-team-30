@@ -2,7 +2,7 @@
 
 Lo que sigue abierto. Cuando algo se resuelve, se borra de aquí y, si corresponde, se anota en `docs/DECISIONES.md`.
 
-Actualizado el 22 de noviembre de 2026, 03:00.
+Actualizado el 22 de noviembre de 2026, 08:35.
 
 ## Antes de cerrar el repo (domingo 22)
 
@@ -10,11 +10,11 @@ Lista corta de lo que falta, sacada de las tablas de abajo. Lo que no se alcance
 
 | # | Qué | Quién | Referencia |
 | --- | --- | --- | --- |
-| z1 | Fusionar la rama `docs` a `main` (trae `origin/main`, `guia-al-dia`, el guion del día alineado con la presentación y la portada corregida) y confirmar en GitHub que se ve la versión nueva | Ramón | y5, s |
-| z2 | Decidir qué pasa con las ramas que tienen un commit sin fusionar: `portada-hero` («el puente» en vez del Venn), `orbita-galaxia` y `orbita-relevo` (bancos de prueba de `/orbita`). Si no van, no se fusionan; no cambian nada de lo que se presenta | Sebastián | — |
+| z1 | **Resuelto:** `docs` está fusionada en `main` y en el espejo de Render (22 de noviembre, mañana) | Ramón | y5, s |
+| z2 | **Decidido por omisión al cierre:** `portada-hero`, `orbita-galaxia` y `orbita-relevo` quedan sin fusionar. No cambian nada de lo que se presenta | Sebastián | — |
 | z3 | **Resuelto:** según la charla oficial, el hacking se detiene a las **09:00**. Presentaciones generales de 09:30 a 11:30; finales de 12:30 a 15:30. `CLAUDE.md` ya lo dice | Equipo | — |
 | z4 | Correr `node scripts/e2e.mjs https://team-30-platanus-hack.onrender.com --llm` y anotar en `docs/MEDICIONES.md` cuántas frases de la negociación fueron respaldo | Sebastián | q, ensayo del bot |
-| z5 | Subir Render a un plan pagado o, como mínimo, abrir el deploy 10 minutos antes para despertarlo | Sebastián | c |
+| z5 | **Resuelto:** Render en plan `standard` (`render.yaml`, commit `c01df48`), pagado con los créditos del evento: ya no se duerme. Las salas igual se pierden si el servicio se reinicia (cada deploy) | Sebastián | c |
 | z6 | **Video de respaldo grabado** (86 s, contra el deploy, 5 navegadores con 3 celulares a la vista; ver «Video de respaldo» en `docs/DEMO_DIA.md`). Está en el escritorio del Mac donde se grabó, no en el repo: copiarlo al computador del proyector y dejarlo abierto en una pestaña, en pausa | Sebastián y Ramón | `docs/DEMO_DIA.md` (d) |
 | z7 | Ensayos cronometrados con 5 teléfonos reales en la red de la sede, desde la lámina 4 de `/presentacion` | Equipo | r, y3 |
 | z8 | Revisar con sesión iniciada en `hack.platan.us` que el repo pasa la validación | Sebastián | e |
@@ -27,7 +27,7 @@ Lista corta de lo que falta, sacada de las tablas de abajo. Lo que no se alcance
 | --- | --- | --- |
 | a | **Resuelto: el producto se llama Sculptor** (ronda 10, antes «Nexo»). Se cambió todo lo visible. Siguen con el nombre viejo, a propósito, los identificadores internos: variables `NEXO_*`, encabezados `x-nexo-secret` y `x-nexo-session`, ids de botón `nexo:approve`/`nexo:veto`, claves de almacenamiento `nexo:*`, la carpeta `src/components/nexo/`, el repo y la URL del deploy. Cambiarlos rompería Render y los webhooks. | Equipo | Si la plantilla de WhatsApp ya aprobada se llama `nexo_comite_caso`, `KAPSO_TEMPLATE_NAME` debe seguir con ese nombre hasta que Meta apruebe `sculptor_comite_caso`. |
 | b | **Resuelto:** `project-logo.png` es el logo oficial de Sculptor (galaxia NGC 253 en píxeles, PNG 1000x1000, 193 KB). | Nada. |
-| c | **Render está en plan gratis y se duerme** sin visitas. La primera carga tarda y, al dormirse, se pierden las salas, que viven en memoria. | Subir de plan antes de presentar (`plan` en `render.yaml` o desde el panel). |
+| c | **Resuelto (22 nov):** Render pasó a plan `standard` y no se duerme. Cada deploy reinicia el servicio y borra las salas en memoria: no hacer push durante la presentación. | Nada. |
 | d | **Dónde corre la demo en vivo.** El deploy usa Claude, así que ahí los datos sí salen a la nube. "Cero bytes a la nube" solo vale en modo local. | Decidir si la demo corre en el deploy, en local con el Spark, o ambas. En el pitch, decir "cero bytes" solo mientras se muestra el modo local. |
 | e | **La validación del evento solo se ve con sesión iniciada.** Ningún agente puede revisarla. | Después del push, entrar con tu cuenta y confirmar que el repo pasa la validación. |
 | f | **El README lo escribió una IA.** La plantilla pedía que lo escribiera una persona del equipo. | Leerlo y corregirlo a mano. |

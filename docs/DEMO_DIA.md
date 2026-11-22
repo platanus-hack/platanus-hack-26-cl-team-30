@@ -23,11 +23,11 @@ El PDF describe piezas que solo existen en los prototipos de diseño (`docs/dise
 | El Juez 3 desliza la tarjeta hacia arriba o hacia abajo | Botones **Aceptar** y **Rechazar**, con la razón precargada | `src/components/seat/demo-view.tsx` |
 | Botón «Espiar rival (403)» en el celular | En la sala de demo no existe. El «Ver» con 403 está en las salas normales, en la pestaña Secretos | `docs/PREGUNTAS.md` (17 y 20) |
 | «Toquen el botón de su Agente» | Cada persona elige una **postura** entre 3, con un toque. Su agente ya le escribió un consejo | `docs/ARQUITECTURA.md` («Negociación entre agentes») |
-| 80 tests · 60 SSE | **516 pruebas** · **500 conexiones con p95 de 51,5 ms, en local**. 60 es solo la prueba chica de cada `npm test` | `npx vitest run` (ver abajo), `docs/MEDICIONES.md` |
+| 80 tests · 60 SSE | **520 pruebas** · **500 conexiones con p95 de 51,5 ms, en local**. 60 es solo la prueba chica de cada `npm test` | `npx vitest run` (ver abajo), `docs/MEDICIONES.md` |
 | «7 órganos del esqueleto» | Los órganos apilados se reemplazaron por la silla del celular | `docs/DECISIONES.md` («La silla del celular reemplaza a los órganos apilados») |
 | «Cero hola, somos el equipo 30» | La charla pide empezar con el nombre y una frase | Charla «Cómo hacer un buen demo» |
 
-**Cifras que sí se pueden decir:** 516 pruebas sin modelo (`npx vitest run`: 516 de 516 en 17 archivos, domingo 22 a las 02:08, sobre `origin/main`; repetir sobre la rama final) · 500 conexiones con p95 de 51,5 ms en local · 0,52 contra 0,53 · margen de 0,02 · necesidad sin cubrir de 0,9 contra 0,4 · 7 s por mensaje · 6 s por agente · plan B a los 20 s · tres escenarios con el mismo motor.
+**Cifras que sí se pueden decir:** 520 pruebas sin modelo (`npx vitest run`: 520 de 520 en 18 archivos, domingo 22 a las 08:35, sobre `origin/main`) · 500 conexiones con p95 de 51,5 ms en local · 0,52 contra 0,53 · margen de 0,02 · necesidad sin cubrir de 0,9 contra 0,4 · 7 s por mensaje · 6 s por agente · plan B a los 20 s · tres escenarios con el mismo motor.
 
 **No decir:** «cero bytes a la nube» (solo vale en modo local, y el modo local no está verificado contra el Spark) · «Dell GB10» (`CLAUDE.md` dice NVIDIA DGX Spark) · una latencia del Spark o de Claude por frase (no están medidas) · «aislamiento criptográfico» (es un permiso por rol en el servidor) · «los pesos se acuerdan antes de deliberar» (la fórmula está fija en el código) · «webhooks o conector con Buk» (no existen).
 
@@ -160,7 +160,7 @@ El QR apunta al deploy público, así que el público entra con sus datos móvil
 **12. ¿Cómo manejan la concurrencia? ¿Cómo escala?**
 El servidor procesa las acciones de a una, en orden de llegada. El motor es síncrono y cada cambio sube la versión. Si dos personas deciden lo mismo, la segunda recibe 409. En un notebook abrimos 500 conexiones en tiempo real: todos los cambios llegaron a todas, con p95 de 51,5 ms. En el deploy no lo medimos. Hoy es un solo proceso en memoria, con topes de 200 conexiones por sala, 1000 en total y 200 salas. Para crecer: persistencia y un bus compartido, como Redis.
 → `docs/MEDICIONES.md`, `src/lib/store/rooms.ts`, `docs/PREGUNTAS.md` (9 y 36)
-*Corrige al PDF:* eran 500 conexiones, no 60, y son 516 pruebas, no 80.
+*Corrige al PDF:* eran 500 conexiones, no 60, y son 520 pruebas, no 80.
 
 **13. ¿Dónde corre el modelo? ¿Qué datos salen a la nube?**
 Toda llamada pasa por una sola capa, `src/lib/llm.ts`. En el deploy usamos Claude, así que sí salen datos: la vista de cada rol va a Claude, y el resumen del Comité va a ElevenLabs y a WhatsApp. El modo local con Ollama en el DGX Spark está implementado, pero no lo verificamos contra el Spark ni medimos su latencia. La telemetría muestra el proveedor real.

@@ -11,7 +11,7 @@ Las 30 preguntas se reducen a **20 temas**, porque varios jueces llegaron a lo m
 1. **Medir cuántas frases escribe Claude.** Correr `node scripts/e2e.mjs https://team-30-platanus-hack.onrender.com --llm` y anotar la línea «N de 4 con texto de respaldo». Sin eso, la respuesta a la pregunta 2 es «no lo medimos».
 2. **Descargar el acta de la demo en vivo** (`/api/rooms/<código>/acta?format=md`) antes de que la sala se reinicie (2 minutos después de sellar). Ahí se ve qué mensajes fueron respaldo.
 3. **No decir:** «de la negociación sale la decisión», «ningún agente cambia el estado», «el modelo nunca decide quién ve qué», «validado con usuarios», «en el mismo segundo» (en Render se midieron hasta 3 s).
-4. **Sí decir, con cifras medidas** (`docs/MEDICIONES.md`): 516 pruebas sin modelo en 17 archivos; 142 de 142 pasos del recorrido contra el deploy; Comité por WhatsApp probado en vivo contra Kapso, 103 s de punta a punta.
+4. **Sí decir, con cifras medidas** (`docs/MEDICIONES.md`): 520 pruebas sin modelo en 18 archivos; 142 de 142 pasos del recorrido contra el deploy; Comité por WhatsApp probado en vivo contra Kapso, 103 s de punta a punta.
 
 ## Índice de las 30 preguntas
 
@@ -59,13 +59,13 @@ Cada celda es el número de tema de este documento. Ejemplo: la pregunta 4 del j
 
 ### 4. ¿Cómo evaluaron el modelo? ¿Por qué Opus? ⚠️ · IA-9
 
-> «De las 516 pruebas, ¿cuántas usan un modelo real? ¿Tasa de genomas válidos, latencia p95, costo por demo? ¿Por qué Opus 5.5 para una frase de 18 palabras?»
+> «De las 520 pruebas, ¿cuántas usan un modelo real? ¿Tasa de genomas válidos, latencia p95, costo por demo? ¿Por qué Opus 5.5 para una frase de 18 palabras?»
 
 **Respuesta (20 s):** Ninguna prueba llama a un modelo real: corren con dobles, a propósito, para que sean reproducibles y gratis. No hicimos evaluaciones de calidad. Lo que sí probamos es que una salida mala no rompe nada: esquema Zod, filtro de datos reservados, plazo y respaldo. Opus es el valor por defecto y no lo comparamos con uno más chico; cambiarlo es una variable de entorno.
 
 **Respaldo:** `tests/negotiation.test.ts` y otros (`vi.mock("../src/agents")`). `src/agents/__tests__/agents.test.ts` (servidor OpenAI simulado). `src/lib/llm.ts` → `anthropicParams`: en Opus el razonamiento no se apaga, así que el tope real es 140 + 1024 tokens; `thinking: false` fuerza esfuerzo `low` aunque `render.yaml` diga `medium`. Única latencia registrada: unos 10 s por mutación, una corrida sin salida guardada (`docs/MEDICIONES.md`).
 
-**Cómo decirlo:** separar con claridad «pruebas del sistema» (516, sin modelo) de «evaluación del modelo» (no hay).
+**Cómo decirlo:** separar con claridad «pruebas del sistema» (520, sin modelo) de «evaluación del modelo» (no hay).
 
 ## B. Permisos e identidad
 
@@ -195,7 +195,7 @@ Cada celda es el número de tema de este documento. Ejemplo: la pregunta 4 del j
 
 **Respuesta (20 s):** Pocas, y lo sabemos: los topes protegen el servidor por recurso, no por persona. 200 conexiones anónimas llenan una sala, y si Render no pone la IP real en `X-Forwarded-For`, todos comparten el límite de peticiones. Para la demo usamos una sala con código nuevo, creada en el momento. La defensa de verdad son cuentas y límites por identidad.
 
-**Respaldo:** `src/lib/store/rooms.ts` → `openConnection` (200 por sala, 1000 en total), `sweepRooms`. `src/lib/store/rate-limit.ts` → `clientKey`. `render.yaml` (plan gratis, `TRUST_PROXY=1` sin verificar). La carga de 500 conexiones se midió en un notebook, sin Next y antes del tope (`docs/MEDICIONES.md`).
+**Respaldo:** `src/lib/store/rooms.ts` → `openConnection` (200 por sala, 1000 en total), `sweepRooms`. `src/lib/store/rate-limit.ts` → `clientKey`. `render.yaml` (plan `standard` desde el 22 de noviembre, `TRUST_PROXY=1` sin verificar). La carga de 500 conexiones se midió en un notebook, sin Next y antes del tope (`docs/MEDICIONES.md`).
 
 ### 17. ¿El acta es íntegra y duradera? ⚠️ · T-6
 

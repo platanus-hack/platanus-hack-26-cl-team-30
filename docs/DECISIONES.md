@@ -281,10 +281,10 @@ Formato de cada entrada:
 
 ## Render para el deploy público
 
-- **Decisión:** el servidor público corre en Render como un proceso Node descrito en `render.yaml`. Hoy está en el plan gratis (`plan: free`), que se duerme sin visitas y pierde las salas al dormirse.
+- **Decisión:** el servidor público corre en Render como un proceso Node descrito en `render.yaml`. Estuvo en el plan gratis (`plan: free`), que se duerme sin visitas y pierde las salas al dormirse; el 22 de noviembre pasó a `plan: standard`, pagado con los créditos del evento, para que no se duerma durante las presentaciones. Cada deploy igual reinicia el proceso y borra las salas.
 - **Alternativa descartada:** Vercel.
 - **Por qué:** la colaboración en tiempo real necesita un proceso que se mantenga vivo y comparta estado entre conexiones. Las funciones de Vercel no lo garantizan.
-- **Costo:** el deploy sale de un repo personal espejo, porque Render no puede conectarse al repo de la organización. En el plan gratis el servicio se duerme sin visitas.
+- **Costo:** el deploy sale de un repo personal espejo, porque Render no puede conectarse al repo de la organización. En el plan gratis el servicio se dormía sin visitas; en `standard` no.
 
 ## Chequeo de vida separado del chequeo del modelo
 
