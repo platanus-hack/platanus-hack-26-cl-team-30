@@ -2,7 +2,24 @@
 
 Lo que sigue abierto. Cuando algo se resuelve, se borra de aquí y, si corresponde, se anota en `docs/DECISIONES.md`.
 
-Actualizado el 21 de noviembre de 2026.
+Actualizado el 22 de noviembre de 2026, 03:00.
+
+## Antes de cerrar el repo (domingo 22)
+
+Lista corta de lo que falta, sacada de las tablas de abajo. Lo que no se alcance se dice como «no lo medimos» o se saca del guion.
+
+| # | Qué | Quién | Referencia |
+| --- | --- | --- | --- |
+| z1 | Fusionar la rama `docs` a `main` (trae `origin/main`, `guia-al-dia`, el guion del día alineado con la presentación y la portada corregida) y confirmar en GitHub que se ve la versión nueva | Ramón | y5, s |
+| z2 | Decidir qué pasa con las ramas que tienen un commit sin fusionar: `portada-hero` («el puente» en vez del Venn), `orbita-galaxia` y `orbita-relevo` (bancos de prueba de `/orbita`). Si no van, no se fusionan; no cambian nada de lo que se presenta | Sebastián | — |
+| z3 | Confirmar la hora de cierre del repo: `CLAUDE.md` dice que el hacking termina a las 09:30 y `docs/DEMO_DIA.md` que los repos se cierran a las 9:00. Trabajar con la más temprana | Equipo | — |
+| z4 | Correr `node scripts/e2e.mjs https://team-30-platanus-hack.onrender.com --llm` y anotar en `docs/MEDICIONES.md` cuántas frases de la negociación fueron respaldo | Sebastián | q, ensayo del bot |
+| z5 | Subir Render a un plan pagado o, como mínimo, abrir el deploy 10 minutos antes para despertarlo | Sebastián | c |
+| z6 | Grabar el video de respaldo en el ensayo 2 (hoy no existe) | Ramón | `docs/DEMO_DIA.md` (d) |
+| z7 | Ensayos cronometrados con 5 teléfonos reales en la red de la sede, desde la lámina 4 de `/presentacion` | Equipo | r, y3 |
+| z8 | Revisar con sesión iniciada en `hack.platan.us` que el repo pasa la validación | Sebastián | e |
+| z9 | Leer y corregir a mano el README: la plantilla pide que lo escriba una persona del equipo | Ramón | f |
+| z10 | Después de la hackathon: rotar el token del proxy | Sebastián | g |
 
 ## Decisiones que necesitan a Sebastián
 
@@ -133,4 +150,4 @@ Lo encontraron tres revisores sin contexto leyendo el código; las respuestas pa
 - **Canales del Comité para una sola sala a la vez:** número de WhatsApp global, razón aplicada a la sesión más reciente, `getOnlyVoiceSession` global, mismo secreto para la herramienta de la guía y la que sella.
 - **La telemetría informa la configuración, no lo observado,** y no cuenta lo que sale a ElevenLabs ni a Kapso.
 - ~~**El prompt de la guía describe la demo de 3 personas** y `guide-status.ts` dice que la propuesta sale «con el resultado del debate», lo que no es cierto.~~ **Resuelto (22 nov):** `GUIDE_PROMPT` describe la demo de 5 personas, el texto de `guide-status.ts` dice que la propuesta sale de la regla visible y no del debate, y el agente ya creado en ElevenLabs se actualizó por la API (`PATCH`, verificado con `GET`).
-- **Textos fuera de `docs/` que afirman más que el código** (no se tocaron en este ensayo): «Ningún agente cambia el estado» y «Ejemplo real» en la landing (`src/components/sculptor/content.ts`, `chrome.tsx`), «500 conexiones» y «97/97» en la landing, y ~~en `CLAUDE.md` «permisos… sin modelo» (en la mutación los propone el modelo)~~ (**resuelto, 22 nov:** `CLAUDE.md` dice que en la mutación el modelo propone quién ve cada dato y el código lo normaliza y valida).
+- **Resuelto (22 nov): textos de la portada.** `src/components/sculptor/content.ts` ya no dice «Ningún agente cambia el estado» ni «en el mismo segundo», «97/97» pasó a «142/142» y la barra (`chrome.tsx`) dice «Ver un caso» en vez de «Ejemplo real». «500 conexiones» sigue, con «en un notebook» al lado.
